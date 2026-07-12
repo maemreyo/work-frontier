@@ -12,8 +12,13 @@ from typing import Final, override
 PACKAGE: Final = "work_frontier"
 MIN_PACKAGE_PARTS: Final = 2
 LAYERS: Final = frozenset(
-    {"domain", "platform", "application", "adapters", "interfaces"}
+    {"domain", "platform", "application", "adapters", "interfaces", "contracts"}
 )
+COMPOSITION_ROOT_FILES: Final = frozenset({"__main__.py", "composition.py"})
+
+# Canonical import matrix from ARCHITECTURE.md section 3.3
+# Application orchestrates Domain; Platform (audit) references Domain types
+# Contracts is a shared transport/DTO layer importable by all except Domain
 ALLOW_MATRIX: Final = {
     "domain": {
         "domain": True,
@@ -21,27 +26,31 @@ ALLOW_MATRIX: Final = {
         "application": False,
         "adapters": False,
         "interfaces": False,
+        "contracts": False,  # Domain stays pure, no transport DTOs
     },
     "platform": {
-        "domain": False,
+        "domain": True,  # audit references domain types (AUD → DEC)
         "platform": True,
-        "application": False,
+        "application": False,  # except application.ports
         "adapters": False,
         "interfaces": False,
+        "contracts": True,
     },
     "application": {
-        "domain": False,
+        "domain": True,  # application orchestrates domain
         "platform": False,
         "application": True,
         "adapters": False,
         "interfaces": False,
+        "contracts": True,
     },
     "adapters": {
         "domain": False,
         "platform": True,
-        "application": False,
+        "application": False,  # except application.ports
         "adapters": True,
         "interfaces": False,
+        "contracts": True,
     },
     "interfaces": {
         "domain": False,
@@ -49,6 +58,15 @@ ALLOW_MATRIX: Final = {
         "application": True,
         "adapters": False,
         "interfaces": True,
+        "contracts": True,
+    },
+    "contracts": {
+        "domain": False,
+        "platform": False,
+        "application": False,
+        "adapters": False,
+        "interfaces": False,
+        "contracts": True,
     },
 }
 
@@ -60,6 +78,16 @@ class BoundaryViolation:
     path: Path
     line: int
     rule: str
+
+
+def is_composition_root(path: Path, source_root: Path) -> bool:
+    """Return True if path is a composition root allowed to import everything."""
+    relative_parts = path.relative_to(source_root).parts
+    return (
+        len(relative_parts) >= MIN_PACKAGE_PARTS
+        and relative_parts[0] == PACKAGE
+        and relative_parts[-1] in COMPOSITION_ROOT_FILES
+    )
 
 
 def layer_for_path(path: Path, source_root: Path) -> str | None:
@@ -74,7 +102,13 @@ def layer_for_path(path: Path, source_root: Path) -> str | None:
 def resolve_relative_import(
     file_path: Path, source_root: Path, module: str | None, level: int
 ) -> str | None:
-    """Resolve a relative import to an absolute module path."""
+    """Resolve a relative import to an absolute module path.
+
+    level=0: absolute import (return module as-is)
+    level=1: from . import X (current package)
+    level=2: from .. import X (parent package)
+    level=N: go up N-1 levels from current package
+    """
     if level == 0:
         return module
 
@@ -84,9 +118,12 @@ def resolve_relative_import(
     if module_parts and module_parts[-1] == "__init__":
         _ = module_parts.pop()
 
-    if len(module_parts) < level:
+    # level=N means go up N-1 levels from current package
+    levels_up = level - 1
+    if len(module_parts) < levels_up:
         return None
-    base_parts = module_parts[:-level] if level > 0 else module_parts
+
+    base_parts = module_parts[:-levels_up] if levels_up > 0 else module_parts
 
     if module:
         base_parts.extend(module.split("."))
@@ -97,12 +134,18 @@ def resolve_relative_import(
 def target_for_module(module: str) -> tuple[str, bool] | None:
     """Return the target layer and whether it is the public ports package."""
     parts = module.split(".")
-    if len(parts) < MIN_PACKAGE_PARTS or parts[0] != PACKAGE or parts[1] not in LAYERS:
+    if len(parts) < MIN_PACKAGE_PARTS or parts[0] != PACKAGE:
         return None
-    return (parts[1], parts[:3] == [PACKAGE, "application", "ports"])
+
+    target_layer = parts[1]
+    if target_layer not in LAYERS:
+        return None
+
+    is_ports = parts[:3] == [PACKAGE, "application", "ports"]
+    return (target_layer, is_ports)
 
 
-def violation_rule(
+def violation_rule(  # noqa: PLR0912
     source_layer: str, target_layer: str, target_is_ports: bool
 ) -> str | None:
     """Return the ADR-006 rule violated by a layer-to-layer import."""
@@ -122,19 +165,28 @@ def violation_rule(
         return None
 
     if source_layer == "domain":
+        if target_layer == "contracts":
+            return "domain-cannot-import-contracts"
         return "domain-cannot-import-non-domain"
     if source_layer == "platform" and target_layer == "application":
         return "platform-may-import-only-application-ports"
     if source_layer == "application":
+        if target_layer in {"platform", "adapters", "interfaces"}:
+            return "application-cannot-import-implementation"
         return "application-cannot-import-implementation"
-    if source_layer == "adapters" and target_layer == "domain":
-        return "adapters-cannot-import-domain"
-    if source_layer == "adapters" and target_layer == "application":
-        return "adapters-may-import-only-application-ports"
-    if source_layer == "adapters" and target_layer == "interfaces":
-        return "adapters-cannot-import-interfaces"
+    if source_layer == "adapters":
+        if target_layer == "domain":
+            return "adapters-cannot-import-domain"
+        if target_layer == "application":
+            return "adapters-may-import-only-application-ports"
+        if target_layer == "interfaces":
+            return "adapters-cannot-import-interfaces"
     if source_layer == "interfaces":
+        if target_layer in {"domain", "platform", "adapters"}:
+            return "interfaces-must-call-application"
         return "interfaces-must-call-application"
+    if source_layer == "contracts":
+        return "contracts-cannot-import-other-layers"
 
     return "unknown-violation"
 
@@ -157,8 +209,16 @@ class ImportCollector(ast.NodeVisitor):
         resolved = resolve_relative_import(
             self.file_path, self.source_root, node.module, node.level
         )
-        if resolved is not None:
-            self.modules.append((resolved, node.lineno))
+        if resolved is None:
+            return
+
+        self.modules.append((resolved, node.lineno))
+
+        # Expand "from work_frontier import platform" to catch aliased imports
+        if resolved == PACKAGE:
+            for alias in node.names:
+                if alias.name != "*":
+                    self.modules.append((f"{resolved}.{alias.name}", node.lineno))
 
 
 def imported_modules(
@@ -174,9 +234,13 @@ def validate(source_root: Path) -> tuple[BoundaryViolation, ...]:
     """Return every forbidden import below a Work Frontier source root."""
     violations: list[BoundaryViolation] = []
     for path in sorted(source_root.rglob("*.py")):
+        if is_composition_root(path, source_root):
+            continue
+
         source_layer = layer_for_path(path, source_root)
         if source_layer is None:
             continue
+
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=path)
         for module, line in imported_modules(tree, path, source_root):
             target = target_for_module(module)

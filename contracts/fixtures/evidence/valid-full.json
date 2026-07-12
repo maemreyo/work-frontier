@@ -2,6 +2,8 @@
   "schema_version": "1.0.0",
   "harness_id": "WF-HAR-CONTRACT-03",
   "status": "fail",
+  "run_id": "run-1720764090000",
+  "subject_sha": "f1e2d3c4b5a6978012345678901234567890fedc",
   "invocation": {
     "command": "mypy backend/app --strict",
     "exit_code": 1,
@@ -14,6 +16,11 @@
     "name": "mypy",
     "version": "1.10.0",
     "commit_sha": "f1e2d3c4b5a6978012345678901234567890fedc"
+  },
+  "environment": {
+    "python": "3.13.5",
+    "os": "darwin-arm64",
+    "platform": "macOS-14.5-arm64-arm-64bit"
   },
   "artifacts": [
     {
@@ -39,6 +46,18 @@
       "detail": "backend/app/services/auth.py passed strict type checking"
     }
   ],
+  "stdout_artifact": {
+    "path": ".omo/evidence/static/mypy-stdout-1720764090000.txt",
+    "hashes": {
+      "sha256": "a3b2c1d0e9f8876543210fedcba9876543210fedcba9876543210fedcba98765"
+    }
+  },
+  "stderr_artifact": {
+    "path": ".omo/evidence/static/mypy-stderr-1720764090000.txt",
+    "hashes": {
+      "sha256": "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
+    }
+  },
   "property_bag": {
     "contract.service_name": "backend",
     "contract.strict_mode": true,

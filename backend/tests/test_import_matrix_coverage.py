@@ -1,4 +1,4 @@
-"""Verify ALLOW_MATRIX covers all 25 layer pairs explicitly."""
+"""Verify ALLOW_MATRIX covers all 36 layer pairs explicitly."""
 
 from __future__ import annotations
 
@@ -11,11 +11,12 @@ LAYERS: tuple[str, ...] = (
     "application",
     "adapters",
     "interfaces",
+    "contracts",
 )
 
 
 def test_matrix_is_complete() -> None:
-    """Every layer must have entries for all 5 targets."""
+    """Every layer must have entries for all 6 targets."""
     for source in LAYERS:
         assert source in ALLOW_MATRIX, f"Missing source layer: {source}"
         for target in LAYERS:
@@ -23,8 +24,8 @@ def test_matrix_is_complete() -> None:
 
 
 @pytest.mark.parametrize(("source", "target"), [(s, t) for s in LAYERS for t in LAYERS])
-def test_all_25_pairs_have_bool_verdict(source: str, target: str) -> None:
-    """Each of 25 layer pairs has an explicit allow/deny decision."""
+def test_all_36_pairs_have_bool_verdict(source: str, target: str) -> None:
+    """Each of 36 layer pairs has an explicit allow/deny decision."""
     verdict = ALLOW_MATRIX[source][target]
     assert isinstance(verdict, bool), (
         f"Edge {source}->{target} must be bool, got {type(verdict)}"

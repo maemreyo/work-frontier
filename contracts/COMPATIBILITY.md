@@ -23,28 +23,56 @@ artifacts, checked in for cross-language validation.
 | **allowed-difference** | Intentional. No feasible cross-language equivalent, or metadata-only. |
 | **known-deviation** | Semantic gap. One side is stricter than the other. |
 
+## Strict validation mode
+
+Pydantic runs with `strict=True`, `frozen=True`, and `extra="forbid"`.
+This disables type coercion at the model level:
+- Strings are not coerced to int, bool, or datetime
+- `AwareDatetime` requires timezone-aware ISO 8601 strings
+- Unknown fields are rejected
+
+Zod mirrors this with `.strict()` which prevents extra properties,
+though Zod's `z.number().int()` still accepts numeric strings.
+Both sides reject `"1"` as `int` and `"true"` as `bool` in strict mode.
+
 ## Observed differences
 
 ### 1. `computed_at` timezone enforcement
 
-**Tag: known-deviation**
+**Tag: generated-equivalent** (downgraded from known-deviation)
 
 | Layer | Representation |
 |---|---|
-| Pydantic | `datetime` — accepts both naive and aware ISO strings |
-| JSON Schema | `{"format": "date-time", "type": "string"}` — no enforcement at schema level |
+| Pydantic | `AwareDatetime` — requires timezone-aware ISO strings |
+| JSON Schema | `{"type": "string", "format": "date-time"}` — no runtime enforcement |
 | Zod | `z.string().datetime({ offset: true })` — requires timezone offset |
 
-`x-to-zod` interprets `format: date-time` per RFC 3339, which mandates a
-timezone offset. Pydantic's `datetime` is more permissive and happily parses
-`"2026-01-01T00:00:00"` (naive). Zod rejects it.
+Pydantic now uses `AwareDatetime` which rejects naive datetime strings.
+Both Pydantic and Zod require timezone-aware datetime. No semantic gap.
 
-**Current impact:** None in practice. Both the Python and TypeScript test suites
-construct `computed_at` with explicit UTC offsets (`datetime(…, tzinfo=UTC)` and
-`"2026-07-12T00:00:00Z"`). If a naive datetime string ever reaches the Zod
-schema, it will fail where the Pydantic side would have accepted it.
+### 2. Type coercion rejection
 
-### 2. Immutability (`frozen=True`)
+**Tag: generated-equivalent**
+
+Both Pydantic (`strict=True`) and Zod (`.strict()`) reject type coercion:
+- `"1"` is not accepted as `int`
+- `"true"` is not accepted as `bool`
+- String hash values are rejected when regex pattern expects hex
+
+### 3. Lowercase hex hash pattern
+
+**Tag: generated-equivalent**
+
+| Layer | Representation |
+|---|---|
+| Pydantic | `Field(pattern=r"^[0-9a-f]{64}$")` |
+| JSON Schema | `"pattern": "^[0-9a-f]{64}$"` |
+| Zod | `.regex(/^[0-9a-f]{64}$/)` |
+
+All three hash fields (`normalized_snapshot_hash`, `policy_bundle_hash`,
+`ranking_pipeline_hash`) enforce lowercase hex via regex pattern.
+
+### 4. Immutability (`frozen=True`)
 
 **Tag: allowed-difference**
 
@@ -55,7 +83,7 @@ reassignment.
 This is a Python-side concern. JavaScript consumers treat the parsed object as a
 plain data structure. No runtime gap.
 
-### 3. Field-level `title` metadata
+### 5. Field-level `title` metadata
 
 **Tag: allowed-difference**
 
@@ -65,7 +93,7 @@ Id"`). `x-to-zod` drops these. The top-level contract title
 
 Pure documentation metadata. No runtime impact.
 
-### 4. `source_revision_set` minimum-length enforcement
+### 6. `source_revision_set` minimum-length enforcement
 
 **Tag: generated-equivalent**
 
@@ -81,7 +109,20 @@ The constraint fires at parse time and rejects empty objects, same as Pydantic.
 The error shape differs (Zod `ZodError` with refine message vs Pydantic
 `ValidationError`), but the pass/fail boundary is identical.
 
-### 5. All other fields
+### 7. `schema_version` default value
+
+**Tag: allowed-difference**
+
+| Layer | Representation |
+|---|---|
+| Pydantic | `Field(default="1.0.0")` |
+| JSON Schema | `"default": "1.0.0"` |
+| Zod | `.default("1.0.0")` |
+
+When omitted from input, Pydantic and Zod both populate `schema_version`
+with `"1.0.0"`. The parsed output always includes this field.
+
+### 8. All other fields
 
 Every remaining field translates without semantic change:
 
@@ -98,12 +139,15 @@ Every remaining field translates without semantic change:
 
 | # | Field(s) | Tag | Severity |
 |---|---|---|---|
-| 1 | `computed_at` | known-deviation | Low (no current test failure; strictness goes one way) |
-| 2 | All fields (frozen) | allowed-difference | None |
-| 3 | All fields (titles) | allowed-difference | None |
-| 4 | `source_revision_set` | generated-equivalent | None |
-| 5 | All other fields | generated-equivalent | None |
+| 1 | `computed_at` | generated-equivalent | None |
+| 2 | Type coercion | generated-equivalent | None |
+| 3 | Hash patterns | generated-equivalent | None |
+| 4 | All fields (frozen) | allowed-difference | None |
+| 5 | All fields (titles) | allowed-difference | None |
+| 6 | `source_revision_set` | generated-equivalent | None |
+| 7 | `schema_version` | allowed-difference | None |
+| 8 | All other fields | generated-equivalent | None |
 
-One known deviation, zero current breakage. The Zod schema is a strict subset
-of what Pydantic accepts, restricted to timezone-aware datetime strings, which
-is already how the contract is produced in practice.
+Zero known deviations. Pydantic and Zod agree on all validation boundaries.
+The Zod schema is a faithful translation of the Pydantic model's strict
+constraints.

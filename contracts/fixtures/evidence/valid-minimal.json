@@ -2,6 +2,8 @@
   "schema_version": "1.0.0",
   "harness_id": "WF-HAR-PREFLIGHT-01",
   "status": "pass",
+  "run_id": "run-1720764000000",
+  "subject_sha": "a1b2c3d4e5f6789012345678901234567890abcd",
   "invocation": {
     "command": "pytest tests/unit",
     "exit_code": 0,

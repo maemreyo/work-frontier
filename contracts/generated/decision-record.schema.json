@@ -45,6 +45,7 @@
     "normalized_snapshot_hash": {
       "maxLength": 64,
       "minLength": 64,
+      "pattern": "^[0-9a-f]{64}$",
       "title": "Normalized Snapshot Hash",
       "type": "string"
     },
@@ -56,6 +57,7 @@
     "policy_bundle_hash": {
       "maxLength": 64,
       "minLength": 64,
+      "pattern": "^[0-9a-f]{64}$",
       "title": "Policy Bundle Hash",
       "type": "string"
     },
@@ -79,6 +81,7 @@
     "ranking_pipeline_hash": {
       "maxLength": 64,
       "minLength": 64,
+      "pattern": "^[0-9a-f]{64}$",
       "title": "Ranking Pipeline Hash",
       "type": "string"
     },
@@ -90,6 +93,12 @@
     "ready": {
       "title": "Ready",
       "type": "boolean"
+    },
+    "schema_version": {
+      "default": "1.0.0",
+      "minLength": 1,
+      "title": "Schema Version",
+      "type": "string"
     },
     "source_revision_set": {
       "additionalProperties": {

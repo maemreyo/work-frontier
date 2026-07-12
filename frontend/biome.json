@@ -5,7 +5,8 @@
     "rules": {
       "recommended": true,
       "complexity": {
-        "useLiteralKeys": "off"
+        "useLiteralKeys": "off",
+        "useRegexLiterals": "off"
       },
       "suspicious": {
         "noExplicitAny": "error",

@@ -2,25 +2,18 @@
   "schema_version": "1.0.0",
   "harness_id": "WF-HAR-STATIC-01",
   "status": "pass",
-  "run_id": "run-1783840455692",
-  "subject_sha": "9b8da6834d96ae0f4d9f7480ce643023bfda6f16",
   "invocation": {
     "command": "python scripts/check_import_boundaries.py",
     "exit_code": 0,
-    "working_directory": ".",
-    "start_time": "2026-07-12T07:14:15.658149Z",
-    "end_time": "2026-07-12T07:14:15.662937Z",
-    "duration_seconds": 0.004788
+    "working_directory": "/Users/trung.ngo/Documents/zaob-dev/work-frontier",
+    "start_time": "2026-07-12T06:43:33.268789Z",
+    "end_time": "2026-07-12T06:43:33.273138Z",
+    "duration_seconds": 0.004349
   },
   "tool": {
     "name": "check_import_boundaries",
     "version": "1.0.0",
     "commit_sha": "9b8da6834d96ae0f4d9f7480ce643023bfda6f16"
-  },
-  "environment": {
-    "python": "3.13.5",
-    "os": "darwin-arm64",
-    "platform": "macOS-26.4.1-arm64-arm-64bit-Mach-O"
   },
   "artifacts": [
     {
@@ -65,8 +58,6 @@
     }
   ],
   "results": [],
-  "stdout_artifact": null,
-  "stderr_artifact": null,
   "property_bag": {
     "check_import_boundaries": {
       "source_root": "backend/src",

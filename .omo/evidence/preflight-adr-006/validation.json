@@ -59,19 +59,19 @@
       "contract_id": "WF-P0-04",
       "scenario": "audit-envelope-tamper",
       "result": "rejected_by_contract",
-      "failure_id": "malformed_audit_anchor"
+      "failure_id": "extra_field_audit_anchor"
     },
     {
       "contract_id": "WF-P0-04",
       "scenario": "missing-anchor-proof",
       "result": "rejected_by_contract",
-      "failure_id": "malformed_audit_anchor"
+      "failure_id": "extra_field_audit_anchor"
     },
     {
       "contract_id": "WF-P0-05",
       "scenario": "partial-internal-commit",
       "result": "rejected_by_contract",
-      "failure_id": "malformed_alternatives"
+      "failure_id": "extra_field_alternatives"
     },
     {
       "contract_id": "WF-P0-05",

@@ -2,7 +2,7 @@
 
 bootstrap:
 	uv sync --all-groups
-	pnpm --dir frontend install --frozen-lockfile
+	pnpm install --frozen-lockfile
 
 check-architecture:
 	uv run python scripts/check_import_boundaries.py

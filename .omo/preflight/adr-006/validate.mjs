@@ -44,27 +44,27 @@ async function readCanonicalDocuments() {
  * @returns {object}
  */
 function getBaselineDocument(contractId) {
-  // Stub baseline document with WF-P0-02 reproducibility fields
   return {
-    decision: "test-decision",
-    workspace_id: "workspace-001",
-    normalized_snapshot_id: "snapshot-001",
+    decision_id: "WF-DEC-0001",
+    workspace_id: "WF-WS-0001",
+    program_id: null,
+    item_id: "WF-ITEM-0001",
+    computed_at: "2026-07-12T03:20:00Z",
+    causation_id: "WF-CAU-0001",
+    correlation_id: "WF-COR-0001",
+    normalized_snapshot_id: "WF-SNP-0001",
+    normalized_snapshot_hash: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     source_revision_set: {
-      commit_sha: "abc123",
-      branch: "main",
+      backend: "abc123",
     },
-    graph_revision: "v1",
-    policy_bundle_id: "bundle-001",
-    ranking_pipeline_hash: "hash-001",
+    graph_revision: "rev-1",
+    policy_bundle_id: "WF-PB-0001",
+    policy_bundle_hash: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    ranking_pipeline_hash: "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
     engine_version: "1.0.0",
-    normalization_profile_version: "1.0",
-    causation_id: "cause-001",
-    correlation_id: "corr-001",
+    normalization_profile_version: "1.0.0",
+    ready: true,
     ranking_position: 1,
-    audit_anchor: {
-      timestamp: "2026-07-12T00:00:00Z",
-    },
-    alternatives: [],
   };
 }
 
@@ -136,34 +136,35 @@ function applyMutation(baselineDoc, mutation) {
  * @returns {{ success: boolean, failureId?: string }}
  */
 function validateContract(contractId, document) {
-  // Stub validation - checks basic structural requirements
   const requiredFields = [
-    "decision",
+    "decision_id",
     "workspace_id",
+    "program_id",
+    "item_id",
+    "computed_at",
+    "causation_id",
+    "correlation_id",
     "normalized_snapshot_id",
+    "normalized_snapshot_hash",
     "source_revision_set",
     "graph_revision",
     "policy_bundle_id",
+    "policy_bundle_hash",
     "ranking_pipeline_hash",
     "engine_version",
     "normalization_profile_version",
-    "causation_id",
-    "correlation_id",
+    "ready",
   ];
 
-  // Check required fields exist
   for (const field of requiredFields) {
     if (!(field in document)) {
       return { success: false, failureId: `missing_field_${field}` };
     }
   }
 
-  // Check no extra fields at root (WF-P0-01 taxonomy enforcement)
   const allowedFields = new Set([
     ...requiredFields,
     "ranking_position",
-    "audit_anchor",
-    "alternatives",
   ]);
   for (const key of Object.keys(document)) {
     if (!allowedFields.has(key)) {
@@ -171,7 +172,6 @@ function validateContract(contractId, document) {
     }
   }
 
-  // Check basic constraints
   if (typeof document.workspace_id === "string" && document.workspace_id.length === 0) {
     return { success: false, failureId: "empty_workspace_id" };
   }
@@ -180,17 +180,20 @@ function validateContract(contractId, document) {
     return { success: false, failureId: "invalid_ranking_position" };
   }
 
-  // Check nested structure types
   if (document.source_revision_set && typeof document.source_revision_set !== "object") {
     return { success: false, failureId: "malformed_source_revision_set" };
   }
 
-  if (document.audit_anchor && typeof document.audit_anchor !== "object") {
-    return { success: false, failureId: "malformed_audit_anchor" };
+  if (typeof document.normalized_snapshot_hash === "string" && !/^[a-f0-9]{64}$/.test(document.normalized_snapshot_hash)) {
+    return { success: false, failureId: "invalid_normalized_snapshot_hash" };
   }
 
-  if (document.alternatives && !Array.isArray(document.alternatives)) {
-    return { success: false, failureId: "malformed_alternatives" };
+  if (typeof document.policy_bundle_hash === "string" && !/^[a-f0-9]{64}$/.test(document.policy_bundle_hash)) {
+    return { success: false, failureId: "invalid_policy_bundle_hash" };
+  }
+
+  if (typeof document.ranking_pipeline_hash === "string" && !/^[a-f0-9]{64}$/.test(document.ranking_pipeline_hash)) {
+    return { success: false, failureId: "invalid_ranking_pipeline_hash" };
   }
 
   return { success: true };

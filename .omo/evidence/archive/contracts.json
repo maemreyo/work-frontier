@@ -2,25 +2,18 @@
   "schema_version": "1.0.0",
   "harness_id": "WF-HAR-STATIC-02",
   "status": "pass",
-  "run_id": "run-1783840456618",
-  "subject_sha": "9b8da6834d96ae0f4d9f7480ce643023bfda6f16",
   "invocation": {
     "command": "python generate_contracts.py --check",
     "exit_code": 0,
-    "working_directory": ".",
-    "start_time": "2026-07-12T07:14:15.844720Z",
-    "end_time": "2026-07-12T07:14:16.371961Z",
-    "duration_seconds": 0.527241
+    "working_directory": "/Users/trung.ngo/Documents/zaob-dev/work-frontier",
+    "start_time": "2026-07-12T06:43:33.407575Z",
+    "end_time": "2026-07-12T06:43:33.991492Z",
+    "duration_seconds": 0.583917
   },
   "tool": {
     "name": "generate_contracts",
     "version": "1.0.0",
     "commit_sha": "9b8da6834d96ae0f4d9f7480ce643023bfda6f16"
-  },
-  "environment": {
-    "python": "3.13.5",
-    "os": "darwin-arm64",
-    "platform": "macOS-26.4.1-arm64-arm-64bit-Mach-O"
   },
   "artifacts": [
     {
@@ -44,8 +37,6 @@
       "detail": "frontend/src/contracts/decision-record.generated.ts: current"
     }
   ],
-  "stdout_artifact": null,
-  "stderr_artifact": null,
   "property_bag": {
     "generate_contracts": {
       "mode": "check",

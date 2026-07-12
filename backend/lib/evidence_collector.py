@@ -16,6 +16,10 @@ from work_frontier.contracts.evidence_record import (
     Result,
     Tool,
 )
+from work_frontier.contracts.evidence_writer import (
+    generate_run_id,
+    get_environment_fingerprint,
+)
 
 
 class EvidenceCollector:
@@ -93,6 +97,7 @@ class EvidenceCollector:
         start_time: datetime,
         end_time: datetime,
         working_directory: str | None = None,
+        run_id: str | None = None,
     ) -> EvidenceRecord:
         """Build the final EvidenceRecord.
 
@@ -106,6 +111,7 @@ class EvidenceCollector:
             start_time: Execution start timestamp (must be timezone-aware)
             end_time: Execution end timestamp (must be timezone-aware)
             working_directory: Optional working directory where command was executed
+            run_id: Optional run identifier (auto-generated if not provided)
 
         Returns:
             Complete EvidenceRecord ready for serialization
@@ -119,6 +125,8 @@ class EvidenceCollector:
             schema_version="1.0.0",
             harness_id=self.harness_id,
             status=status,
+            run_id=run_id or generate_run_id(),
+            subject_sha=self.commit_sha,
             invocation=Invocation(
                 command=command,
                 exit_code=exit_code,
@@ -132,6 +140,7 @@ class EvidenceCollector:
                 version=self.tool_version,
                 commit_sha=self.commit_sha,
             ),
+            environment=get_environment_fingerprint(),
             artifacts=self.artifacts,
             results=self.results,
         )

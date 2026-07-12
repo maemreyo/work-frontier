@@ -87,17 +87,35 @@ class EvidenceRecord(BaseModel):
         pattern=r"^WF-HAR-[A-Z]+-\d{2}$",
         description="Harness identifier: WF-HAR-{CATEGORY}-{NN}",
     )
-    status: Literal["pass", "fail", "skip"] = Field(
+    status: Literal["pass", "fail", "skip", "not_applicable"] = Field(
         description="Overall harness execution status"
+    )
+    run_id: str = Field(
+        min_length=1,
+        description="Unique run identifier for this evidence generation",
+    )
+    subject_sha: str = Field(
+        pattern=r"^[a-f0-9]{40}$",
+        description="Git commit SHA of the code being tested",
     )
     invocation: Invocation
     tool: Tool
+    environment: dict[str, str] = Field(
+        default_factory=dict,
+        description="Environment fingerprint (OS, runtime versions, etc.)",
+    )
     artifacts: list[Artifact] = Field(
         default_factory=list,
         description="Files or resources examined or produced during execution",
     )
     results: list[Result] = Field(
         default_factory=list, description="Individual test results or findings"
+    )
+    stdout_artifact: Artifact | None = Field(
+        default=None, description="Captured stdout artifact"
+    )
+    stderr_artifact: Artifact | None = Field(
+        default=None, description="Captured stderr artifact"
     )
     property_bag: dict[str, JsonValue] | None = Field(
         default=None,

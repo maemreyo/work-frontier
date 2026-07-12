@@ -1,3 +1,5 @@
+import { readdirSync, readFileSync } from "node:fs"
+import { join } from "node:path"
 import { describe, expect, it } from "vitest"
 
 import { DecisionRecordSchema } from "../../src/contracts/decision-record.generated"
@@ -23,7 +25,13 @@ const validRecord = {
   normalization_profile_version: "profile-01",
   ready: true,
   ranking_position: 1,
+  schema_version: "1.0.0",
 }
+
+const FIXTURES_DIR = join(__dirname, "../../..", "contracts", "fixtures", "decision-record")
+const fixtureFiles = readdirSync(FIXTURES_DIR)
+  .filter((f) => f.endsWith(".json"))
+  .sort()
 
 describe("DecisionRecordSchema", () => {
   it("round-trips a complete canonical envelope when parsed", () => {
@@ -44,5 +52,23 @@ describe("DecisionRecordSchema", () => {
 
     // Then the required reproducibility field is rejected
     expect(result.success).toBe(false)
+  })
+
+  it.each(fixtureFiles)("cross-language consistency: %s", (fixtureFile) => {
+    // Given a shared fixture with expected validity encoded in filename
+    const fixturePath = join(FIXTURES_DIR, fixtureFile)
+    const jsonStr = readFileSync(fixturePath, "utf-8")
+    const data = JSON.parse(jsonStr)
+    const expectedValid = fixtureFile.startsWith("valid-")
+
+    // When the Zod contract validates it
+    const result = DecisionRecordSchema.safeParse(data)
+
+    // Then the verdict matches Python/Pydantic
+    if (expectedValid) {
+      expect(result.success).toBe(true)
+    } else {
+      expect(result.success).toBe(false)
+    }
   })
 })
