@@ -2,21 +2,21 @@
   "schema_version": "1.0.0",
   "harness_id": "WF-HAR-CONTRACT-05",
   "status": "pass",
-  "run_id": "run-1783860333058",
-  "subject_sha": "cdc0d04a84e2014954e4d00ea3348ed58ffc6800",
-  "subject_tree_sha": "749eec8a69f393faee5e43fd87861a417ac7073d",
+  "run_id": "run-1783860424473",
+  "subject_sha": "1ebe4efd423ae5f44bb38ea238af5c8608f4ecea",
+  "subject_tree_sha": "177c2a1ccf0f8e03ec0a3bc92258d98fdb35782a",
   "invocation": {
     "command": "uv run python scripts/generate_contracts.py --check",
     "exit_code": 0,
     "working_directory": ".",
-    "start_time": "2026-07-12T12:45:32.272730Z",
-    "end_time": "2026-07-12T12:45:32.782467Z",
-    "duration_seconds": 0.509737
+    "start_time": "2026-07-12T12:47:03.662146Z",
+    "end_time": "2026-07-12T12:47:04.206579Z",
+    "duration_seconds": 0.544433
   },
   "tool": {
     "name": "generate_contracts",
     "version": "3.13.5",
-    "commit_sha": "cdc0d04a84e2014954e4d00ea3348ed58ffc6800"
+    "commit_sha": "1ebe4efd423ae5f44bb38ea238af5c8608f4ecea"
   },
   "environment": {
     "python": "3.13.5",

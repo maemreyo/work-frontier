@@ -2,21 +2,21 @@
   "schema_version": "1.0.0",
   "harness_id": "WF-HAR-INTEG-01",
   "status": "pass",
-  "run_id": "run-1783860275566",
-  "subject_sha": "6b83fdc6e0c9516184a1ff61b81906226a23c7ec",
-  "subject_tree_sha": "e78d6e5756b40bc8bd67d35c8943986c05b5029a",
+  "run_id": "run-1783860427233",
+  "subject_sha": "1ebe4efd423ae5f44bb38ea238af5c8608f4ecea",
+  "subject_tree_sha": "177c2a1ccf0f8e03ec0a3bc92258d98fdb35782a",
   "invocation": {
     "command": "make migration-smoke",
     "exit_code": 0,
     "working_directory": ".",
-    "start_time": "2026-07-12T12:44:34.510308Z",
-    "end_time": "2026-07-12T12:44:35.529286Z",
-    "duration_seconds": 1.018978
+    "start_time": "2026-07-12T12:47:06.270819Z",
+    "end_time": "2026-07-12T12:47:07.197676Z",
+    "duration_seconds": 0.926857
   },
   "tool": {
     "name": "migration-smoke",
     "version": "1.18.5",
-    "commit_sha": "6b83fdc6e0c9516184a1ff61b81906226a23c7ec"
+    "commit_sha": "1ebe4efd423ae5f44bb38ea238af5c8608f4ecea"
   },
   "environment": {
     "python": "3.13.5",
@@ -29,7 +29,7 @@
     {
       "path": ".omo/evidence/static/migration-smoke.json",
       "hashes": {
-        "sha256": "b5fc9010ff09798d5cf7815181c3723df08def08094bee405bbfcf952f210dbf"
+        "sha256": "160155c46124009a5fdc716b2e87ae0a11f6273686a3abc11490990a6ab00e4d"
       }
     }
   ],

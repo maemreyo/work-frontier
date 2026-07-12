@@ -2,21 +2,21 @@
   "schema_version": "1.0.0",
   "harness_id": "WF-HAR-STATIC-01",
   "status": "pass",
-  "run_id": "run-1783860267887",
-  "subject_sha": "6b83fdc6e0c9516184a1ff61b81906226a23c7ec",
-  "subject_tree_sha": "e78d6e5756b40bc8bd67d35c8943986c05b5029a",
+  "run_id": "run-1783860419620",
+  "subject_sha": "1ebe4efd423ae5f44bb38ea238af5c8608f4ecea",
+  "subject_tree_sha": "177c2a1ccf0f8e03ec0a3bc92258d98fdb35782a",
   "invocation": {
     "command": "uv run basedpyright && pnpm --dir frontend exec tsc --noEmit",
     "exit_code": 0,
     "working_directory": ".",
-    "start_time": "2026-07-12T12:44:23.761727Z",
-    "end_time": "2026-07-12T12:44:27.848391Z",
-    "duration_seconds": 4.086664
+    "start_time": "2026-07-12T12:46:55.708725Z",
+    "end_time": "2026-07-12T12:46:59.582099Z",
+    "duration_seconds": 3.873374
   },
   "tool": {
     "name": "python",
     "version": "3.13.5",
-    "commit_sha": "6b83fdc6e0c9516184a1ff61b81906226a23c7ec"
+    "commit_sha": "1ebe4efd423ae5f44bb38ea238af5c8608f4ecea"
   },
   "environment": {
     "python": "3.13.5",

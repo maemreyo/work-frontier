@@ -2,21 +2,21 @@
   "schema_version": "1.0.0",
   "harness_id": "WF-HAR-INTEG-02",
   "status": "pass",
-  "run_id": "run-1783860276523",
-  "subject_sha": "6b83fdc6e0c9516184a1ff61b81906226a23c7ec",
-  "subject_tree_sha": "e78d6e5756b40bc8bd67d35c8943986c05b5029a",
+  "run_id": "run-1783860428119",
+  "subject_sha": "1ebe4efd423ae5f44bb38ea238af5c8608f4ecea",
+  "subject_tree_sha": "177c2a1ccf0f8e03ec0a3bc92258d98fdb35782a",
   "invocation": {
     "command": "make storage-smoke",
     "exit_code": 0,
     "working_directory": ".",
-    "start_time": "2026-07-12T12:44:35.746171Z",
-    "end_time": "2026-07-12T12:44:36.486681Z",
-    "duration_seconds": 0.74051
+    "start_time": "2026-07-12T12:47:07.403172Z",
+    "end_time": "2026-07-12T12:47:08.085968Z",
+    "duration_seconds": 0.682796
   },
   "tool": {
     "name": "storage-smoke",
     "version": "1.43.46",
-    "commit_sha": "6b83fdc6e0c9516184a1ff61b81906226a23c7ec"
+    "commit_sha": "1ebe4efd423ae5f44bb38ea238af5c8608f4ecea"
   },
   "environment": {
     "python": "3.13.5",
@@ -29,7 +29,7 @@
     {
       "path": ".omo/evidence/static/minio-roundtrip.json",
       "hashes": {
-        "sha256": "184064bf3bc71c1c52c5e42da5b3e65d99d2f4328bf3948fd4b5412a0312acb8"
+        "sha256": "7b41c21b2f9b9d9a4c5cf78e1b94c01da5f332a42f59df0db15578a59491a9ed"
       }
     }
   ],
