@@ -2,21 +2,21 @@
   "schema_version": "1.0.0",
   "harness_id": "WF-HAR-STATIC-02",
   "status": "pass",
-  "run_id": "run-1783860268216",
-  "subject_sha": "6b83fdc6e0c9516184a1ff61b81906226a23c7ec",
-  "subject_tree_sha": "e78d6e5756b40bc8bd67d35c8943986c05b5029a",
+  "run_id": "run-1783860331940",
+  "subject_sha": "cdc0d04a84e2014954e4d00ea3348ed58ffc6800",
+  "subject_tree_sha": "749eec8a69f393faee5e43fd87861a417ac7073d",
   "invocation": {
     "command": "uv run python scripts/check_import_boundaries.py",
     "exit_code": 0,
     "working_directory": ".",
-    "start_time": "2026-07-12T12:44:28.160363Z",
-    "end_time": "2026-07-12T12:44:28.174538Z",
-    "duration_seconds": 0.014175
+    "start_time": "2026-07-12T12:45:31.884847Z",
+    "end_time": "2026-07-12T12:45:31.896670Z",
+    "duration_seconds": 0.011823
   },
   "tool": {
     "name": "check_import_boundaries",
     "version": "3.13.5",
-    "commit_sha": "6b83fdc6e0c9516184a1ff61b81906226a23c7ec"
+    "commit_sha": "cdc0d04a84e2014954e4d00ea3348ed58ffc6800"
   },
   "environment": {
     "python": "3.13.5",
