@@ -1,0 +1,20 @@
+{
+  "decision_id": "WF-DEC-0300",
+  "workspace_id": "WF-WS-0300",
+  "program_id": "WF-PRG-0300",
+  "item_id": "WF-ITEM-0300",
+  "computed_at": "2026-07-12T03:20:00Z",
+  "causation_id": "WF-CAU-0300",
+  "correlation_id": "WF-COR-0300",
+  "normalized_snapshot_id": "WF-SNP-0300",
+  "normalized_snapshot_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "source_revision_set": {},
+  "graph_revision": "rev-1",
+  "policy_bundle_id": "WF-PB-0300",
+  "policy_bundle_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "ranking_pipeline_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "engine_version": "1.0.0",
+  "normalization_profile_version": "1.0.0",
+  "ready": true,
+  "ranking_position": 1
+}
