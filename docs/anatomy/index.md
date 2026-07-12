@@ -2,7 +2,7 @@
 
 Work Frontier currently provides a source-controlled foundation verification and evidence toolchain for a future dependency-aware readiness control plane. The executable system is primarily Python and Node/TypeScript tooling: strict contracts, preflight mutation tests, import-boundary enforcement, harness execution, evidence capture, and local PostgreSQL/MinIO smoke tests. The business control-plane runtime described in architecture documents is not implemented yet.
 
-**Generated:** 2026-07-12 · **Mode:** full trace · **Source commit:** `35e29a933534452757fe0515e29af7e6c6189b52`
+**Generated:** 2026-07-12 · **Mode:** full trace · **Source commit:** `e54bfeca1150fbc15fb6da1b603af938e2bca79`
 
 ## Tech stack & key dependencies
 

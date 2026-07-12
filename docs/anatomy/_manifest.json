@@ -3,7 +3,7 @@
   "project": "Work Frontier",
   "mode": "full trace",
   "generated_at": "2026-07-12T00:00:00+07:00",
-  "source_commit": "35e29a933534452757fe0515e29af7e6c6189b52",
+  "source_commit": "e54bfeca1150fbc15fb6da1b603af938e2bca79",
   "output_root": "docs/anatomy",
   "trace_depth": "deep",
   "module_count": 8,

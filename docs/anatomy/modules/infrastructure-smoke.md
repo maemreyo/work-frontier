@@ -6,13 +6,13 @@
 ## Public interface
 
 - `python scripts/migration_smoke.py` — validates migration rollback/recovery.
-- `python scripts/minio_smoke.py` — validates object storage lifecycle.
+- `python scripts/minio_roundtrip.py` — validates object storage lifecycle.
 
 ## Depends on
 
 - **`contracts`** — emits structured evidence for infrastructure checks (`scripts/migration_smoke.py:159`)
 - external: `postgresql` — runs Alembic upgrade, failure injection, rollback and re-upgrade checks (`scripts/migration_smoke.py:159`)
-- external: `minio` — creates a bucket and verifies put/get/delete object lifecycle (`scripts/minio_smoke.py:39`)
+- external: `minio` — creates a bucket and verifies put/get/delete object lifecycle (`scripts/minio_roundtrip.py:39`)
 - external: `docker-compose` — provides PostgreSQL and MinIO services (`docker-compose.yml:3`)
 
 ## Used by

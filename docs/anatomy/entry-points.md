@@ -1,6 +1,6 @@
 # Entry Points: Work Frontier
 
-This is a source-verified inventory of executable surfaces found at commit `35e29a933534452757fe0515e29af7e6c6189b52`. No HTTP routes, queue consumers, cron jobs, deployed worker process, or product UI bootstrap were confirmed.
+This is a source-verified inventory of executable surfaces found at commit `e54bfeca1150fbc15fb6da1b603af938e2bca79`. No HTTP routes, queue consumers, cron jobs, deployed worker process, or product UI bootstrap were confirmed.
 
 ## CLI commands
 
@@ -11,9 +11,10 @@ This is a source-verified inventory of executable surfaces found at commit `35e2
 | `python scripts/generate_contracts.py --check` | `contract-generation` | Checks contract artifact drift | [contract-generation.md](modules/contract-generation.md) |
 | `python scripts/generate_contracts.py --write` | `contract-generation` | Regenerates JSON Schema and Zod artifacts | [contract-generation.md](modules/contract-generation.md) |
 | `python scripts/check_import_boundaries.py` | `architecture-enforcement` | Enforces Python layer import boundaries | [architecture-enforcement.md](modules/architecture-enforcement.md) |
-| `python -m work_frontier.contracts.harness_runner` | `evidence-runtime` | Executes registered harnesses and writes evidence | [evidence-runtime.md](modules/evidence-runtime.md) |
+| `python scripts/run_harness.py --id WF-HAR-...` | `evidence-runtime` | Executes one registry-backed harness | [evidence-runtime.md](modules/evidence-runtime.md) |
+| `python scripts/run_harness.py --recertify-foundation` | `evidence-runtime` | Recertifies the foundation closure and writes supersession evidence | [evidence-runtime.md](modules/evidence-runtime.md) |
 | `python scripts/migration_smoke.py` | `infrastructure-smoke` | Proves migration rollback/recovery | [infrastructure-smoke.md](modules/infrastructure-smoke.md) |
-| `python scripts/minio_smoke.py` | `infrastructure-smoke` | Proves MinIO put/get/delete lifecycle | [infrastructure-smoke.md](modules/infrastructure-smoke.md) |
+| `python scripts/minio_roundtrip.py` | `infrastructure-smoke` | Proves MinIO put/get/delete lifecycle | [infrastructure-smoke.md](modules/infrastructure-smoke.md) |
 | `python scripts/build_harness_registry.py` | `evidence-runtime` | Rebuilds the machine-readable harness registry | [evidence-runtime.md](modules/evidence-runtime.md) |
 
 ## CI-triggered entry points

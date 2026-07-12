@@ -9,14 +9,14 @@
 **What it will NOT do:** It will not split into microservices, turn audit history into event-sourced current state, add other production trackers, give AI decision authority, or claim production capacity without executable proof.
 
 **Effort:** XL
-**Risk:** High - greenfield implementation spans security-critical domain logic, three runtime processes, external GitHub cutover, and 67 release harnesses.
+**Risk:** High - greenfield implementation spans security-critical domain logic, three runtime processes, external GitHub cutover, and 68 release harnesses.
 **Decisions to sanity-check:** Python/FastAPI backend plus React/Vite frontend; PostgreSQL-backed queue with MinIO/S3; Copilot disabled by default; full 72-hour soak retained for GA certification.
 
 Your next move: run a high-accuracy review or start execution through the dedicated worker. Full execution detail follows below.
 
 ---
 
-> TL;DR (machine): XL/high-risk greenfield build; 35 dependency-ordered implementation todos plus four independent final gates deliver all 13 modules, 67 harnesses, Standard certification, and #539 cutover.
+> TL;DR (machine): XL/high-risk greenfield build; 35 dependency-ordered implementation todos plus four independent final gates deliver all 13 modules, 68 harnesses, Standard certification, and #539 cutover.
 
 ## Scope
 
@@ -29,7 +29,7 @@ Your next move: run a high-accuracy review or start execution through the dedica
 - Resource-scoped identity/tenancy/RBAC/SoD, append-only-with-retention evidence/audit, durable inbox/queue, idempotent sync, reconciliation, and stale-write fencing.
 - GitHub Level-3 production adapter and frozen #539 reference fixture; explicit `legacy_active`, `shadow`, and `projection_active` writer ownership.
 - REST/OpenAPI, CLI parity, web/worker/scheduler processes, four accessible Control Room views, optional provider-neutral Copilot, hosted/self-hosted deployment artifacts, and signed release certification.
-- All 67 harness contracts implemented. Sixty-four block every Standard-envelope release; Large and Tenant Aggregate capacity harnesses block only releases declaring those envelopes.
+- All 68 harness contracts implemented. Sixty-five block every Standard-envelope release; Large and Tenant Aggregate capacity harnesses block only releases declaring those envelopes.
 
 ### Must NOT have (guardrails, anti-slop, scope boundaries)
 
@@ -439,8 +439,8 @@ Large todos may use the execution slices listed below, but the parent checkbox r
       QA scenarios: happy—backup clean stack restore and serve; failure—kill worker/DB/disk-full triggers recovery and alerts without acknowledged loss. Evidence `.omo/evidence/task-33-full-product-implementation/`.
       Commit: Y | `feat(ops): add certified deployment and recovery`
 
-- [ ] 34. Complete all 67 harnesses and signed Standard ReleaseCertification
-      What to do / Must NOT do: Implement missing commands/artifacts, run bottom-up layers, produce canonical manifest tied to exact commit/service versions, SBOM/provenance, sign Ed25519, publish verification command/key ID and coverage report. Standard certification requires 64 blockers; dead-code informational; scoped capacity marked N/A with reason unless declared.
+- [ ] 34. Complete all 68 harnesses and signed Standard ReleaseCertification
+      What to do / Must NOT do: Implement missing commands/artifacts, run bottom-up layers, produce canonical manifest tied to exact commit/service versions, SBOM/provenance, sign Ed25519, publish verification command/key ID and coverage report. Standard certification requires 65 blockers; dead-code informational; scoped capacity marked N/A with reason unless declared.
       Parallelization: Wave 6 convergence | Blocked by: 1-33 | Blocks: 35,F1-F4
       References: `docs/quality/harness-catalog.md`; `verification-strategy.md`; `release-certification.md`; `performance-envelope.md`
       Acceptance criteria: registry and evidence contain the exact canonical unique entries with no aliases; every Standard blocker passes for the certified subject revision; signature verifies; missing/tampered/unhashed artifact, wrong or stale subject SHA, contradictory status, unknown ID, fabricated pass, false N/A or skipped blocker makes `all_passed=false`.
@@ -459,7 +459,7 @@ Large todos may use the execution slices listed below, but the parent checkbox r
 
 > Runs in parallel after ALL todos. ALL must APPROVE. Surface results and wait for the user's explicit okay before declaring complete.
 
-- [ ] F1. Plan compliance audit — independently map every todo, 13 modules, 67 harnesses and Must/NOT guardrail to code plus immutable evidence; reject missing or self-reported completion. Evidence `.omo/evidence/final-plan-compliance.md`.
+- [ ] F1. Plan compliance audit — independently map every todo, 13 modules, 68 harnesses and Must/NOT guardrail to code plus immutable evidence; reject missing or self-reported completion. Evidence `.omo/evidence/final-plan-compliance.md`.
 - [ ] F2. Code quality/security review — run static diagnostics, architecture boundaries, migration review, concurrency/transaction analysis, secret/dependency/security scans, and inspect every changed file; zero introduced errors/high findings. Evidence `.omo/evidence/final-code-quality.md`.
 - [ ] F3. Real manual QA — start a clean production-like Standard stack; use browser and CLI to onboard frozen/sandbox GitHub, inspect/claim/approve/reconcile, exercise all views, backup/restore, AI-off behavior and rollback; screenshots/traces required. Evidence `.omo/evidence/final-manual-qa/`.
 - [ ] F4. Scope fidelity — compare implementation against canonical docs, OpenAPI, release cert and #539 reference; prove no non-GitHub adapter, AI authority, dual writer, event sourcing, hidden SoD bypass, or unsupported capacity claim. Evidence `.omo/evidence/final-scope-fidelity.md`.
@@ -478,6 +478,6 @@ Large todos may use the execution slices listed below, but the parent checkbox r
 - Every canonical module exists behind enforced seams; deterministic replay and incremental/full-solve convergence pass.
 - Tenant isolation, RBAC, SoD, break-glass, credential secrecy, evidence integrity, GitHub durable ingestion, approval and lease race behavior pass executable tests.
 - All four UI views satisfy WCAG 2.2 AA and product-path harnesses at required viewports with no console or schema errors.
-- The Standard production stack meets SLO/RPO/RTO and all 64 default blocking harnesses; all 67 harness entries have truthful evidence/applicability.
+- The Standard production stack meets SLO/RPO/RTO and all 65 default blocking harnesses; all 68 harness entries have truthful evidence/applicability.
 - A signed ReleaseCertification verifies against the exact commit, and #539 reaches `projection_active` only after exact semantic parity with a proven <5-minute rollback.
 - F1-F4 all return unconditional approval, and the user explicitly accepts the surfaced final verification results.

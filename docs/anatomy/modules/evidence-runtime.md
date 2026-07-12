@@ -5,19 +5,20 @@
 
 ## Public interface
 
-- `python -m work_frontier.contracts.harness_runner` — executes selected or blocking harnesses.
+- `python scripts/run_harness.py --id WF-HAR-...` — executes one registry-backed harness.
+- `python scripts/run_harness.py --recertify-foundation` — runs the foundation closure and writes supersession evidence.
 - `write_evidence_record(...)` — persists canonical evidence, stdout and stderr artifacts.
 
 ## Internal structure
 
-- `harness_runner.py` — selects and executes harness commands.
+- `harness_runner.py` — selects and executes harness commands (library, not a CLI entry point).
 - `evidence_writer.py` — writes immutable evidence artifacts.
-- `backend/lib/evidence_collector.py` — parallel helper API with overlapping responsibility.
+- `scripts/run_harness.py` — CLI entry point that wraps `harness_runner` for single-harness and recertification runs.
 
 ## Depends on
 
 - **`contracts`** — loads registry and evidence schemas and serializes validated records (`backend/src/work_frontier/contracts/harness_runner.py:53`)
-- external: `git` — captures and validates the subject commit SHA (`backend/src/work_frontier/contracts/evidence_writer.py:25`)
+- external: `git` — captures and validates the subject commit SHA and working-tree cleanliness (`backend/src/work_frontier/contracts/evidence_writer.py:25`)
 - external: `subprocess` — executes harness commands and captures stdout/stderr (`backend/src/work_frontier/contracts/harness_runner.py:53`)
 
 ## Used by

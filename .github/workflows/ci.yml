@@ -62,18 +62,53 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
-      - run: make bootstrap
-      - run: make check-architecture
-      - run: uv run ruff check backend/src backend/tests scripts
-      - run: uv run ruff format --check backend/src backend/tests scripts
-      - run: uv run basedpyright
-      - run: pnpm --dir frontend run check
-      - run: make infra-up
-      - run: make migration-smoke
-      - run: make storage-smoke
-      - run: make test
-      - run: make infra-down
+      - name: Bootstrap (first clean pass)
+        run: make bootstrap
+      - name: Static checks
+        run: make check-static
+      - name: Unit tests
+        run: make test
+      - name: Regeneration drift guard (clean-clone stability)
+        run: |
+          make generate-contracts
+          make generate-harness-registry
+          if ! git diff --quiet; then
+            echo "::error::generated contracts/registry drift after regeneration"
+            git diff --stat
+            exit 1
+          fi
+          echo "regeneration is stable on a clean checkout"
+      - name: Infrastructure up
+        run: make infra-up
+      - name: Migration smoke
+        run: make migration-smoke
+      - name: Storage smoke
+        run: make storage-smoke
+      - name: Infrastructure down
         if: always()
+        run: make infra-down
+      - name: Recertify foundation (exact HEAD)
+        run: make recertify-foundation
+      - name: Assert recertification subject SHA matches GITHUB_SHA
+        run: |
+          SUBJECT_SHA="$(python3 -c "import json,sys; d=json.load(open('.omo/evidence/task-5-full-product-implementation/foundation-recertification.json')); print(d['subject_sha'])")"
+          if [ "$SUBJECT_SHA" != "$GITHUB_SHA" ]; then
+            echo "::error::recertification subject_sha ${SUBJECT_SHA} does not match GITHUB_SHA ${GITHUB_SHA}"
+            exit 1
+          fi
+          echo "recertification attests exact HEAD: ${SUBJECT_SHA}"
+      - name: Second clean pass (idempotency proof)
+        run: |
+          make check-static
+          make test
+          make generate-contracts
+          make generate-harness-registry
+          if ! git diff --quiet; then
+            echo "::error::second clean pass produced drift — foundation is not idempotent"
+            git diff --stat
+            exit 1
+          fi
+          echo "second clean pass is byte-identical to first"
       - uses: gitleaks/gitleaks-action@v2
       - uses: anchore/sbom-action@v0
         with:

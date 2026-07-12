@@ -15,8 +15,8 @@ graph LR
 
 | Service | Module(s) | Ports | Depends on | File |
 | --- | --- | --- | --- | --- |
-| `postgres` | `infrastructure-smoke` | `5432:5432` | — | [infrastructure-smoke.md](modules/infrastructure-smoke.md) |
-| `minio` | `infrastructure-smoke` | `9000:9000`, `9001:9001` | — | [infrastructure-smoke.md](modules/infrastructure-smoke.md) |
+| `postgres` | `infrastructure-smoke` | `${POSTGRES_HOST_PORT:-54329}:5432` | — | [infrastructure-smoke.md](modules/infrastructure-smoke.md) |
+| `minio` | `infrastructure-smoke` | `${MINIO_API_HOST_PORT:-9002}:9000`, `${MINIO_CONSOLE_HOST_PORT:-9003}:9001` | — | [infrastructure-smoke.md](modules/infrastructure-smoke.md) |
 
 ## Runtime boundary
 

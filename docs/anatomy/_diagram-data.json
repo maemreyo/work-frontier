@@ -2,7 +2,7 @@
   "project_name": "Work Frontier",
   "generated_at": "2026-07-12",
   "mode": "full trace",
-  "source_commit": "35e29a933534452757fe0515e29af7e6c6189b52",
+  "source_commit": "e54bfeca1150fbc15fb6da1b603af938e2bca79",
   "modules": [
     {
       "slug": "foundation-preflight",
@@ -253,7 +253,7 @@
         "name": "postgres",
         "module": "infrastructure-smoke",
         "ports": [
-          "5432:5432"
+          "54329:5432"
         ],
         "depends_on": []
       },
@@ -261,8 +261,8 @@
         "name": "minio",
         "module": "infrastructure-smoke",
         "ports": [
-          "9000:9000",
-          "9001:9001"
+          "9002:9000",
+          "9003:9001"
         ],
         "depends_on": []
       }

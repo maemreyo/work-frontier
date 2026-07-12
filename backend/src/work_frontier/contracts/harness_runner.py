@@ -17,9 +17,11 @@ from work_frontier.contracts.evidence_record import (
 )
 from work_frontier.contracts.evidence_writer import (
     get_git_commit_sha,
+    get_git_tree_sha,
     get_tool_version,
     hash_bytes,
     hash_file,
+    is_working_tree_clean,
     write_evidence,
     write_text_artifact,
 )
@@ -279,8 +281,17 @@ def recertify_foundation(
     *,
     repo_root: Path | None = None,
     registry_path: Path | None = None,
+    require_clean_tree: bool = True,
 ) -> dict[str, Any]:
-    """Run foundation closure harnesses; write supersession certification."""
+    """Run foundation closure harnesses; write supersession certification.
+
+    When ``require_clean_tree`` is True (the default), the working tree must
+    match HEAD and contain no source-of-truth untracked files. This guards
+    against the previous failure mode where evidence was written from a
+    dirty working tree but only ``git rev-parse HEAD`` was recorded, so the
+    supersession report attributed results to a revision that did not
+    contain the code that produced them.
+    """
     root = repo_root or Path.cwd()
     registry = load_registry(
         registry_path or (root / "contracts" / "harness-registry.json")
@@ -288,30 +299,48 @@ def recertify_foundation(
     subject_sha = get_git_commit_sha(root)
     closure = foundation_closure(registry)
 
-    records: list[EvidenceRecord] = []
     failures: list[str] = []
-    for harness_id in closure:
-        harness = get_harness(registry, harness_id)
-        if harness.get("status") != "implemented":
-            failures.append(f"{harness_id}: not implemented; cannot recertify")
-            continue
-        record = run_harness(harness_id, repo_root=root, registry_path=registry_path)
-        records.append(record)
-        failures.extend(
-            validate_evidence_record(
-                record,
-                registry=registry,
-                expected_subject_sha=subject_sha,
-                require_blocking_pass=True,
-                repo_root=root,
-            )
+    working_tree_clean = is_working_tree_clean(root)
+    if require_clean_tree and not working_tree_clean:
+        failures.append(
+            "working tree is dirty; cannot certify a revision-bound claim. "
+            "Commit, stash, or remove untracked source files and re-run."
         )
+
+    try:
+        subject_tree_sha = get_git_tree_sha(root)
+    except Exception as exc:  # noqa: BLE001 - surface as certification failure
+        subject_tree_sha = None
+        failures.append(f"could not compute git tree SHA: {exc}")
+
+    records: list[EvidenceRecord] = []
+    if not failures:
+        for harness_id in closure:
+            harness = get_harness(registry, harness_id)
+            if harness.get("status") != "implemented":
+                failures.append(f"{harness_id}: not implemented; cannot recertify")
+                continue
+            record = run_harness(
+                harness_id, repo_root=root, registry_path=registry_path
+            )
+            records.append(record)
+            failures.extend(
+                validate_evidence_record(
+                    record,
+                    registry=registry,
+                    expected_subject_sha=subject_sha,
+                    require_blocking_pass=True,
+                    repo_root=root,
+                )
+            )
 
     certified = len(failures) == 0 and len(records) == len(closure)
     report = {
         "schema_version": "1.0.0",
         "kind": "foundation_recertification",
         "subject_sha": subject_sha,
+        "subject_tree_sha": subject_tree_sha,
+        "working_tree_clean": working_tree_clean,
         "closure": closure,
         "certified": certified,
         "failures": failures,
@@ -322,6 +351,7 @@ def recertify_foundation(
                 "run_id": record.run_id,
                 "tool_version": record.tool.version,
                 "exit_code": record.invocation.exit_code,
+                "subject_tree_sha": record.subject_tree_sha,
             }
             for record in records
         ],

@@ -191,7 +191,7 @@
           "target": "minio",
           "kind": "external",
           "detail": "creates a bucket and verifies put/get/delete object lifecycle",
-          "citation": "scripts/minio_smoke.py:39"
+          "citation": "scripts/minio_roundtrip.py:39"
         },
         {
           "target": "docker-compose",
@@ -348,7 +348,7 @@
         "raw": "PostgreSQL smoke CLI."
       },
       {
-        "module": "scripts/minio_smoke.py",
+        "module": "scripts/minio_roundtrip.py",
         "detail": "main",
         "raw": "MinIO smoke CLI."
       }

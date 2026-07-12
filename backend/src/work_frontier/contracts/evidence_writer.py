@@ -34,6 +34,110 @@ def get_git_commit_sha(repo_root: Path | None = None) -> str:
     return result.stdout.strip()
 
 
+def get_git_tree_sha(repo_root: Path | None = None) -> str:
+    """Return the git tree SHA that the working tree matches.
+
+    Uses ``git write-tree`` so the digest reflects exactly what is on disk,
+    not just what HEAD points to. Callers that need a strict revision-bound
+    digest must combine this with a working-tree-clean check.
+    """
+    if repo_root is None:
+        repo_root = Path.cwd()
+    result = subprocess.run(
+        ["git", "write-tree"],
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return result.stdout.strip()
+
+
+def is_working_tree_clean(repo_root: Path | None = None) -> bool:
+    """Return True iff the working tree matches HEAD and has no untracked files.
+
+    The tree is considered dirty when any tracked file differs from HEAD or
+    when an untracked, non-ignored source-of-truth file exists (tracked
+    sources, configs, contracts, registry, evidence writers). Untracked
+    ephemeral files under .omo/evidence/, .pytest_cache, .ruff_cache,
+    __pycache__, frontend/dist, frontend/tsconfig.tsbuildinfo are tolerated.
+    """
+    if repo_root is None:
+        repo_root = Path.cwd()
+
+    # Tracked-file drift (including intent-to-add) must be zero.
+    diff = subprocess.run(
+        ["git", "diff", "--name-only", "HEAD"],
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    if diff.stdout.strip():
+        return False
+
+    # Untracked, non-ignored files that affect the foundation.
+    porcelain = subprocess.run(
+        [
+            "git",
+            "status",
+            "--porcelain",
+            "--untracked-files=normal",
+            "--ignored=no",
+        ],
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return not _has_meaningful_untracked(porcelain.stdout)
+
+
+_EPHEMERAL_UNTRACKED_PREFIXES = (
+    ".omo/evidence/",
+    ".pytest_cache/",
+    ".ruff_cache/",
+    ".basedpyright/",
+    ".coverage",
+    "htmlcov/",
+    "frontend/dist/",
+    "frontend/tsconfig.tsbuildinfo",
+    "frontend/node_modules/",
+    "frontend/coverage/",
+    "frontend/.vite/",
+    "__pycache__/",
+    ".venv/",
+)
+
+
+# Minimum porcelain-v1 line length: status code "??" + space + at least one
+# path character. Shorter lines cannot represent an untracked file entry.
+_PORCELAIN_MIN_LINE_LEN = 4
+
+
+def _has_meaningful_untracked(porcelain_stdout: str) -> bool:
+    for line in porcelain_stdout.splitlines():
+        # Porcelain v1: two chars status + path. Untracked is "??" prefix.
+        # Ignored files were filtered out by --ignored=no (we asked for untracked only).
+        if not line.strip():
+            continue
+        if len(line) < _PORCELAIN_MIN_LINE_LEN:
+            return True
+        if line[:2] != "??":
+            # Tracked-file drift would have been caught earlier, but be strict
+            # here too in case the working tree was modified between the two
+            # calls.
+            return True
+        path = line[3:].strip()
+        for prefix in _EPHEMERAL_UNTRACKED_PREFIXES:
+            if path.startswith(prefix) or path == prefix.rstrip("/"):
+                continue
+        # Anything else counts as meaningful (e.g. a stray script in scripts/,
+        # an edited registry, a brand-new test file outside ephemeral dirs).
+        return True
+    return False
+
+
 def get_tool_version(tool_name: str) -> str:
     """Return the actual version string for a known tool.
 
@@ -219,6 +323,10 @@ def write_evidence(
 
     duration_seconds = (end_time - start_time).total_seconds()
     commit_sha = get_git_commit_sha(repo_root)
+    try:
+        tree_sha = get_git_tree_sha(repo_root)
+    except subprocess.CalledProcessError:
+        tree_sha = None
     resolved_version = (
         tool_version if tool_version is not None else get_tool_version(tool_name)
     )
@@ -263,6 +371,7 @@ def write_evidence(
         status=status,
         run_id=run_id or generate_run_id(),
         subject_sha=commit_sha,
+        subject_tree_sha=tree_sha,
         invocation=invocation,
         tool=tool,
         environment=get_environment_fingerprint(),

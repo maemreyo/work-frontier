@@ -14,8 +14,8 @@
 - `decision_record.py` — canonical decision contract and canonical JSON behavior.
 - `evidence_record.py` — evidence schema and nested result/artifact models.
 - `harness_registry.py` — registry parsing and foundation closure validation.
-- `harness_runner.py` — command execution and evidence verification.
-- `evidence_writer.py` — environment, tool-version, hash and stream capture.
+- `harness_runner.py` — command execution, revision-bound and dirty-tree certification.
+- `evidence_writer.py` — environment, tool-version, hash, tree SHA and stream capture.
 
 ## Depends on
 

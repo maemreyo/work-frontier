@@ -1,7 +1,7 @@
 {
   "version": 1,
   "generated_at": "2026-07-12T00:00:00+07:00",
-  "source_commit": "35e29a933534452757fe0515e29af7e6c6189b52",
+  "source_commit": "e54bfeca1150fbc15fb6da1b603af938e2bca79",
   "review_status": "reviewed",
   "hits": [
     {
@@ -27,7 +27,7 @@
     },
     {
       "kind": "cli",
-      "path": "backend/src/work_frontier/contracts/harness_runner.py",
+      "path": "scripts/run_harness.py",
       "symbol": "main",
       "disposition": "confirmed",
       "review_note": "Harness execution CLI."
@@ -41,7 +41,7 @@
     },
     {
       "kind": "cli",
-      "path": "scripts/minio_smoke.py",
+      "path": "scripts/minio_roundtrip.py",
       "symbol": "main",
       "disposition": "confirmed",
       "review_note": "MinIO smoke CLI."

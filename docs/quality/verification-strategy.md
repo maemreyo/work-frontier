@@ -55,7 +55,7 @@ against real code, hit real services, and produced verifiable artifacts.
 
 The P0 gate is the only verification gate that runs before repository bootstrap.
 It is a composite evidence bundle, not a new release-harness ID: it keeps the
-catalog's 67 executable contracts stable while requiring their foundation
+catalog's 68 executable contracts stable while requiring their foundation
 criteria at the earliest point.
 
 | Contract ID | Contract | Required proof | Future harness evidence |

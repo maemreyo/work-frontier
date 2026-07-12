@@ -776,6 +776,7 @@ NAME: short lowercase identifier
 
 | Layer | Count | Blocks Release |
 |-------|-------|---------------|
+| Foundation / Preflight | 1 | 1 |
 | Static | 5 | 4 |
 | Domain | 5 | 5 |
 | Property | 5 | 5 |
@@ -787,9 +788,10 @@ NAME: short lowercase identifier
 | Cross-Cutting | 2 | 2 |
 | Security | 15 | 15 |
 | Accessibility | 4 | 4 |
-| **Total** | **67** | **64 required by default; 3 scoped or informational** |
+| **Total** | **68** | **65 required by default; 3 scoped or informational** |
 
-The catalog defines 67 harnesses. Sixty-four block every Standard-envelope
+The catalog defines 68 harnesses. Sixty-five block every Standard-envelope
 release. Dead-code detection is informational; Large and Tenant Aggregate
 capacity harnesses become blocking only when the release declares support for
-their respective envelopes.
+their respective envelopes. Each Standard release must carry truthful,
+revision-bound evidence for all 65 blocking harnesses before it can certify.
