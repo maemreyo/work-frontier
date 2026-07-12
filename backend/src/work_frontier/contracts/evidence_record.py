@@ -98,13 +98,12 @@ class EvidenceRecord(BaseModel):
         pattern=r"^[a-f0-9]{40}$",
         description="Git commit SHA of the code being tested",
     )
-    subject_tree_sha: str | None = Field(
-        default=None,
+    subject_tree_sha: str = Field(
         pattern=r"^[a-f0-9]{40}$",
         description=(
-            "Git tree SHA that the working tree matches at execution time. "
-            "Required for revision-bound certification; recorded so a re-run "
-            "can verify the evidence still attests the exact source tree."
+            "Git tree SHA of the committed HEAD^{tree}. Required for "
+            "revision-bound certification; every record in a closure must "
+            "match the report's subject_tree_sha."
         ),
     )
     invocation: Invocation

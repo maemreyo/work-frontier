@@ -35,16 +35,16 @@ def get_git_commit_sha(repo_root: Path | None = None) -> str:
 
 
 def get_git_tree_sha(repo_root: Path | None = None) -> str:
-    """Return the git tree SHA that the working tree matches.
+    """Return the committed tree SHA of the current HEAD.
 
-    Uses ``git write-tree`` so the digest reflects exactly what is on disk,
-    not just what HEAD points to. Callers that need a strict revision-bound
-    digest must combine this with a working-tree-clean check.
+    Uses ``git rev-parse HEAD^{tree}`` so the digest reflects exactly what
+    is committed at HEAD. Callers must ensure the working tree is clean
+    before using this as a source-of-truth digest.
     """
     if repo_root is None:
         repo_root = Path.cwd()
     result = subprocess.run(
-        ["git", "write-tree"],
+        ["git", "rev-parse", "HEAD^{tree}"],
         cwd=repo_root,
         capture_output=True,
         text=True,
@@ -129,12 +129,13 @@ def _has_meaningful_untracked(porcelain_stdout: str) -> bool:
             # calls.
             return True
         path = line[3:].strip()
-        for prefix in _EPHEMERAL_UNTRACKED_PREFIXES:
-            if path.startswith(prefix) or path == prefix.rstrip("/"):
-                continue
-        # Anything else counts as meaningful (e.g. a stray script in scripts/,
-        # an edited registry, a brand-new test file outside ephemeral dirs).
-        return True
+        if not any(
+            path.startswith(prefix) or path == prefix.rstrip("/")
+            for prefix in _EPHEMERAL_UNTRACKED_PREFIXES
+        ):
+            # Anything else counts as meaningful (e.g. a stray script in scripts/,
+            # an edited registry, a brand-new test file outside ephemeral dirs).
+            return True
     return False
 
 
@@ -323,10 +324,7 @@ def write_evidence(
 
     duration_seconds = (end_time - start_time).total_seconds()
     commit_sha = get_git_commit_sha(repo_root)
-    try:
-        tree_sha = get_git_tree_sha(repo_root)
-    except subprocess.CalledProcessError:
-        tree_sha = None
+    tree_sha = get_git_tree_sha(repo_root)
     resolved_version = (
         tool_version if tool_version is not None else get_tool_version(tool_name)
     )

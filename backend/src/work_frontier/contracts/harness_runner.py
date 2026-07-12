@@ -185,6 +185,7 @@ def validate_evidence_record(
     *,
     registry: dict[str, Any],
     expected_subject_sha: str | None = None,
+    expected_subject_tree_sha: str | None = None,
     require_blocking_pass: bool = False,
     repo_root: Path | None = None,
 ) -> list[str]:
@@ -201,6 +202,15 @@ def validate_evidence_record(
         failures.append(
             f"{record.harness_id}: subject_sha {record.subject_sha} "
             f"!= {expected_subject_sha}"
+        )
+
+    if (
+        expected_subject_tree_sha
+        and record.subject_tree_sha != expected_subject_tree_sha
+    ):
+        failures.append(
+            f"{record.harness_id}: subject_tree_sha {record.subject_tree_sha} "
+            f"!= {expected_subject_tree_sha}"
         )
 
     if record.tool.version in {"", "1.0.0", "unknown", "fabricated"}:
@@ -281,16 +291,15 @@ def recertify_foundation(
     *,
     repo_root: Path | None = None,
     registry_path: Path | None = None,
-    require_clean_tree: bool = True,
 ) -> dict[str, Any]:
     """Run foundation closure harnesses; write supersession certification.
 
-    When ``require_clean_tree`` is True (the default), the working tree must
-    match HEAD and contain no source-of-truth untracked files. This guards
-    against the previous failure mode where evidence was written from a
-    dirty working tree but only ``git rev-parse HEAD`` was recorded, so the
-    supersession report attributed results to a revision that did not
-    contain the code that produced them.
+    The working tree must match HEAD and contain no source-of-truth
+    untracked files. This guards against the previous failure mode where
+    evidence was written from a dirty working tree but only
+    ``git rev-parse HEAD`` was recorded, so the supersession report
+    attributed results to a revision that did not contain the code that
+    produced them.
     """
     root = repo_root or Path.cwd()
     registry = load_registry(
@@ -301,17 +310,13 @@ def recertify_foundation(
 
     failures: list[str] = []
     working_tree_clean = is_working_tree_clean(root)
-    if require_clean_tree and not working_tree_clean:
+    if not working_tree_clean:
         failures.append(
             "working tree is dirty; cannot certify a revision-bound claim. "
             "Commit, stash, or remove untracked source files and re-run."
         )
 
-    try:
-        subject_tree_sha = get_git_tree_sha(root)
-    except Exception as exc:  # noqa: BLE001 - surface as certification failure
-        subject_tree_sha = None
-        failures.append(f"could not compute git tree SHA: {exc}")
+    subject_tree_sha = get_git_tree_sha(root)
 
     records: list[EvidenceRecord] = []
     if not failures:
@@ -329,9 +334,28 @@ def recertify_foundation(
                     record,
                     registry=registry,
                     expected_subject_sha=subject_sha,
+                    expected_subject_tree_sha=subject_tree_sha,
                     require_blocking_pass=True,
                     repo_root=root,
                 )
+            )
+
+    # TOCTOU guard: recheck working tree and tree SHA after full harness closure.
+    # Harness execution must not have mutated the source tree.
+    if not failures:
+        if not is_working_tree_clean(root):
+            failures.append(
+                "TOCTOU: working tree became dirty during harness execution"
+            )
+        try:
+            post_tree_sha = get_git_tree_sha(root)
+        except Exception:  # noqa: BLE001 - surface as certification failure
+            failures.append("TOCTOU: could not compute git tree SHA after closure")
+            post_tree_sha = None
+        if post_tree_sha is not None and post_tree_sha != subject_tree_sha:
+            failures.append(
+                f"TOCTOU: tree SHA changed during harness execution "
+                f"({subject_tree_sha} -> {post_tree_sha})"
             )
 
     certified = len(failures) == 0 and len(records) == len(closure)

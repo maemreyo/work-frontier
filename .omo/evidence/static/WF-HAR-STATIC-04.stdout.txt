@@ -1,7 +1,0 @@
-All checks passed!
-33 files already formatted
-
-> @work-frontier/control-room@0.1.0 check /Users/trung.ngo/Documents/zaob-dev/work-frontier/frontend
-> biome lint src tests && tsc --noEmit
-
-Checked 6 files in 43ms. No fixes applied.

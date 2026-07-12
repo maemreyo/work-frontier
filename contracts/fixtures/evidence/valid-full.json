@@ -4,6 +4,7 @@
   "status": "fail",
   "run_id": "run-1720764090000",
   "subject_sha": "f1e2d3c4b5a6978012345678901234567890fedc",
+  "subject_tree_sha": "fedcba9876543210fedcba9876543210fedcba98",
   "invocation": {
     "command": "mypy backend/app --strict",
     "exit_code": 1,

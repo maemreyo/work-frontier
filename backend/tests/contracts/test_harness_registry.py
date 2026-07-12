@@ -70,6 +70,7 @@ def test_validate_evidence_rejects_fabricated_version_and_stale_subject() -> Non
         status="pass",
         run_id="run-test",
         subject_sha="a" * 40,
+        subject_tree_sha="a" * 40,
         invocation=Invocation(
             command="true",
             exit_code=0,

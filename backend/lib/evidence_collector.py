@@ -19,6 +19,7 @@ from work_frontier.contracts.evidence_record import (
 from work_frontier.contracts.evidence_writer import (
     generate_run_id,
     get_environment_fingerprint,
+    get_git_tree_sha,
 )
 
 
@@ -127,6 +128,7 @@ class EvidenceCollector:
             status=status,
             run_id=run_id or generate_run_id(),
             subject_sha=self.commit_sha,
+            subject_tree_sha=get_git_tree_sha(),
             invocation=Invocation(
                 command=command,
                 exit_code=exit_code,
