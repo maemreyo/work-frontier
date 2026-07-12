@@ -2,21 +2,21 @@
   "schema_version": "1.0.0",
   "harness_id": "WF-HAR-STATIC-02",
   "status": "pass",
-  "run_id": "run-1783860420148",
-  "subject_sha": "1ebe4efd423ae5f44bb38ea238af5c8608f4ecea",
-  "subject_tree_sha": "177c2a1ccf0f8e03ec0a3bc92258d98fdb35782a",
+  "run_id": "run-1783860508451",
+  "subject_sha": "78b8e73e9841e85bc09ba612939f693c37a3a83f",
+  "subject_tree_sha": "774adfa65d24a12da2280f804e8b8551973535a2",
   "invocation": {
     "command": "uv run python scripts/check_import_boundaries.py",
     "exit_code": 0,
     "working_directory": ".",
-    "start_time": "2026-07-12T12:46:59.787124Z",
-    "end_time": "2026-07-12T12:47:00.113884Z",
-    "duration_seconds": 0.32676
+    "start_time": "2026-07-12T12:48:28.085263Z",
+    "end_time": "2026-07-12T12:48:28.414618Z",
+    "duration_seconds": 0.329355
   },
   "tool": {
     "name": "check_import_boundaries",
     "version": "3.13.5",
-    "commit_sha": "1ebe4efd423ae5f44bb38ea238af5c8608f4ecea"
+    "commit_sha": "78b8e73e9841e85bc09ba612939f693c37a3a83f"
   },
   "environment": {
     "python": "3.13.5",
@@ -29,7 +29,7 @@
     {
       "path": ".omo/evidence/static/import-boundaries.json",
       "hashes": {
-        "sha256": "01dc991d7d6d10e39c42457faba4d92ce36e0e4a592063df7aecd158c8de89af"
+        "sha256": "ae354b0c90560de5a0c7d7fe0b47851255849ba5c94df5c82fbddd5846090ae2"
       }
     }
   ],

@@ -2,21 +2,21 @@
   "schema_version": "1.0.0",
   "harness_id": "WF-HAR-STATIC-05",
   "status": "pass",
-  "run_id": "run-1783860423373",
-  "subject_sha": "1ebe4efd423ae5f44bb38ea238af5c8608f4ecea",
-  "subject_tree_sha": "177c2a1ccf0f8e03ec0a3bc92258d98fdb35782a",
+  "run_id": "run-1783860511708",
+  "subject_sha": "78b8e73e9841e85bc09ba612939f693c37a3a83f",
+  "subject_tree_sha": "774adfa65d24a12da2280f804e8b8551973535a2",
   "invocation": {
     "command": "gitleaks detect --source . --report-format json --report-path .omo/evidence/static/secrets.json",
     "exit_code": 0,
     "working_directory": ".",
-    "start_time": "2026-07-12T12:47:02.685872Z",
-    "end_time": "2026-07-12T12:47:03.332406Z",
-    "duration_seconds": 0.646534
+    "start_time": "2026-07-12T12:48:31.078805Z",
+    "end_time": "2026-07-12T12:48:31.664444Z",
+    "duration_seconds": 0.585639
   },
   "tool": {
     "name": "gitleaks",
     "version": "8.30.1",
-    "commit_sha": "1ebe4efd423ae5f44bb38ea238af5c8608f4ecea"
+    "commit_sha": "78b8e73e9841e85bc09ba612939f693c37a3a83f"
   },
   "environment": {
     "python": "3.13.5",
@@ -49,7 +49,7 @@
   "stderr_artifact": {
     "path": ".omo/evidence/static/WF-HAR-STATIC-05.stderr.txt",
     "hashes": {
-      "sha256": "a36534b8864612c8777f2da688cfe3e6f76cbceefa2d689927ce89490e97a934"
+      "sha256": "67893818c00cb7c9028e3daad4f918b9fb3ba85123a9e2447a2362026cf2457c"
     }
   },
   "property_bag": {

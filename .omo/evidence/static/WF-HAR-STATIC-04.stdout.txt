@@ -4,4 +4,4 @@ All checks passed!
 > @work-frontier/control-room@0.1.0 check /Users/trung.ngo/Documents/zaob-dev/work-frontier/frontend
 > biome lint src tests && tsc --noEmit
 
-Checked 6 files in 37ms. No fixes applied.
+Checked 6 files in 43ms. No fixes applied.
