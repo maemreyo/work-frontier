@@ -11,8 +11,10 @@ from typing import Literal
 
 from work_frontier.contracts.evidence_record import (
     Artifact,
+    ArtifactHashes,
     EvidenceRecord,
     Invocation,
+    JsonValue,
     Result,
     Tool,
 )
@@ -21,7 +23,6 @@ from work_frontier.contracts.evidence_writer import (
     get_environment_fingerprint,
     get_git_commit_sha,
     get_git_tree_sha,
-    hash_bytes,
 )
 
 
@@ -82,11 +83,17 @@ class EvidenceCollector:
         """Add an artifact with SHA-256 hash.
 
         Args:
-            path: Path to the artifact file
+            path: Path to the artifact file (must be within repo root)
         """
         sha256 = hashlib.sha256(path.read_bytes()).hexdigest()
+        # Convert to repo-relative path for portable certification.
+        try:
+            rel_path = str(path.resolve().relative_to(self.repo_root.resolve()))
+        except ValueError:
+            msg = f"artifact path {path} is outside repo root {self.repo_root}"
+            raise ValueError(msg) from None
         self.artifacts.append(
-            Artifact(path=str(path), hashes={"sha256": sha256})
+            Artifact(path=rel_path, hashes=ArtifactHashes(sha256=sha256))
         )
 
     def build(
@@ -99,7 +106,7 @@ class EvidenceCollector:
         run_id: str | None = None,
         stdout: str = "",
         stderr: str = "",
-        property_bag: dict[str, str | int | float | bool | None] | None = None,
+        property_bag: dict[str, JsonValue] | None = None,
         repo_root: Path | None = None,
         evidence_root: Path | None = None,
         applicability: Literal["standard", "large", "tenant"] = "standard",
@@ -124,6 +131,7 @@ class EvidenceCollector:
             repo_root: Repository root for writing log files (default: CWD)
             evidence_root: Directory for evidence log files (default: .omo/evidence/)
             applicability: Harness applicability scope (default: "standard")
+            applicability_reason: Reason for the applicability value
 
         Returns:
             Complete EvidenceRecord ready for serialization
@@ -185,17 +193,20 @@ class EvidenceCollector:
                 commit_sha=self.commit_sha,
             ),
             applicability=applicability,
-            applicability_reason=applicability_reason,
+            applicability_reason=(
+                applicability_reason
+                or f"{applicability.capitalize()} scope harness execution"
+            ),
             environment=get_environment_fingerprint(),
             artifacts=self.artifacts,
             results=self.results,
             stdout_artifact=Artifact(
                 path=stdout_rel,
-                hashes={"sha256": _hash_bytes(stdout or "")},
+                hashes=ArtifactHashes(sha256=_hash_bytes(stdout or "")),
             ),
             stderr_artifact=Artifact(
                 path=stderr_rel,
-                hashes={"sha256": _hash_bytes(stderr or "")},
+                hashes=ArtifactHashes(sha256=_hash_bytes(stderr or "")),
             ),
             property_bag=property_bag,
         )

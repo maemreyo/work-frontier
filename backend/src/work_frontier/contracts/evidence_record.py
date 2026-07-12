@@ -4,11 +4,19 @@ Models match the JSON Schema at contracts/generated/evidence-record.schema.json 
 Schema version: 1.0.0
 """
 
+import math
 import re
-from datetime import datetime
+from pathlib import PurePosixPath
 from typing import ClassVar, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    AwareDatetime,
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_validator,
+)
 
 JsonValue = str | int | float | bool | None | dict[str, object] | list[object]
 
@@ -27,13 +35,27 @@ class Invocation(BaseModel):
     working_directory: str = Field(
         description="Working directory (repo-relative) where command was executed"
     )
-    start_time: datetime = Field(
-        description="ISO 8601 timestamp when execution started"
+    start_time: AwareDatetime = Field(
+        description="ISO 8601 timestamp when execution started (must be timezone-aware)"
     )
-    end_time: datetime = Field(
-        description="ISO 8601 timestamp when execution completed"
+    end_time: AwareDatetime = Field(
+        description=(
+            "ISO 8601 timestamp when execution completed (must be timezone-aware)"
+        )
     )
     duration_seconds: float = Field(ge=0, description="Execution duration in seconds")
+
+    @model_validator(mode="after")
+    def validate_duration(self) -> "Invocation":
+        """Enforce duration_seconds consistency with start_time/end_time."""
+        expected = (self.end_time - self.start_time).total_seconds()
+        if not math.isclose(self.duration_seconds, expected, abs_tol=0.001):
+            msg = (
+                f"duration_seconds ({self.duration_seconds}) does not match "
+                f"end_time - start_time ({expected})"
+            )
+            raise ValueError(msg)
+        return self
 
 
 class Tool(BaseModel):
@@ -52,17 +74,26 @@ class Tool(BaseModel):
 class ArtifactHashes(BaseModel):
     """Typed content hashes with required canonical SHA-256.
 
-    The ``sha256`` field is required and must be a lowercase 64-char hex
-    string. Additional hash algorithms may be stored as extra fields for
-    interoperability (e.g. md5 for legacy tools), but ``sha256`` is the
-    authoritative content identity for certification.
+    Only SHA-256 is authoritative for certification.  Additional
+    standard algorithms may be added as typed optional fields; the
+    model does not accept arbitrary extra keys.
     """
 
-    model_config: ClassVar[ConfigDict] = ConfigDict(extra="allow")
+    model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
 
     sha256: str = Field(
         pattern=r"^[a-f0-9]{64}$",
         description="Lowercase SHA-256 hex digest (required, canonical)",
+    )
+    md5: str | None = Field(
+        default=None,
+        pattern=r"^[a-f0-9]{32}$",
+        description="Optional MD5 hex digest (lowercase 32-char hex, legacy interop)",
+    )
+    sha512: str | None = Field(
+        default=None,
+        pattern=r"^[a-f0-9]{128}$",
+        description="Optional SHA-512 hex digest (lowercase 128-char hex)",
     )
 
 
@@ -75,6 +106,23 @@ class Artifact(BaseModel):
     hashes: ArtifactHashes = Field(
         description="Content hashes with required canonical sha256",
     )
+
+    @field_validator("path")
+    @classmethod
+    def path_must_be_repo_relative(cls, v: str) -> str:
+        """Reject absolute paths and path-traversal patterns.
+
+        All artifact paths must be repository-root-relative (POSIX-style)
+        so that certification is portable across working-directory layouts.
+        """
+        parsed = PurePosixPath(v)
+        if parsed.is_absolute():
+            msg = f"artifact path must be repo-relative, got absolute path: {v}"
+            raise ValueError(msg)
+        if ".." in parsed.parts:
+            msg = f"artifact path must not contain '..' traversal: {v}"
+            raise ValueError(msg)
+        return v
 
 
 class Result(BaseModel):
@@ -97,7 +145,27 @@ class EvidenceRecord(BaseModel):
     point for harness-specific data without requiring schema migration.
     """
 
-    model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
+    model_config: ClassVar[ConfigDict] = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "if": {
+                "properties": {"status": {"const": "not_applicable"}},
+                "required": ["status"],
+            },
+            "then": {
+                "properties": {
+                    "applicability_reason": {
+                        "type": "string",
+                        "minLength": 10,
+                        "description": (
+                            "Substantive explanation of why the harness is not "
+                            "applicable (min 10 characters)"
+                        ),
+                    }
+                }
+            },
+        },
+    )
 
     schema_version: Literal["1.0.0"] = Field(
         description="Schema version for forward compatibility"
@@ -130,11 +198,14 @@ class EvidenceRecord(BaseModel):
     applicability: Literal["standard", "large", "tenant"] = Field(
         description="Harness applicability scope; required, no default",
     )
-    applicability_reason: str | None = Field(
-        default=None,
+    applicability_reason: str = Field(
+        min_length=1,
         description=(
-            "Reason for the applicability value. Required when status is "
-            "'not_applicable'; optional otherwise."
+            "Reason for the applicability value. Required for EVERY record: "
+            "foundation records use 'Included in Standard foundation closure "
+            "defined by registry.foundation_closure'; large/tenant records "
+            "document the envelope trigger; not_applicable records document "
+            "the condition that makes the harness inapplicable."
         ),
     )
     environment: dict[str, str] = Field(
@@ -165,10 +236,39 @@ class EvidenceRecord(BaseModel):
 
     @model_validator(mode="after")
     def validate_applicability_reason(self) -> "EvidenceRecord":
-        """Validate applicability_reason is present when status is not_applicable."""
-        if self.status == "not_applicable" and (
-            not self.applicability_reason or not self.applicability_reason.strip()
+        """Validate applicability_reason is present for EVERY record."""
+        if not self.applicability_reason or not self.applicability_reason.strip():
+            msg = (
+                f"applicability_reason is required for every record; "
+                f"got status={self.status!r}, reason={self.applicability_reason!r}"
+            )
+            raise ValueError(msg)
+        if self.status == "not_applicable" and len(self.applicability_reason) < 10:  # noqa: PLR2004
+            msg = (
+                f"applicability_reason for not_applicable must be a "
+                f"substantive explanation (got {len(self.applicability_reason)} chars)"
+            )
+            raise ValueError(msg)
+        return self
+
+    @model_validator(mode="after")
+    def validate_status_contradictions(self) -> "EvidenceRecord":
+        """Reject status/result contradictions.
+
+        When status is 'pass' every result must have passed=True.
+        When status is 'fail' and exit_code is 0, at least one result
+        must have passed=False.
+        """
+        if self.status == "pass":
+            for r in self.results:
+                if not r.passed:
+                    msg = f"status is 'pass' but result {r.kind!r} has passed=False"
+                    raise ValueError(msg)
+        if (
+            self.status == "fail"
+            and self.invocation.exit_code == 0
+            and not any(not r.passed for r in self.results)
         ):
-            msg = "applicability_reason is required when status is 'not_applicable'"
+            msg = "status is 'fail' with exit_code=0 but no result has passed=False"
             raise ValueError(msg)
         return self

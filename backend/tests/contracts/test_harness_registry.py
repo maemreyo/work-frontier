@@ -109,6 +109,7 @@ def test_validate_evidence_rejects_fabricated_version_and_stale_subject() -> Non
         ),
         tool=Tool(name="python", version="1.0.0", commit_sha="a" * 40),
         applicability="standard",
+        applicability_reason="Standard foundation closure test record",
         environment={"os": "test"},
         artifacts=[Artifact(path="x", hashes=ArtifactHashes(sha256="b" * 64))],
         results=[Result(kind="test", passed=True)],

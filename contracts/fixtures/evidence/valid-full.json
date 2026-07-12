@@ -11,7 +11,7 @@
     "working_directory": ".",
     "start_time": "2026-07-12T03:21:30Z",
     "end_time": "2026-07-12T03:22:45Z",
-    "duration_seconds": 75.3
+    "duration_seconds": 75.0
   },
   "tool": {
     "name": "mypy",
@@ -19,7 +19,7 @@
     "commit_sha": "f1e2d3c4b5a6978012345678901234567890fedc"
   },
   "applicability": "standard",
-  "applicability_reason": null,
+  "applicability_reason": "Standard foundation closure fixture with results",
   "environment": {
     "python": "3.13.5",
     "os": "darwin-arm64",

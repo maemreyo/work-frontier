@@ -23,14 +23,42 @@
       "type": "object"
     },
     "ArtifactHashes": {
-      "additionalProperties": true,
-      "description": "Typed content hashes with required canonical SHA-256.\n\nThe ``sha256`` field is required and must be a lowercase 64-char hex\nstring. Additional hash algorithms may be stored as extra fields for\ninteroperability (e.g. md5 for legacy tools), but ``sha256`` is the\nauthoritative content identity for certification.",
+      "additionalProperties": false,
+      "description": "Typed content hashes with required canonical SHA-256.\n\nOnly SHA-256 is authoritative for certification.  Additional\nstandard algorithms may be added as typed optional fields; the\nmodel does not accept arbitrary extra keys.",
       "properties": {
+        "md5": {
+          "anyOf": [
+            {
+              "pattern": "^[a-f0-9]{32}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional MD5 hex digest (lowercase 32-char hex, legacy interop)",
+          "title": "Md5"
+        },
         "sha256": {
           "description": "Lowercase SHA-256 hex digest (required, canonical)",
           "pattern": "^[a-f0-9]{64}$",
           "title": "Sha256",
           "type": "string"
+        },
+        "sha512": {
+          "anyOf": [
+            {
+              "pattern": "^[a-f0-9]{128}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional SHA-512 hex digest (lowercase 128-char hex)",
+          "title": "Sha512"
         }
       },
       "required": [
@@ -56,7 +84,7 @@
           "type": "number"
         },
         "end_time": {
-          "description": "ISO 8601 timestamp when execution completed",
+          "description": "ISO 8601 timestamp when execution completed (must be timezone-aware)",
           "format": "date-time",
           "title": "End Time",
           "type": "string"
@@ -67,7 +95,7 @@
           "type": "integer"
         },
         "start_time": {
-          "description": "ISO 8601 timestamp when execution started",
+          "description": "ISO 8601 timestamp when execution started (must be timezone-aware)",
           "format": "date-time",
           "title": "Start Time",
           "type": "string"
@@ -159,6 +187,16 @@
   },
   "additionalProperties": false,
   "description": "Canonical evidence record for verification harness execution.\n\nInspired by SARIF v2.1.0 patterns (invocation envelope, tool.driver,\nartifact.hashes, propertyBag). The property_bag field is an extension\npoint for harness-specific data without requiring schema migration.",
+  "if": {
+    "properties": {
+      "status": {
+        "const": "not_applicable"
+      }
+    },
+    "required": [
+      "status"
+    ]
+  },
   "properties": {
     "applicability": {
       "description": "Harness applicability scope; required, no default",
@@ -171,17 +209,10 @@
       "type": "string"
     },
     "applicability_reason": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "description": "Reason for the applicability value. Required when status is 'not_applicable'; optional otherwise.",
-      "title": "Applicability Reason"
+      "description": "Reason for the applicability value. Required for EVERY record: foundation records use 'Included in Standard foundation closure defined by registry.foundation_closure'; large/tenant records document the envelope trigger; not_applicable records document the condition that makes the harness inapplicable.",
+      "minLength": 1,
+      "title": "Applicability Reason",
+      "type": "string"
     },
     "artifacts": {
       "description": "Files or resources examined or produced during execution",
@@ -313,10 +344,20 @@
     "invocation",
     "tool",
     "applicability",
+    "applicability_reason",
     "environment",
     "stdout_artifact",
     "stderr_artifact"
   ],
+  "then": {
+    "properties": {
+      "applicability_reason": {
+        "description": "Substantive explanation of why the harness is not applicable (min 10 characters)",
+        "minLength": 10,
+        "type": "string"
+      }
+    }
+  },
   "title": "EvidenceRecord",
   "type": "object"
 }

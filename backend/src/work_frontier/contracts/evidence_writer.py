@@ -372,6 +372,17 @@ def write_evidence(
 
     evidence_root.mkdir(parents=True, exist_ok=True)
 
+    if applicability_reason is None or not applicability_reason.strip():
+        if applicability == "standard":
+            applicability_reason = (
+                "Included in Standard foundation closure defined by "
+                "registry.foundation_closure"
+            )
+        elif applicability == "large":
+            applicability_reason = "Large-scope envelope trigger"
+        else:
+            applicability_reason = "Tenant-scope envelope trigger"
+
     evidence_stem = Path(output_filename).stem
     stdout_artifact = write_text_artifact_to_dir(
         content=stdout or "",

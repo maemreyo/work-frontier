@@ -429,23 +429,36 @@ def _make_two_harness_registry(path: Path) -> None:
     _ = path.write_text(json.dumps(registry))
 
 
-def test_recertify_rejects_cross_harness_tamper() -> None:
-    """Post-closure revalidation catches artifact tampering between harnesses.
+def test_recertify_run_scoped_artifacts_prevent_cross_harness_tamper() -> None:
+    """Run-scoped artifact paths prevent cross-harness tampering.
 
-    Harness B overwrites harness A's declared artifact after A was
-    validated.  The post-closure revalidation must detect the hash
-    mismatch and fail certification.
+    Each harness gets its own artifact directory under
+    evidence_root/artifacts/<harness_id>/, so even when two harnesses
+    write to the same global path, their certified artifact copies
+    are isolated and no hash collision occurs.
     """
     clone = _make_clean_clone()
     registry_path = Path(tempfile.mkstemp(suffix=".json")[1])
     try:
         _make_two_harness_registry(registry_path)
 
-        with pytest.raises(CertificationError, match="hash mismatch"):
-            _ = recertify_foundation(
-                repo_root=clone,
-                registry_path=registry_path,
-            )
+        report = recertify_foundation(
+            repo_root=clone,
+            registry_path=registry_path,
+        )
+        assert report["certified"] is True
+
+        # Verify each harness has its own run-scoped artifact.
+        evidence_root = clone / report["evidence_root"]
+        h1_artifact = (
+            evidence_root / "artifacts" / "WF-HAR-TAMPER-01" / "shared-output.txt"
+        )
+        h2_artifact = (
+            evidence_root / "artifacts" / "WF-HAR-TAMPER-02" / "shared-output.txt"
+        )
+        assert h1_artifact.is_file()
+        assert h2_artifact.is_file()
+        assert h1_artifact.read_text() != h2_artifact.read_text()
     finally:
         shutil.rmtree(clone, ignore_errors=True)
         registry_path.unlink(missing_ok=True)
@@ -588,18 +601,14 @@ def test_recertify_rejects_tampered_evidence_status() -> None:
     try:
         _make_two_harness_evidence_status_tamper_registry(registry_path)
 
-        with pytest.raises(CertificationError) as exc_info:
+        with pytest.raises(
+            CertificationError,
+            match=r"evidence record content changed after creation",
+        ):
             _ = recertify_foundation(
                 repo_root=clone,
                 registry_path=registry_path,
             )
-        # The revalidation should catch the tampered status (pass with
-        # tampered exit_code mismatch, or the disk-reloaded record
-        # validation)
-        error_text = str(exc_info.value)
-        assert any(
-            kw in error_text for kw in ["status", "tamper", "fail", "hash mismatch"]
-        )
     finally:
         shutil.rmtree(clone, ignore_errors=True)
         registry_path.unlink(missing_ok=True)
@@ -668,6 +677,7 @@ def validator_env(tmp_path: Path) -> tuple[Path, EvidenceRecord]:
             commit_sha="a" * 40,
         ),
         applicability="standard",
+        applicability_reason="Standard foundation closure test record",
         environment={"os": "test"},
         stdout_artifact=Artifact(
             path="stdout.txt",

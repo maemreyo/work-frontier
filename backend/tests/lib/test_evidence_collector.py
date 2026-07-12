@@ -145,17 +145,20 @@ class TestEvidenceCollectorArtifactHandling:
     def test_add_artifact_computes_sha256_hash(self, tmp_path: Path) -> None:
         """Test that add_artifact() correctly computes SHA-256 hash.
 
-        Given: A file with known content
+        Given: A file with known content in a temp git repo
         When: add_artifact() is called
-        Then: The artifact is added with correct SHA-256 hash
+        Then: The artifact is added with correct SHA-256 hash and repo-relative path
         """
         # Given
+        repo = tmp_path / "repo"
+        _ = _init_temp_git_repo(repo, "dummy.txt", "dummy")
         collector = EvidenceCollector(
             harness_id="WF-HAR-PYTHON-01",
             tool_name="pytest",
             tool_version="8.1.0",
+            repo_root=repo,
         )
-        test_file = tmp_path / "test_artifact.txt"
+        test_file = repo / "test_artifact.txt"
         test_content = b"test content for hashing"
         _ = test_file.write_bytes(test_content)
         expected_hash = hashlib.sha256(test_content).hexdigest()
@@ -165,25 +168,28 @@ class TestEvidenceCollectorArtifactHandling:
 
         # Then
         assert len(collector.artifacts) == 1
-        assert collector.artifacts[0].path == str(test_file)
+        assert collector.artifacts[0].path == "test_artifact.txt"
         assert collector.artifacts[0].hashes is not None
         assert collector.artifacts[0].hashes.sha256 == expected_hash
 
     def test_add_multiple_artifacts(self, tmp_path: Path) -> None:
         """Test that multiple artifacts can be added.
 
-        Given: An initialized collector and multiple files
+        Given: An initialized collector and multiple files in a temp git repo
         When: add_artifact() is called multiple times
-        Then: All artifacts are accumulated with their hashes
+        Then: All artifacts are accumulated with their hashes and repo-relative paths
         """
         # Given
+        repo = tmp_path / "repo"
+        _ = _init_temp_git_repo(repo, "dummy.txt", "dummy")
         collector = EvidenceCollector(
             harness_id="WF-HAR-PYTHON-01",
             tool_name="pytest",
             tool_version="8.1.0",
+            repo_root=repo,
         )
-        file1 = tmp_path / "artifact1.txt"
-        file2 = tmp_path / "artifact2.txt"
+        file1 = repo / "artifact1.txt"
+        file2 = repo / "artifact2.txt"
         _ = file1.write_bytes(b"content 1")
         _ = file2.write_bytes(b"content 2")
 
@@ -193,8 +199,8 @@ class TestEvidenceCollectorArtifactHandling:
 
         # Then
         assert len(collector.artifacts) == 2
-        assert collector.artifacts[0].path == str(file1)
-        assert collector.artifacts[1].path == str(file2)
+        assert collector.artifacts[0].path == "artifact1.txt"
+        assert collector.artifacts[1].path == "artifact2.txt"
 
 
 class TestEvidenceCollectorBuildLogic:
@@ -385,13 +391,16 @@ class TestEvidenceRecordSerialization:
         Then: The JSON is valid and contains all expected fields
         """
         # Given
+        repo = tmp_path / "repo"
+        _ = _init_temp_git_repo(repo, "dummy.txt", "dummy")
         collector = EvidenceCollector(
             harness_id="WF-HAR-PYTHON-01",
             tool_name="pytest",
             tool_version="8.1.0",
+            repo_root=repo,
         )
         collector.add_result(kind="test", passed=True, detail="test passed")
-        test_file = tmp_path / "artifact.txt"
+        test_file = repo / "artifact.txt"
         _ = test_file.write_bytes(b"test content")
         collector.add_artifact(test_file)
         start = datetime(2026, 7, 12, 10, 0, 0, tzinfo=UTC)
@@ -403,7 +412,6 @@ class TestEvidenceRecordSerialization:
             exit_code=0,
             start_time=start,
             end_time=end,
-            working_directory="/workspace",
         )
         json_str = record.model_dump_json()
         parsed: dict[str, Any] = json.loads(json_str)
@@ -414,7 +422,7 @@ class TestEvidenceRecordSerialization:
         assert parsed["status"] == "pass"
         assert parsed["invocation"]["command"] == "pytest tests/"
         assert parsed["invocation"]["exit_code"] == 0
-        assert parsed["invocation"]["working_directory"] == "/workspace"
+        assert parsed["invocation"]["working_directory"] == "."
         assert parsed["invocation"]["duration_seconds"] == 10.0
         assert parsed["tool"]["name"] == "pytest"
         assert parsed["tool"]["version"] == "8.1.0"

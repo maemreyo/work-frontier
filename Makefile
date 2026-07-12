@@ -17,15 +17,15 @@ check: check-static test ## Run the fast pre-push verification path
 check-architecture: ## Enforce Python architecture import boundaries
 	uv run python scripts/check_import_boundaries.py
 
-check-static: check-preflight check-architecture check-contracts check-harness-registry ## Run lint, format, type, contract, registry, and architecture checks
-	uv run ruff check backend/src backend/tests scripts
-	uv run ruff format --check backend/src backend/tests scripts
+check-static: check-preflight check-architecture check-contracts check-harness-registry check-anatomy ## Run lint, format, type, contract, registry, architecture, and anatomy checks
+	uv run ruff check backend/lib backend/src backend/tests scripts
+	uv run ruff format --check backend/lib backend/src backend/tests scripts
 	uv run basedpyright
 	pnpm --dir frontend run check
 
 fix: ## Apply safe Python and frontend formatter/linter fixes
-	uv run ruff check --fix backend/src backend/tests scripts
-	uv run ruff format backend/src backend/tests scripts
+	uv run ruff check --fix backend/lib backend/src backend/tests scripts
+	uv run ruff format backend/lib backend/src backend/tests scripts
 	pnpm --dir frontend run fix
 
 generate-contracts: ## Regenerate JSON Schema and frontend Zod contracts
@@ -39,6 +39,9 @@ generate-harness-registry: ## Regenerate the machine-readable harness registry
 
 check-harness-registry: ## Fail when the harness registry drifts
 	uv run python scripts/build_harness_registry.py --check
+
+check-anatomy: ## Check anatomy docs for content/source drift
+	python3 scripts/check_anatomy_drift.py docs/anatomy --repo-root .
 
 check-preflight: ## Run ADR-006 foundation validation and behavioral tests
 	node .omo/preflight/adr-006/validate.mjs

@@ -30,7 +30,7 @@ packages = ["backend/src/work_frontier"]
 typeCheckingMode = "all"
 pythonVersion = "3.13"
 pythonPlatform = "All"
-include = ["backend/src", "backend/tests", "scripts"]
+include = ["backend/lib", "backend/src", "backend/tests", "scripts"]
 exclude = ["**/__pycache__", "**/.venv", "**/build", "**/dist", "backend/tests/fixtures"]
 reportUnusedCallResult = "warning"
 reportUnusedVariable = "error"
@@ -46,6 +46,11 @@ reportUnknownMemberType = "none"
 reportImplicitStringConcatenation = "none"
 
 [[tool.basedpyright.executionEnvironments]]
+root = "backend/lib"
+extraPaths = ["backend/src"]
+reportImplicitStringConcatenation = "none"
+
+[[tool.basedpyright.executionEnvironments]]
 root = "."
 extraPaths = ["backend/src"]
 reportImplicitStringConcatenation = "none"
@@ -53,7 +58,7 @@ reportImplicitStringConcatenation = "none"
 [tool.ruff]
 target-version = "py313"
 line-length = 88
-src = ["backend/src", "backend/tests", "scripts"]
+src = ["backend/lib", "backend/src", "backend/tests", "scripts"]
 extend-exclude = ["backend/tests/fixtures"]
 
 [tool.ruff.lint]
@@ -68,6 +73,7 @@ fixable = ["ALL"]
 "backend/tests/**/*.py" = ["D", "PLC0415", "PLR2004", "S101", "S607"]
 "scripts/**/*.py" = ["C901", "INP001", "PLC0415", "PLR0911", "PLR0915", "PLR2004", "S603", "S607", "SIM102", "T201", "TRY301", "BLE001", "EXE001", "D103", "RET504"]
 "scripts/minio_roundtrip.py" = ["S105"]
+"backend/lib/evidence_collector.py" = ["PLR0913", "D"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
