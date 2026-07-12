@@ -301,7 +301,8 @@ def write_text_artifact_to_dir(
     return Artifact(path=rel_path, hashes=ArtifactHashes(sha256=hash_bytes(encoded)))
 
 
-def _relative_workdir(working_directory: str | None, repo_root: Path) -> str:
+def relative_workdir(working_directory: str | None, repo_root: Path) -> str:
+    """Return a repository-contained working directory as a relative path."""
     if working_directory is None:
         return "."
 
@@ -400,7 +401,7 @@ def write_evidence(
     invocation = Invocation(
         command=command,
         exit_code=exit_code,
-        working_directory=_relative_workdir(working_directory, repo_root),
+        working_directory=relative_workdir(working_directory, repo_root),
         start_time=start_time,
         end_time=end_time,
         duration_seconds=duration_seconds,

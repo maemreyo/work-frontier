@@ -34,6 +34,7 @@ RUNNER_EVIDENCE_HARNESSES: Final = frozenset({"WF-HAR-STATIC-01", "WF-HAR-STATIC
 RUNNER_EVIDENCE_EXPECTED_PATTERN: Final = re.compile(
     r"^\.omo/evidence/static/WF-HAR-[A-Z0-9]+(?:-[A-Z0-9]+)*\.json$"
 )
+REMOTE_ARTIFACT_PREFIXES: Final = ("s3://", "http://", "https://")
 
 
 class ArtifactMode(StrEnum):
@@ -86,6 +87,13 @@ def _validate_harness_entry(harness_entry: dict[str, Any], seen: set[str]) -> st
         raise HarnessRegistryError(msg)
     if not str(harness_entry.get("artifact", "")).strip():
         msg = f"{harness_id}: artifact is required"
+        raise HarnessRegistryError(msg)
+    declared_artifact = str(harness_entry["artifact"])
+    if declared_artifact.startswith(REMOTE_ARTIFACT_PREFIXES):
+        msg = (
+            f"{harness_id}: remote artifact {declared_artifact!r} is not allowed; "
+            "a registry-declared certification artifact must be locally verifiable"
+        )
         raise HarnessRegistryError(msg)
     applicability = str(harness_entry.get("applicability", ""))
     if applicability not in APPLICABILITY:

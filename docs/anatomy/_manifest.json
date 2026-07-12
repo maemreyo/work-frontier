@@ -86,7 +86,7 @@
     "Delete this manifest to force a full retrace."
   ],
   "content_digest": "92311b464de506d8b1fdfdc4ef6ffc4eeadf4ac00a7927091f3166965917c206",
-  "source_input_digest": "a0ae057457dc110276d72bfc9aacc7350eacdf91ee88357b27674829a3577b53",
+  "source_input_digest": "162a0592a68278a54e5e14a8c57a3bd287394ab1fb8c2183b7ba8663d4374921",
   "generator_version": "anatomy-skill@1.0.0",
   "source_inputs": [
     ".agents/skills/anatomy-ask/SKILL.md",

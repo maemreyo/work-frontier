@@ -5,13 +5,14 @@ and handle all required validation cases.
 """
 
 import json
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import cast
 
 import pytest
 from pydantic import ValidationError
 
-from work_frontier.contracts.evidence_record import EvidenceRecord
+from work_frontier.contracts.evidence_record import EvidenceRecord, Invocation
 
 # Path to fixtures directory
 FIXTURES_DIR = (
@@ -32,6 +33,7 @@ def test_valid_minimal_fixture_validates() -> None:
     # Then: all required fields are present and correct
     assert record.schema_version == "1.0.0"
     assert record.harness_id == "WF-HAR-PREFLIGHT-01"
+
     assert record.status == "pass"
     assert record.invocation.command == "pytest tests/unit"
     assert record.invocation.exit_code == 0
@@ -42,6 +44,24 @@ def test_valid_minimal_fixture_validates() -> None:
     assert record.artifacts == []
     assert record.results == []
     assert record.property_bag is None
+
+
+@pytest.mark.parametrize(
+    "working_directory",
+    ["/absolute/path", "build/../outside"],
+)
+def test_invocation_rejects_non_portable_working_directory(
+    working_directory: str,
+) -> None:
+    with pytest.raises(ValidationError, match="working_directory"):
+        _ = Invocation(
+            command="true",
+            exit_code=0,
+            working_directory=working_directory,
+            start_time=datetime(2026, 7, 12, 10, 0, 0, tzinfo=UTC),
+            end_time=datetime(2026, 7, 12, 10, 0, 1, tzinfo=UTC),
+            duration_seconds=1.0,
+        )
 
 
 def test_valid_full_fixture_validates() -> None:

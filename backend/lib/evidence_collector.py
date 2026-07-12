@@ -23,6 +23,8 @@ from work_frontier.contracts.evidence_writer import (
     get_environment_fingerprint,
     get_git_commit_sha,
     get_git_tree_sha,
+    relative_workdir,
+    write_text_artifact_to_dir,
 )
 
 
@@ -102,7 +104,7 @@ class EvidenceCollector:
         exit_code: int,
         start_time: datetime,
         end_time: datetime,
-        working_directory: str = ".",
+        working_directory: str | None = None,
         run_id: str | None = None,
         stdout: str = "",
         stderr: str = "",
@@ -151,26 +153,18 @@ class EvidenceCollector:
         if evidence_root is None:
             evidence_root = repo_root / ".omo" / "evidence"
 
-        # Write stdout/stderr to disk so the artifact references point to
-        # real files that pass validate_evidence_record's existence check.
-        evidence_root.mkdir(parents=True, exist_ok=True)
-        stdout_path = evidence_root / f"{self.harness_id}.stdout.txt"
-        stderr_path = evidence_root / f"{self.harness_id}.stderr.txt"
-        _ = stdout_path.write_text(stdout or "", encoding="utf-8")
-        _ = stderr_path.write_text(stderr or "", encoding="utf-8")
-
-        def _hash_bytes(content: str) -> str:
-            return hashlib.sha256(content.encode("utf-8")).hexdigest()
-
-        # Compute repo-root-relative paths for the artifact records
-        try:
-            stdout_rel = str(stdout_path.relative_to(repo_root))
-        except ValueError:
-            stdout_rel = str(stdout_path)
-        try:
-            stderr_rel = str(stderr_path.relative_to(repo_root))
-        except ValueError:
-            stderr_rel = str(stderr_path)
+        stdout_artifact = write_text_artifact_to_dir(
+            content=stdout,
+            dir_path=evidence_root,
+            filename=f"{self.harness_id}.stdout.txt",
+            repo_root=repo_root,
+        )
+        stderr_artifact = write_text_artifact_to_dir(
+            content=stderr,
+            dir_path=evidence_root,
+            filename=f"{self.harness_id}.stderr.txt",
+            repo_root=repo_root,
+        )
 
         return EvidenceRecord(
             schema_version="1.0.0",
@@ -182,7 +176,7 @@ class EvidenceCollector:
             invocation=Invocation(
                 command=command,
                 exit_code=exit_code,
-                working_directory=working_directory,
+                working_directory=relative_workdir(working_directory, repo_root),
                 start_time=start_time,
                 end_time=end_time,
                 duration_seconds=(end_time - start_time).total_seconds(),
@@ -201,12 +195,12 @@ class EvidenceCollector:
             artifacts=self.artifacts,
             results=self.results,
             stdout_artifact=Artifact(
-                path=stdout_rel,
-                hashes=ArtifactHashes(sha256=_hash_bytes(stdout or "")),
+                path=stdout_artifact.path,
+                hashes=stdout_artifact.hashes,
             ),
             stderr_artifact=Artifact(
-                path=stderr_rel,
-                hashes=ArtifactHashes(sha256=_hash_bytes(stderr or "")),
+                path=stderr_artifact.path,
+                hashes=stderr_artifact.hashes,
             ),
             property_bag=property_bag,
         )

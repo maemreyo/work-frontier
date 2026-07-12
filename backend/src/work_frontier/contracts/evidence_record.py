@@ -45,6 +45,16 @@ class Invocation(BaseModel):
     )
     duration_seconds: float = Field(ge=0, description="Execution duration in seconds")
 
+    @field_validator("working_directory")
+    @classmethod
+    def working_directory_must_be_repo_relative(cls, v: str) -> str:
+        """Ensure the invocation directory is portable certification metadata."""
+        parsed = PurePosixPath(v)
+        if parsed.is_absolute() or ".." in parsed.parts:
+            msg = "working_directory must be repo-relative and contained"
+            raise ValueError(msg)
+        return v
+
     @model_validator(mode="after")
     def validate_duration(self) -> "Invocation":
         """Enforce duration_seconds consistency with start_time/end_time."""

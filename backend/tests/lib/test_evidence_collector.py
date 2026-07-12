@@ -320,12 +320,12 @@ class TestEvidenceCollectorBuildLogic:
         # Then
         assert record.invocation.duration_seconds == expected_duration
 
-    def test_build_with_working_directory(self) -> None:
-        """Test that build() includes working_directory when provided.
+    def test_build_rejects_working_directory_outside_repo(self) -> None:
+        """Test that build() rejects an absolute directory outside the repository.
 
         Given: A working directory path
         When: build() is called with working_directory parameter
-        Then: The record includes the working directory
+        Then: The non-portable working directory is rejected
         """
         # Given
         collector = EvidenceCollector(
@@ -337,16 +337,14 @@ class TestEvidenceCollectorBuildLogic:
         end = start + timedelta(seconds=5)
 
         # When
-        record = collector.build(
-            command="pytest tests/",
-            exit_code=0,
-            start_time=start,
-            end_time=end,
-            working_directory="/workspace/project",
-        )
-
-        # Then
-        assert record.invocation.working_directory == "/workspace/project"
+        with pytest.raises(ValueError, match="working_directory must be relative"):
+            _ = collector.build(
+                command="pytest tests/",
+                exit_code=0,
+                start_time=start,
+                end_time=end,
+                working_directory="/workspace/project",
+            )
 
     def test_build_includes_all_metadata(self) -> None:
         """Test that build() includes all harness and tool metadata.

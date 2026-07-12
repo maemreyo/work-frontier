@@ -22,7 +22,6 @@ from work_frontier.contracts.evidence_writer import (
     get_git_commit_sha,
     get_git_tree_sha,
     get_tool_version,
-    hash_bytes,
     hash_file,
     is_working_tree_clean,
     write_evidence,
@@ -153,16 +152,6 @@ def run_harness(  # noqa: PLR0915 - harness lifecycle spans pre/post validation
         ev_rel = str((evidence_root / evidence_filename).relative_to(root))
         property_bag["artifact.resolved_path"] = ev_rel
         property_bag["artifact.runner_evidence_path"] = ev_rel
-    elif _is_remote_artifact(declared_artifact):
-        artifacts.append(
-            Artifact(
-                path=declared_artifact,
-                hashes=ArtifactHashes(
-                    sha256=hash_bytes(declared_artifact.encode("utf-8"))
-                ),
-            )
-        )
-        property_bag["artifact.kind"] = "remote"
     else:
         # Look for the artifact first at the run-scoped path (modern
         # producers that honor WF_HARNESS_ARTIFACT), then at the legacy
@@ -273,6 +262,10 @@ def _validate_artifact(
         )
         return failures
     if _is_remote_artifact(artifact.path):
+        failures.append(
+            f"{harness_id}: {label} artifact {artifact.path} is remote and "
+            "cannot be locally content-verified"
+        )
         return failures
 
     candidate = (root / artifact.path).resolve()
@@ -536,6 +529,12 @@ def recertify_foundation(  # noqa: PLR0915 - certification lifecycle spans 8 har
             if record.harness_id != expected_id:
                 failures.append(
                     f"{expected_id}: file contains record for {record.harness_id}"
+                )
+                continue
+            if record.run_id != run_id:
+                failures.append(
+                    f"{expected_id}: record run_id {record.run_id!r} does not match "
+                    f"certification run_id {run_id!r}"
                 )
                 continue
             disk_records.append(record)

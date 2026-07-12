@@ -150,7 +150,7 @@ def _minimal_harness(**overrides: object) -> dict[str, object]:
         "id": "WF-HAR-TEST-01",
         "name": "test",
         "command": "true",
-        "artifact": "s3://bucket/test",
+        "artifact": ".omo/evidence/static/test.json",
         "blocks_release": False,
         "what_it_runs": "test",
         "pass_criteria": "exit 0",
@@ -181,6 +181,14 @@ def test_build_rejects_invalid_artifact_mode_value() -> None:
     harness = _minimal_harness(artifact_mode="bogus_mode")
     registry = _minimal_registry(harness)
     with pytest.raises(HarnessRegistryError, match="invalid artifact_mode"):
+        validate_registry(registry)
+
+
+def test_registry_rejects_remote_declared_artifact() -> None:
+    harness = _minimal_harness(artifact="s3://bucket/unverified")
+    registry = _minimal_registry(harness)
+
+    with pytest.raises(HarnessRegistryError, match="remote artifact"):
         validate_registry(registry)
 
 

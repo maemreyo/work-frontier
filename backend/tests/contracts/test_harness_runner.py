@@ -77,8 +77,11 @@ def _make_minimal_registry(path: Path) -> None:
             {
                 "id": "WF-HAR-TEST-01",
                 "name": "test",
-                "command": "true",
-                "artifact": "s3://example-bucket/does-not-matter",
+                "command": (
+                    "mkdir -p .omo/evidence/static && "
+                    "echo test > .omo/evidence/static/test-output.txt"
+                ),
+                "artifact": ".omo/evidence/static/test-output.txt",
                 "artifact_mode": "declared_file",
                 "blocks_release": True,
                 "what_it_runs": "noop",
@@ -182,7 +185,7 @@ def test_recertify_rejects_missing_artifact_mode() -> None:
                     "id": "WF-HAR-NOAM-01",
                     "name": "no-artifact-mode",
                     "command": "true",
-                    "artifact": "s3://bucket/test",
+                    "artifact": ".omo/evidence/static/test.json",
                     # artifact_mode deliberately omitted
                     "blocks_release": True,
                     "what_it_runs": "noop without artifact_mode",
@@ -302,6 +305,7 @@ def test_recertify_foundation_records_subject_tree_sha_and_requires_tree_match()
         )
         assert report["subject_tree_sha"] == expected_tree
         assert report["working_tree_clean"] is True
+        assert {record["run_id"] for record in report["records"]} == {report["run_id"]}
         for record in report["records"]:
             assert record["subject_tree_sha"] == expected_tree
     finally:
@@ -464,6 +468,45 @@ def test_recertify_run_scoped_artifacts_prevent_cross_harness_tamper() -> None:
         registry_path.unlink(missing_ok=True)
 
 
+def test_recertify_rejects_unexpected_evidence_record_on_disk() -> None:
+    clone = _make_clean_clone()
+    registry_path = Path(tempfile.mkstemp(suffix=".json")[1])
+    try:
+        registry = {
+            "schema_version": "1.0.0",
+            "harness_count": 1,
+            "catalog_harness_count": 1,
+            "standard_blocker_count": 1,
+            "standard_blockers": ["WF-HAR-EXTRA-01"],
+            "harnesses": [
+                {
+                    "id": "WF-HAR-EXTRA-01",
+                    "name": "writes-extra-record",
+                    "command": (
+                        "mkdir -p .omo/evidence/static && "
+                        "echo output > .omo/evidence/static/extra-output.txt && "
+                        "echo '{}' > \"$WF_EVIDENCE_ROOT/WF-HAR-EXTRA-FAKE.json\""
+                    ),
+                    "artifact": ".omo/evidence/static/extra-output.txt",
+                    "artifact_mode": "declared_file",
+                    "blocks_release": True,
+                    "what_it_runs": "writes a contradictory record",
+                    "pass_criteria": "closure rejects extra JSON",
+                    "applicability": "standard",
+                    "status": "implemented",
+                }
+            ],
+            "foundation_closure": ["WF-HAR-EXTRA-01"],
+        }
+        _ = registry_path.write_text(json.dumps(registry))
+
+        with pytest.raises(CertificationError, match="unexpected records"):
+            _ = recertify_foundation(repo_root=clone, registry_path=registry_path)
+    finally:
+        shutil.rmtree(clone, ignore_errors=True)
+        registry_path.unlink(missing_ok=True)
+
+
 def _make_two_harness_evidence_tamper_registry(path: Path) -> None:
     """Write a registry where the second harness deletes the first's evidence JSON.
 
@@ -475,6 +518,8 @@ def _make_two_harness_evidence_tamper_registry(path: Path) -> None:
     # .omo/evidence/runs/<sha>/<run_id>/. Both harnesses share the same
     # evidence_root within a single recertify_foundation call.
     delete_command = (
+        "mkdir -p .omo/evidence/static && "
+        "echo tamper > .omo/evidence/static/tamperer.json && "
         "EVIDENCE_FILE=$(find .omo/evidence/runs -name "
         "'WF-HAR-TAMPER-EV-01.json' -type f 2>/dev/null | head -1) && "
         '[ -n "$EVIDENCE_FILE" ] && rm -f "$EVIDENCE_FILE" || true'
@@ -489,8 +534,11 @@ def _make_two_harness_evidence_tamper_registry(path: Path) -> None:
             {
                 "id": "WF-HAR-TAMPER-EV-01",
                 "name": "producer",
-                "command": "echo producer > /dev/null",
-                "artifact": "s3://bucket/producer",
+                "command": (
+                    "mkdir -p .omo/evidence/static && "
+                    "echo producer > .omo/evidence/static/producer.json"
+                ),
+                "artifact": ".omo/evidence/static/producer.json",
                 "artifact_mode": "declared_file",
                 "blocks_release": True,
                 "what_it_runs": "creates evidence",
@@ -502,7 +550,7 @@ def _make_two_harness_evidence_tamper_registry(path: Path) -> None:
                 "id": "WF-HAR-TAMPER-EV-02",
                 "name": "evidence-tamperer",
                 "command": delete_command,
-                "artifact": "s3://bucket/tamperer",
+                "artifact": ".omo/evidence/static/tamperer.json",
                 "artifact_mode": "declared_file",
                 "blocks_release": True,
                 "what_it_runs": "deletes first harness's evidence file",
@@ -545,6 +593,8 @@ def _make_two_harness_evidence_status_tamper_registry(path: Path) -> None:
     (status changed) and revalidation must catch the tamper.
     """
     sed_command = (
+        "mkdir -p .omo/evidence/static && "
+        "echo tamper > .omo/evidence/static/tamperer.json && "
         'python -c "import json,pathlib; '
         "p=next(pathlib.Path('.').rglob('WF-HAR-TAMPER-ST-01.json')); "
         "d=json.loads(p.read_text()); "
@@ -562,8 +612,11 @@ def _make_two_harness_evidence_status_tamper_registry(path: Path) -> None:
             {
                 "id": "WF-HAR-TAMPER-ST-01",
                 "name": "producer",
-                "command": "echo producer > /dev/null",
-                "artifact": "s3://bucket/producer",
+                "command": (
+                    "mkdir -p .omo/evidence/static && "
+                    "echo producer > .omo/evidence/static/producer.json"
+                ),
+                "artifact": ".omo/evidence/static/producer.json",
                 "artifact_mode": "declared_file",
                 "blocks_release": True,
                 "what_it_runs": "creates evidence",
@@ -575,7 +628,7 @@ def _make_two_harness_evidence_status_tamper_registry(path: Path) -> None:
                 "id": "WF-HAR-TAMPER-ST-02",
                 "name": "status-tamperer",
                 "command": sed_command,
-                "artifact": "s3://bucket/tamperer",
+                "artifact": ".omo/evidence/static/tamperer.json",
                 "artifact_mode": "declared_file",
                 "blocks_release": True,
                 "what_it_runs": "changes first harness's evidence status",
@@ -626,7 +679,7 @@ _REGISTRY = {
             "id": "WF-HAR-VALIDATE-TEST-01",
             "name": "validate-test",
             "command": "true",
-            "artifact": "s3://example-bucket/test",
+            "artifact": ".omo/evidence/static/test.json",
             "blocks_release": True,
             "what_it_runs": "test",
             "pass_criteria": "exit 0",
