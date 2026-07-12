@@ -80,8 +80,11 @@ def test_validate_evidence_rejects_fabricated_version_and_stale_subject() -> Non
             duration_seconds=1.0,
         ),
         tool=Tool(name="python", version="1.0.0", commit_sha="a" * 40),
+        environment={"os": "test"},
         artifacts=[Artifact(path="x", hashes={"sha256": "b" * 64})],
         results=[Result(kind="test", passed=True)],
+        stdout_artifact=Artifact(path="stdout.txt", hashes={"sha256": "c" * 64}),
+        stderr_artifact=Artifact(path="stderr.txt", hashes={"sha256": "d" * 64}),
         property_bag={"registry.harness_id": "WF-HAR-STATIC-02"},
     )
     failures = validate_evidence_record(

@@ -86,5 +86,6 @@
     "Target-state architecture is discussed only as a discrepancy.",
     "Delete this manifest to force a full retrace."
   ],
-  "content_digest": "92311b464de506d8b1fdfdc4ef6ffc4eeadf4ac00a7927091f3166965917c206"
+  "content_digest": "92311b464de506d8b1fdfdc4ef6ffc4eeadf4ac00a7927091f3166965917c206",
+  "source_input_digest": "224f82a82d046f29a65eb2f168ea6cf41f636a9e2b0e3e5eb7425142ac9b4049"
 }

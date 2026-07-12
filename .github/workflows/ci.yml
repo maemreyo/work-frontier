@@ -48,7 +48,7 @@ jobs:
         run: uv run python scripts/build_harness_registry.py --check
       - name: Check anatomy docs content drift
         run: |
-          python3 scripts/check_anatomy_drift.py docs/anatomy
+          python3 scripts/check_anatomy_drift.py docs/anatomy --mode check
 
   verify:
     runs-on: ubuntu-latest

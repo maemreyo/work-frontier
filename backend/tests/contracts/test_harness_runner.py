@@ -22,7 +22,7 @@ import sys
 import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -36,6 +36,7 @@ from work_frontier.contracts.evidence_record import (
     JsonValue,
     Tool,
 )
+from work_frontier.contracts.evidence_writer import hash_bytes
 from work_frontier.contracts.harness_runner import (
     CertificationError,
     recertify_foundation,
@@ -231,106 +232,240 @@ _REGISTRY = {
 _SHA256_HEX = "ab" * 32
 
 
-def _make_valid_record(
-    *,
-    tree_sha_and_commit_match: str = "",
-    stdout: Artifact | None = None,
-    stderr: Artifact | None = None,
-    artifacts: list[Artifact] | None = None,
-    property_bag: dict[str, JsonValue] | None = None,
-) -> EvidenceRecord:
-    """Build a valid EvidenceRecord with optional field overrides."""
-    return EvidenceRecord(
+class _UnsetSentinel:
+    pass
+
+
+_UNSET: Any = _UnsetSentinel()
+
+
+@pytest.fixture
+def validator_env(tmp_path: Path) -> tuple[Path, EvidenceRecord]:
+    """Create real stdout/stderr files and return (tmp_path, baseline_record)."""
+    stdout_content = "stdout output"
+    stderr_content = "stderr output"
+    stdout_path = tmp_path / "stdout.txt"
+    stderr_path = tmp_path / "stderr.txt"
+    _ = stdout_path.write_text(stdout_content)
+    _ = stderr_path.write_text(stderr_content)
+
+    record = EvidenceRecord(
         schema_version="1.0.0",
         harness_id="WF-HAR-VALIDATE-TEST-01",
         status="pass",
         run_id="run-test-validate",
         subject_sha="a" * 40,
-        subject_tree_sha=tree_sha_and_commit_match or "b" * 40,
+        subject_tree_sha="b" * 40,
         invocation=Invocation(
             command="true",
             exit_code=0,
+            working_directory=".",
             start_time=datetime(2026, 7, 12, 10, 0, 0, tzinfo=UTC),
             end_time=datetime(2026, 7, 12, 10, 0, 1, tzinfo=UTC),
             duration_seconds=1.0,
         ),
         tool=Tool(
             name="test",
-            version="1.0.0",
-            commit_sha=tree_sha_and_commit_match or "a" * 40,
+            version="8.2.0",
+            commit_sha="a" * 40,
         ),
         environment={"os": "test"},
-        stdout_artifact=stdout
-        or Artifact(path="stdout.txt", hashes={"sha256": _SHA256_HEX}),
-        stderr_artifact=stderr
-        or Artifact(path="stderr.txt", hashes={"sha256": _SHA256_HEX}),
-        artifacts=artifacts or [],
-        property_bag=property_bag or {"registry.harness_id": "WF-HAR-VALIDATE-TEST-01"},
+        stdout_artifact=Artifact(
+            path="stdout.txt",
+            hashes={"sha256": hash_bytes(stdout_content.encode("utf-8"))},
+        ),
+        stderr_artifact=Artifact(
+            path="stderr.txt",
+            hashes={"sha256": hash_bytes(stderr_content.encode("utf-8"))},
+        ),
+        property_bag={"registry.harness_id": "WF-HAR-VALIDATE-TEST-01"},
     )
+    return (tmp_path, record)
 
 
-def test_validate_rejects_subject_tree_sha_mismatch() -> None:
-    """Record subject_tree_sha differs from expected_subject_tree_sha -> failure."""
-    record = _make_valid_record()
+def _make_record(  # noqa: PLR0913 - many optional overrides for mutation tests
+    *,
+    env: tuple[Path, EvidenceRecord],
+    subject_tree_sha: str = _UNSET,
+    commit_sha: str = _UNSET,
+    stdout: Artifact = _UNSET,
+    stderr: Artifact = _UNSET,
+    artifacts: list[Artifact] = _UNSET,
+    property_bag: dict[str, JsonValue] = _UNSET,
+) -> EvidenceRecord:
+    """Build a record from the baseline with selective overrides.
+
+    Each parameter independently overrides the corresponding field.
+    Use *None* to explicitly clear a field.
+    """
+    base = env[1]
+    overrides: dict[str, object] = {}
+    if subject_tree_sha is not _UNSET:
+        overrides["subject_tree_sha"] = subject_tree_sha
+    if commit_sha is not _UNSET:
+        overrides["tool"] = Tool(
+            name="test",
+            version="8.2.0",
+            commit_sha=commit_sha,
+        )
+    if stdout is not _UNSET:
+        overrides["stdout_artifact"] = stdout
+    if stderr is not _UNSET:
+        overrides["stderr_artifact"] = stderr
+    if artifacts is not _UNSET:
+        overrides["artifacts"] = artifacts or []
+    if property_bag is not _UNSET:
+        overrides["property_bag"] = property_bag
+    return base.model_copy(update=overrides)
+
+
+def test_validate_baseline_passes(
+    validator_env: tuple[Path, EvidenceRecord],
+) -> None:
+    """Baseline record (real files, valid hashes, correct version) passes."""
+    root, record = validator_env
     failures = validate_evidence_record(
+        record,
+        registry=_REGISTRY,
+        expected_subject_sha="a" * 40,
+        expected_subject_tree_sha="b" * 40,
+        repo_root=root,
+    )
+    assert failures == []
+
+
+def test_validate_rejects_subject_tree_sha_mismatch(
+    validator_env: tuple[Path, EvidenceRecord],
+) -> None:
+    """Record subject_tree_sha differs from expected_subject_tree_sha -> failure."""
+    root, _ = validator_env
+    record = _make_record(env=validator_env, subject_tree_sha="x" * 40)
+    _ = validate_evidence_record(
         record,
         registry=_REGISTRY,
         expected_subject_sha="a" * 40,
         expected_subject_tree_sha="x" * 40,
+        repo_root=root,
     )
-    assert any("subject_tree_sha" in f for f in failures)
+    record2 = _make_record(env=validator_env, subject_tree_sha="y" * 40)
+    failures2 = validate_evidence_record(
+        record2,
+        registry=_REGISTRY,
+        expected_subject_sha="a" * 40,
+        expected_subject_tree_sha="x" * 40,
+        repo_root=root,
+    )
+    assert any("subject_tree_sha" in f for f in failures2)
+    assert len(failures2) == 1
 
 
-def test_validate_rejects_tool_commit_sha_mismatch() -> None:
+def test_validate_rejects_tool_commit_sha_mismatch(
+    validator_env: tuple[Path, EvidenceRecord],
+) -> None:
     """tool.commit_sha differs from expected_subject_sha -> failure."""
-    record = _make_valid_record(tree_sha_and_commit_match="c" * 40)
+    root, _ = validator_env
+    record = _make_record(env=validator_env, commit_sha="c" * 40)
     failures = validate_evidence_record(
         record,
         registry=_REGISTRY,
         expected_subject_sha="a" * 40,
+        repo_root=root,
     )
     assert any("tool.commit_sha" in f for f in failures)
 
 
-def test_validate_rejects_missing_stdout_artifact() -> None:
-    """stdout_artifact is None -> failure."""
-    record = _make_valid_record(stdout=None)
-    failures = validate_evidence_record(record, registry=_REGISTRY)
-    assert any("stdout" in f and "artifact" in f for f in failures)
+def test_validate_rejects_stdout_hash_mismatch(
+    validator_env: tuple[Path, EvidenceRecord],
+) -> None:
+    """stdout file content doesn't match the recorded hash -> failure."""
+    root, record = validator_env
+    _ = (root / "stdout.txt").write_text("tampered content")
+    failures = validate_evidence_record(
+        record,
+        registry=_REGISTRY,
+        expected_subject_sha="a" * 40,
+        expected_subject_tree_sha="b" * 40,
+        repo_root=root,
+    )
+    assert any("hash mismatch" in f for f in failures)
 
 
-def test_validate_rejects_missing_stderr_artifact() -> None:
-    """stderr_artifact is None -> failure."""
-    record = _make_valid_record(stderr=None)
-    failures = validate_evidence_record(record, registry=_REGISTRY)
-    assert any("stderr" in f and "artifact" in f for f in failures)
-
-
-def test_validate_rejects_stdout_without_sha256() -> None:
+def test_validate_rejects_stdout_without_sha256(
+    validator_env: tuple[Path, EvidenceRecord],
+) -> None:
     """stdout_artifact with no sha256 hash -> failure."""
-    record = _make_valid_record(
-        stdout=Artifact(path="stdout.txt", hashes=None),
+    root, _ = validator_env
+    record = _make_record(
+        env=validator_env,
+        stdout=Artifact(
+            path="stdout.txt",
+            hashes={"md5": "d41d8cd98f00b204e9800998ecf8427e"},
+        ),
     )
-    failures = validate_evidence_record(record, registry=_REGISTRY)
+    failures = validate_evidence_record(
+        record,
+        registry=_REGISTRY,
+        expected_subject_sha="a" * 40,
+        repo_root=root,
+    )
     assert any("sha256" in f for f in failures)
 
 
-def test_validate_rejects_artifact_without_sha256() -> None:
+def test_validate_rejects_artifact_without_sha256(
+    validator_env: tuple[Path, EvidenceRecord],
+) -> None:
     """Declared artifact with no sha256 hash -> failure."""
-    record = _make_valid_record(
-        artifacts=[Artifact(path="output.json", hashes=None)],
+    root, _ = validator_env
+    record = _make_record(
+        env=validator_env,
+        artifacts=[
+            Artifact(
+                path="output.json",
+                hashes={"md5": "d41d8cd98f00b204e9800998ecf8427e"},
+            )
+        ],
     )
-    failures = validate_evidence_record(record, registry=_REGISTRY)
+    failures = validate_evidence_record(
+        record,
+        registry=_REGISTRY,
+        expected_subject_sha="a" * 40,
+        repo_root=root,
+    )
     assert any("sha256" in f for f in failures)
 
 
-def test_validate_rejects_missing_declared_artifact_when_flag_set() -> None:
-    """property_bag declares missing artifact -> failure even without on-disk check."""
-    record = _make_valid_record(
+def test_validate_rejects_missing_declared_artifact_when_flag_set(
+    validator_env: tuple[Path, EvidenceRecord],
+) -> None:
+    """property_bag declares missing artifact -> failure."""
+    root, _ = validator_env
+    record = _make_record(
+        env=validator_env,
         property_bag={
             "registry.harness_id": "WF-HAR-VALIDATE-TEST-01",
             "artifact.declared_missing": "some/file.json",
         },
     )
-    failures = validate_evidence_record(record, registry=_REGISTRY)
+    failures = validate_evidence_record(
+        record,
+        registry=_REGISTRY,
+        expected_subject_sha="a" * 40,
+        repo_root=root,
+    )
     assert any("declared artifact missing" in f for f in failures)
+
+
+def test_validate_rejects_fabricated_tool_version(
+    validator_env: tuple[Path, EvidenceRecord],
+) -> None:
+    """Tool version '1.0.0' is treated as fabricated -> failure."""
+    root, base = validator_env
+    bad_tool = Tool(name="test", version="1.0.0", commit_sha="a" * 40)
+    record = base.model_copy(update={"tool": bad_tool})
+    failures = validate_evidence_record(
+        record,
+        registry=_REGISTRY,
+        expected_subject_sha="a" * 40,
+        repo_root=root,
+    )
+    assert any("fabricated" in f for f in failures)

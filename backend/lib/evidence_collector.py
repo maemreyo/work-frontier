@@ -20,6 +20,7 @@ from work_frontier.contracts.evidence_writer import (
     generate_run_id,
     get_environment_fingerprint,
     get_git_tree_sha,
+    hash_bytes,
 )
 
 
@@ -97,8 +98,11 @@ class EvidenceCollector:
         exit_code: int,
         start_time: datetime,
         end_time: datetime,
-        working_directory: str | None = None,
+        working_directory: str = ".",
         run_id: str | None = None,
+        stdout: str = "",
+        stderr: str = "",
+        property_bag: dict[str, str | int | float | bool | None] | None = None,
     ) -> EvidenceRecord:
         """Build the final EvidenceRecord.
 
@@ -145,4 +149,13 @@ class EvidenceCollector:
             environment=get_environment_fingerprint(),
             artifacts=self.artifacts,
             results=self.results,
+            stdout_artifact=Artifact(
+                path=f".omo/evidence/{self.harness_id}.stdout.txt",
+                hashes={"sha256": hash_bytes((stdout or "").encode("utf-8"))},
+            ),
+            stderr_artifact=Artifact(
+                path=f".omo/evidence/{self.harness_id}.stderr.txt",
+                hashes={"sha256": hash_bytes((stderr or "").encode("utf-8"))},
+            ),
+            property_bag=property_bag,
         )

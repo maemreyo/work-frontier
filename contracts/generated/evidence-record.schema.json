@@ -5,20 +5,12 @@
       "description": "File or resource examined or produced during execution.",
       "properties": {
         "hashes": {
-          "anyOf": [
-            {
-              "additionalProperties": {
-                "type": "string"
-              },
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
+          "additionalProperties": {
+            "type": "string"
+          },
           "description": "Content hashes keyed by algorithm name (e.g., sha256)",
-          "title": "Hashes"
+          "title": "Hashes",
+          "type": "object"
         },
         "path": {
           "description": "File path relative to repository root",
@@ -28,7 +20,8 @@
         }
       },
       "required": [
-        "path"
+        "path",
+        "hashes"
       ],
       "title": "Artifact",
       "type": "object"
@@ -67,22 +60,15 @@
           "type": "string"
         },
         "working_directory": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Working directory where command was executed",
-          "title": "Working Directory"
+          "description": "Working directory (repo-relative) where command was executed",
+          "title": "Working Directory",
+          "type": "string"
         }
       },
       "required": [
         "command",
         "exit_code",
+        "working_directory",
         "start_time",
         "end_time",
         "duration_seconds"
@@ -161,6 +147,17 @@
   "additionalProperties": false,
   "description": "Canonical evidence record for verification harness execution.\n\nInspired by SARIF v2.1.0 patterns (invocation envelope, tool.driver,\nartifact.hashes, propertyBag). The property_bag field is an extension\npoint for harness-specific data without requiring schema migration.",
   "properties": {
+    "applicability": {
+      "default": "standard",
+      "description": "Harness applicability scope",
+      "enum": [
+        "standard",
+        "large",
+        "tenant"
+      ],
+      "title": "Applicability",
+      "type": "string"
+    },
     "artifacts": {
       "description": "Files or resources examined or produced during execution",
       "items": {
@@ -258,27 +255,11 @@
       "type": "string"
     },
     "stderr_artifact": {
-      "anyOf": [
-        {
-          "$ref": "#/$defs/Artifact"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
+      "$ref": "#/$defs/Artifact",
       "description": "Captured stderr artifact"
     },
     "stdout_artifact": {
-      "anyOf": [
-        {
-          "$ref": "#/$defs/Artifact"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
+      "$ref": "#/$defs/Artifact",
       "description": "Captured stdout artifact"
     },
     "subject_sha": {
@@ -305,7 +286,10 @@
     "subject_sha",
     "subject_tree_sha",
     "invocation",
-    "tool"
+    "tool",
+    "environment",
+    "stdout_artifact",
+    "stderr_artifact"
   ],
   "title": "EvidenceRecord",
   "type": "object"

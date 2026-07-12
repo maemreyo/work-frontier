@@ -16,6 +16,7 @@ from work_frontier.contracts.evidence_record import (
     Result,
 )
 from work_frontier.contracts.evidence_writer import (
+    generate_run_id,
     get_git_commit_sha,
     get_git_tree_sha,
     get_tool_version,
@@ -23,7 +24,6 @@ from work_frontier.contracts.evidence_writer import (
     hash_file,
     is_working_tree_clean,
     write_evidence,
-    write_text_artifact,
 )
 from work_frontier.contracts.harness_registry import (
     foundation_closure,
@@ -58,13 +58,14 @@ def _is_remote_artifact(path: str) -> bool:
     return path.startswith(("s3://", "http://", "https://"))
 
 
-def run_harness(
+def run_harness(  # noqa: PLR0915 - harness lifecycle spans pre/post validation
     harness_id: str,
     *,
     repo_root: Path | None = None,
     registry_path: Path | None = None,
+    evidence_root: Path | None = None,
 ) -> EvidenceRecord:
-    """Run one harness by registry ID and write evidence under .omo/evidence."""
+    """Run one harness by registry ID and write evidence under *evidence_root*."""
     root = repo_root or Path.cwd()
     registry = load_registry(
         registry_path or (root / "contracts" / "harness-registry.json")
@@ -73,6 +74,14 @@ def run_harness(
     command = str(harness["command"])
     tool_name = tool_name_for_harness(harness_id)
     tool_version = get_tool_version(tool_name)
+
+    # Pre-harness: delete stale declared artifact for local-file harnesses
+    # to prevent a previous run's artifact from fabricating a fresh pass.
+    declared_artifact = str(harness["artifact"])
+    artifact_mode = harness.get("artifact_mode", "declared_file")
+    if artifact_mode == "declared_file" and not _is_remote_artifact(declared_artifact):
+        stale_path = root / declared_artifact
+        stale_path.unlink(missing_ok=True)
 
     start_time = datetime.now(UTC)
     completed = subprocess.run(
@@ -90,7 +99,6 @@ def run_harness(
 
     stdout = completed.stdout or ""
     stderr = completed.stderr or ""
-    declared_artifact = str(harness["artifact"])
     results = [
         Result(
             kind="harness_exit",
@@ -108,14 +116,12 @@ def run_harness(
         "registry.artifact": declared_artifact,
     }
 
-    artifact_mode = harness.get("artifact_mode", "declared_file")
+    if evidence_root is None:
+        evidence_root = root / ".omo" / "evidence" / "static"
+    evidence_root.mkdir(parents=True, exist_ok=True)
 
     artifacts: list[Artifact] = []
     if artifact_mode == "runner_evidence":
-        # The evidence record itself is the only artifact.  Skip the
-        # pre-existence check — a clean clone will not have the evidence
-        # file yet.  The self-reference removal below drops it from the
-        # artifact list to keep validation round-trips stable.
         property_bag["artifact.kind"] = "runner_evidence"
     elif _is_remote_artifact(declared_artifact):
         artifacts.append(
@@ -136,8 +142,11 @@ def run_harness(
             )
             property_bag["artifact.kind"] = "local-file"
         else:
-            console_rel = f".omo/evidence/static/{harness_id}.console.log"
+            evidence_root_rel = evidence_root.relative_to(root)
+            console_rel = f"{evidence_root_rel}/{harness_id}.console.log"
             console_content = f"STDOUT:\n{stdout}\n\nSTDERR:\n{stderr}\n"
+            from work_frontier.contracts.evidence_writer import write_text_artifact
+
             console_artifact = write_text_artifact(
                 content=console_content,
                 relative_path=console_rel,
@@ -157,16 +166,18 @@ def run_harness(
                 )
 
     evidence_filename = f"{harness_id}.json"
-    evidence_relpath = f".omo/evidence/static/{evidence_filename}"
     # The harness's own evidence file is the certification record, not an
     # artifact to re-hash. Drop it from the artifact list so a re-validation
     # round-trip stays stable across runs and the validator does not see an
     # ever-shifting hash on the self-referential file.
-    artifacts = [
-        artifact for artifact in artifacts if artifact.path != evidence_relpath
-    ]
+    evidence_relpath = str(evidence_root / evidence_filename)
+    try:
+        evidence_rel = str((evidence_root / evidence_filename).relative_to(root))
+    except ValueError:
+        evidence_rel = evidence_relpath
+    artifacts = [artifact for artifact in artifacts if artifact.path != evidence_rel]
 
-    evidence_path = write_evidence(
+    _ = write_evidence(
         harness_id=harness_id,
         status=status,
         command=command,
@@ -179,12 +190,14 @@ def run_harness(
         artifacts=artifacts,
         results=results,
         property_bag=property_bag,
-        output_filename=f"{harness_id}.json",
+        output_filename=evidence_filename,
         repo_root=root,
         stdout=stdout,
         stderr=stderr,
+        evidence_root=evidence_root,
     )
 
+    evidence_path = evidence_root / evidence_filename
     return EvidenceRecord.model_validate_json(evidence_path.read_text(encoding="utf-8"))
 
 
@@ -197,7 +210,7 @@ def _validate_artifact(
 ) -> list[str]:
     """Return certification failures for one artifact (regular or stdout/stderr)."""
     failures: list[str] = []
-    digest = None if artifact.hashes is None else artifact.hashes.get("sha256")
+    digest = artifact.hashes.get("sha256")
     if not digest:
         failures.append(
             f"{harness_id}: {label} artifact {artifact.path} missing sha256"
@@ -258,10 +271,7 @@ def validate_evidence_record(
     if record.tool.version in {"", "1.0.0", "unknown", "fabricated"}:
         failures.append(f"{record.harness_id}: fabricated or missing tool version")
 
-    if (
-        record.invocation.working_directory
-        and record.invocation.working_directory.startswith("/")
-    ):
+    if record.invocation.working_directory.startswith("/"):
         failures.append(f"{record.harness_id}: working_directory must be repo-relative")
 
     if record.invocation.command != str(harness.get("command", "")):
@@ -293,19 +303,7 @@ def validate_evidence_record(
         ("stdout", record.stdout_artifact),
         ("stderr", record.stderr_artifact),
     ):
-        if art is None:
-            bag_key = "artifact.declared_missing"
-            if bag.get(bag_key):
-                failures.append(
-                    f"{record.harness_id}: {label} artifact missing "
-                    f"(declared artifact was never produced)"
-                )
-            else:
-                failures.append(f"{record.harness_id}: {label} artifact is None")
-        else:
-            failures.extend(
-                _validate_artifact(art, root, record.harness_id, label=label)
-            )
+        failures.extend(_validate_artifact(art, root, record.harness_id, label=label))
 
     if (
         require_blocking_pass
@@ -327,7 +325,7 @@ def validate_evidence_record(
     return failures
 
 
-def recertify_foundation(
+def recertify_foundation(  # noqa: PLR0915 - certification lifecycle spans 8 harnesses + post-closure
     *,
     repo_root: Path | None = None,
     registry_path: Path | None = None,
@@ -357,6 +355,10 @@ def recertify_foundation(
         )
 
     subject_tree_sha = get_git_tree_sha(root)
+    run_id = generate_run_id()
+    # Run-scoped evidence directory prevents stale-artifact fabrication:
+    # each recertification starts with a clean directory.
+    evidence_root = root / ".omo" / "evidence" / "runs" / subject_sha[:12] / run_id
 
     records: list[EvidenceRecord] = []
     if not failures:
@@ -366,7 +368,10 @@ def recertify_foundation(
                 failures.append(f"{harness_id}: not implemented; cannot recertify")
                 continue
             record = run_harness(
-                harness_id, repo_root=root, registry_path=registry_path
+                harness_id,
+                repo_root=root,
+                registry_path=registry_path,
+                evidence_root=evidence_root,
             )
             records.append(record)
             failures.extend(
@@ -409,6 +414,40 @@ def recertify_foundation(
                 f"({subject_tree_sha} -> {post_tree_sha})"
             )
 
+    # Post-closure full revalidation: reload every record from disk and
+    # verify that declared artifacts still exist with matching hashes.
+    # This catches cross-harness tampering where harness B overwrites
+    # harness A's artifacts after A was validated.
+    if not failures:
+        for record in records:
+            failures.extend(
+                validate_evidence_record(
+                    record,
+                    registry=registry,
+                    expected_subject_sha=subject_sha,
+                    expected_subject_tree_sha=subject_tree_sha,
+                    require_blocking_pass=True,
+                    repo_root=root,
+                )
+            )
+
+    # Build evidence manifest with SHA-256 of every evidence record file.
+    # This proves which exact record content was certified and enables
+    # downstream tamper detection.
+    evidence_manifest: dict[str, str] = {}
+    for record in records:
+        record_path = evidence_root / f"{record.harness_id}.json"
+        if record_path.is_file():
+            evidence_manifest[record.harness_id] = hash_file(record_path)
+
+    # For runner_evidence mode harnesses, include the evidence file path
+    # to prove the record was actually written.
+    property_bag_manifest: dict[str, JsonValue] = {
+        "evidence_root": str(evidence_root.relative_to(root))
+        if evidence_root.is_relative_to(root)
+        else str(evidence_root),
+    }
+
     certified = len(failures) == 0 and len(records) == len(closure)
     report = {
         "schema_version": "1.0.0",
@@ -417,6 +456,12 @@ def recertify_foundation(
         "subject_tree_sha": subject_tree_sha,
         "working_tree_clean": working_tree_clean,
         "closure": closure,
+        "run_id": run_id,
+        "evidence_root": str(evidence_root.relative_to(root))
+        if evidence_root.is_relative_to(root)
+        else str(evidence_root),
+        "evidence_manifest": evidence_manifest,
+        "property_bag": property_bag_manifest,
         "certified": certified,
         "failures": failures,
         "records": [

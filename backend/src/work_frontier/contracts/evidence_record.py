@@ -7,7 +7,7 @@ Schema version: 1.0.0
 from datetime import datetime
 from typing import ClassVar, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 JsonValue = str | int | float | bool | None | dict[str, object] | list[object]
 
@@ -21,8 +21,8 @@ class Invocation(BaseModel):
         min_length=1, description="Full command invoked by the harness"
     )
     exit_code: int = Field(description="Process exit code")
-    working_directory: str | None = Field(
-        default=None, description="Working directory where command was executed"
+    working_directory: str = Field(
+        description="Working directory (repo-relative) where command was executed"
     )
     start_time: datetime = Field(
         description="ISO 8601 timestamp when execution started"
@@ -52,8 +52,7 @@ class Artifact(BaseModel):
     model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
 
     path: str = Field(min_length=1, description="File path relative to repository root")
-    hashes: dict[str, str] | None = Field(
-        default=None,
+    hashes: dict[str, str] = Field(
         description="Content hashes keyed by algorithm name (e.g., sha256)",
     )
 
@@ -108,8 +107,11 @@ class EvidenceRecord(BaseModel):
     )
     invocation: Invocation
     tool: Tool
+    applicability: Literal["standard", "large", "tenant"] = Field(
+        default="standard",
+        description="Harness applicability scope",
+    )
     environment: dict[str, str] = Field(
-        default_factory=dict,
         description="Environment fingerprint (OS, runtime versions, etc.)",
     )
     artifacts: list[Artifact] = Field(
@@ -119,13 +121,18 @@ class EvidenceRecord(BaseModel):
     results: list[Result] = Field(
         default_factory=list, description="Individual test results or findings"
     )
-    stdout_artifact: Artifact | None = Field(
-        default=None, description="Captured stdout artifact"
-    )
-    stderr_artifact: Artifact | None = Field(
-        default=None, description="Captured stderr artifact"
-    )
+    stdout_artifact: Artifact = Field(description="Captured stdout artifact")
+    stderr_artifact: Artifact = Field(description="Captured stderr artifact")
     property_bag: dict[str, JsonValue] | None = Field(
         default=None,
         description=("Extension point for harness-specific data."),
     )
+
+    @field_validator("environment")
+    @classmethod
+    def environment_must_be_non_empty(cls, v: dict[str, str]) -> dict[str, str]:
+        """Validate environment is non-empty and includes 'os' key."""
+        msg = "environment must be non-empty and include 'os' key"
+        if not v or "os" not in v:
+            raise ValueError(msg)
+        return v

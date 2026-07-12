@@ -38,6 +38,7 @@ def test_valid_minimal_fixture_validates() -> None:
     assert record.tool.name == "pytest"
     assert record.tool.version == "8.2.0"
     assert record.tool.commit_sha == "a1b2c3d4e5f6789012345678901234567890abcd"
+    assert record.environment["os"] == "linux-x86_64"
     assert record.artifacts == []
     assert record.results == []
     assert record.property_bag is None
@@ -59,18 +60,13 @@ def test_valid_full_fixture_validates() -> None:
     assert record.status == "fail"
     assert record.invocation.command == "mypy backend/app --strict"
     assert record.invocation.exit_code == 1
-    assert (
-        record.invocation.working_directory
-        == "/Users/trung.ngo/Documents/zaob-dev/work-frontier"
-    )
+    assert record.invocation.working_directory == "."
     assert record.tool.name == "mypy"
-    assert len(record.artifacts) == 2
+    assert len(record.artifacts) == 1
     assert record.artifacts[0].path == "backend/app/models/user.py"
     assert record.artifacts[0].hashes is not None
     expected_sha = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     assert record.artifacts[0].hashes["sha256"] == expected_sha
-    assert record.artifacts[1].path == "backend/app/services/auth.py"
-    assert record.artifacts[1].hashes is None
     assert len(record.results) == 2
     assert record.results[0].kind == "type_error"
     assert record.results[0].passed is False
@@ -112,18 +108,19 @@ def test_roundtrip_full_preserves_data() -> None:
     assert dict1 == dict2
 
 
-def test_missing_required_field_raises_validation_error() -> None:
-    """Test that missing required field raises ValidationError."""
-    # Given: data missing the required 'status' field
-    data = {
+def _base_valid_data() -> dict[str, object]:
+    """Return minimally valid data dict (excluding the field under test)."""
+    return {
         "schema_version": "1.0.0",
         "harness_id": "WF-HAR-PREFLIGHT-01",
-        # Missing 'status'
+        "status": "pass",
         "run_id": "run-test-001",
         "subject_sha": "a1b2c3d4e5f6789012345678901234567890abcd",
+        "subject_tree_sha": "0123456789abcdef0123456789abcdef01234567",
         "invocation": {
             "command": "pytest tests/unit",
             "exit_code": 0,
+            "working_directory": ".",
             "start_time": "2026-07-12T03:20:00Z",
             "end_time": "2026-07-12T03:20:15Z",
             "duration_seconds": 15.2,
@@ -133,7 +130,26 @@ def test_missing_required_field_raises_validation_error() -> None:
             "version": "8.2.0",
             "commit_sha": "a1b2c3d4e5f6789012345678901234567890abcd",
         },
+        "environment": {
+            "os": "linux-x86_64",
+            "python": "3.13.5",
+        },
+        "stdout_artifact": {
+            "path": "stdout.txt",
+            "hashes": {"sha256": "ab" * 32},
+        },
+        "stderr_artifact": {
+            "path": "stderr.txt",
+            "hashes": {"sha256": "ab" * 32},
+        },
     }
+
+
+def test_missing_required_field_raises_validation_error() -> None:
+    """Test that missing required field raises ValidationError."""
+    # Given: data missing the required 'status' field
+    data = _base_valid_data()
+    del data["status"]
 
     # When/Then: validation should raise ValidationError
     with pytest.raises(ValidationError) as exc_info:
@@ -146,25 +162,8 @@ def test_missing_required_field_raises_validation_error() -> None:
 def test_invalid_harness_id_pattern_raises_validation_error() -> None:
     """Test that invalid harness_id pattern raises ValidationError."""
     # Given: data with invalid harness_id pattern (wrong prefix)
-    data = {
-        "schema_version": "1.0.0",
-        "harness_id": "INVALID-HARNESS-01",  # Invalid: wrong prefix
-        "status": "pass",
-        "run_id": "run-test-001",
-        "subject_sha": "a1b2c3d4e5f6789012345678901234567890abcd",
-        "invocation": {
-            "command": "pytest tests/unit",
-            "exit_code": 0,
-            "start_time": "2026-07-12T03:20:00Z",
-            "end_time": "2026-07-12T03:20:15Z",
-            "duration_seconds": 15.2,
-        },
-        "tool": {
-            "name": "pytest",
-            "version": "8.2.0",
-            "commit_sha": "a1b2c3d4e5f6789012345678901234567890abcd",
-        },
-    }
+    data = _base_valid_data()
+    data["harness_id"] = "INVALID-HARNESS-01"  # Invalid: wrong prefix
 
     # When/Then: validation should raise ValidationError
     with pytest.raises(ValidationError) as exc_info:
@@ -177,25 +176,9 @@ def test_invalid_harness_id_pattern_raises_validation_error() -> None:
 def test_invalid_commit_sha_pattern_raises_validation_error() -> None:
     """Test that invalid commit_sha pattern raises ValidationError."""
     # Given: data with invalid commit_sha (not 40 hex chars)
-    data = {
-        "schema_version": "1.0.0",
-        "harness_id": "WF-HAR-PREFLIGHT-01",
-        "status": "pass",
-        "run_id": "run-test-001",
-        "subject_sha": "a1b2c3d4e5f6789012345678901234567890abcd",
-        "invocation": {
-            "command": "pytest tests/unit",
-            "exit_code": 0,
-            "start_time": "2026-07-12T03:20:00Z",
-            "end_time": "2026-07-12T03:20:15Z",
-            "duration_seconds": 15.2,
-        },
-        "tool": {
-            "name": "pytest",
-            "version": "8.2.0",
-            "commit_sha": "invalid-sha",  # Invalid: not 40 hex chars
-        },
-    }
+    data = _base_valid_data()
+    tool_data = cast("dict[str, object]", data["tool"])
+    tool_data["commit_sha"] = "invalid-sha"
 
     # When/Then: validation should raise ValidationError
     with pytest.raises(ValidationError) as exc_info:
@@ -225,25 +208,9 @@ def test_extra_field_in_evidence_record_raises_validation_error() -> None:
 def test_negative_duration_raises_validation_error() -> None:
     """Test that negative duration_seconds raises ValidationError."""
     # Given: data with negative duration
-    data = {
-        "schema_version": "1.0.0",
-        "harness_id": "WF-HAR-PREFLIGHT-01",
-        "status": "pass",
-        "run_id": "run-test-001",
-        "subject_sha": "a1b2c3d4e5f6789012345678901234567890abcd",
-        "invocation": {
-            "command": "pytest tests/unit",
-            "exit_code": 0,
-            "start_time": "2026-07-12T03:20:00Z",
-            "end_time": "2026-07-12T03:20:15Z",
-            "duration_seconds": -5.0,  # Invalid: negative
-        },
-        "tool": {
-            "name": "pytest",
-            "version": "8.2.0",
-            "commit_sha": "a1b2c3d4e5f6789012345678901234567890abcd",
-        },
-    }
+    data = _base_valid_data()
+    inv_data = cast("dict[str, object]", data["invocation"])
+    inv_data["duration_seconds"] = -5.0
 
     # When/Then: validation should raise ValidationError
     with pytest.raises(ValidationError) as exc_info:

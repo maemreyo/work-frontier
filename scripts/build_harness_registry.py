@@ -33,13 +33,20 @@ FOUNDATION_CLOSURE: tuple[str, ...] = (
 
 FIELD_RE = re.compile(r"\|\s*\*\*([^*]+)\*\*\s*\|\s*(.*?)\s*\|")
 
-# Runner-level semantic overrides that are not expressed in the catalog.
-# These are implementation details of the harness runner, not catalog
-# semantics, so they live here rather than in the catalog markdown.
-_ARTIFACT_MODE_OVERRIDES: dict[str, str] = {
-    "WF-HAR-STATIC-01": "runner_evidence",
-    "WF-HAR-STATIC-04": "runner_evidence",
-}
+# Valid artifact_mode values and the harnesses allowed to use each mode.
+# runner_evidence means the harness's evidence record IS the declared
+# artifact — no separate file is produced.
+_VALID_ARTIFACT_MODES: frozenset[str] = frozenset({"declared_file", "runner_evidence"})
+
+# Harnesses whose declared artifact is the evidence record itself.
+_RUNNER_EVIDENCE_HARNESSES: frozenset[str] = frozenset(
+    {"WF-HAR-STATIC-01", "WF-HAR-STATIC-04"}
+)
+
+# Expected output path pattern for runner_evidence harnesses.
+_RUNNER_EVIDENCE_EXPECTED_PATTERN = re.compile(
+    r"^\.omo/evidence/static/WF-HAR-[A-Z0-9]+(?:-[A-Z0-9]+)*\.json$"
+)
 
 
 def _clean_cell(value: str) -> str:
@@ -87,12 +94,45 @@ def parse_catalog(text: str) -> list[dict[str, object]]:
     return harnesses
 
 
+def _validate_artifact_modes(harnesses: list[dict[str, object]]) -> None:
+    """Validate artifact_mode values and runner_evidence path contracts."""
+    for h in harnesses:
+        h_id = str(h["id"])
+        mode = h.get("artifact_mode", "declared_file")
+        if mode not in _VALID_ARTIFACT_MODES:
+            msg = (
+                f"invalid artifact_mode {mode!r} for {h_id}; "
+                f"valid values: {sorted(_VALID_ARTIFACT_MODES)}"
+            )
+            raise ValueError(msg)
+        if mode == "runner_evidence":
+            if h_id not in _RUNNER_EVIDENCE_HARNESSES:
+                msg = f"{h_id}: runner_evidence mode not allowed for this harness"
+                raise ValueError(msg)
+            declared = str(h.get("artifact", ""))
+            if not _RUNNER_EVIDENCE_EXPECTED_PATTERN.match(declared):
+                msg = (
+                    f"{h_id}: runner_evidence artifact {declared!r} does not "
+                    f"match expected pattern .omo/evidence/static/<HARNESS_ID>.json"
+                )
+                raise ValueError(msg)
+            expected_path = f".omo/evidence/static/{h_id}.json"
+            if declared != expected_path:
+                msg = (
+                    f"{h_id}: runner_evidence artifact {declared!r} "
+                    f"does not match expected path {expected_path!r}"
+                )
+                raise ValueError(msg)
+
+
 def build_registry(harnesses: list[dict[str, object]]) -> dict[str, object]:
     by_id = {str(item["id"]): item for item in harnesses}
     for harness_id in FOUNDATION_CLOSURE:
         if harness_id not in by_id:
             msg = f"foundation closure harness missing from catalog: {harness_id}"
             raise ValueError(msg)
+
+    _validate_artifact_modes(harnesses)
 
     standard_blockers = [
         str(item["id"])
@@ -123,8 +163,10 @@ def main() -> int:
     harnesses = parse_catalog(CATALOG.read_text(encoding="utf-8"))
     for h in harnesses:
         h_id = str(h["id"])
-        if h_id in _ARTIFACT_MODE_OVERRIDES:
-            h["artifact_mode"] = _ARTIFACT_MODE_OVERRIDES[h_id]
+        if h_id in _RUNNER_EVIDENCE_HARNESSES:
+            h["artifact_mode"] = "runner_evidence"
+        else:
+            h["artifact_mode"] = "declared_file"
     registry = build_registry(harnesses)
     rendered = f"{json.dumps(registry, indent=2, sort_keys=False)}\n"
 

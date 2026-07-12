@@ -264,7 +264,7 @@ def write_text_artifact(
     relative_path: str,
     repo_root: Path,
 ) -> Artifact:
-    """Write a text artifact under repo_root and return a hashed Artifact."""
+    """Write a text artifact under *relative_path* relative to *repo_root*."""
     from work_frontier.contracts.evidence_record import Artifact
 
     path = repo_root / relative_path
@@ -272,6 +272,31 @@ def write_text_artifact(
     encoded = content.encode("utf-8")
     _ = path.write_bytes(encoded)
     return Artifact(path=relative_path, hashes={"sha256": hash_bytes(encoded)})
+
+
+def write_text_artifact_to_dir(
+    *,
+    content: str,
+    dir_path: Path,
+    filename: str,
+    repo_root: Path | None = None,
+) -> Artifact:
+    """Write a text artifact into *dir_path* and return a hashed Artifact."""
+    from work_frontier.contracts.evidence_record import Artifact
+
+    if repo_root is None:
+        repo_root = Path.cwd()
+    dir_path.mkdir(parents=True, exist_ok=True)
+    file_path = dir_path / filename
+    encoded = content.encode("utf-8")
+    _ = file_path.write_bytes(encoded)
+    # Construct repo-root-relative path manually to avoid macOS
+    # /var → /private/var symlink resolution issues.
+    try:
+        rel_path = str(file_path.relative_to(repo_root))
+    except ValueError:
+        rel_path = str(file_path)
+    return Artifact(path=rel_path, hashes={"sha256": hash_bytes(encoded)})
 
 
 def _relative_workdir(working_directory: str | None, repo_root: Path) -> str:
@@ -308,11 +333,17 @@ def write_evidence(
     output_filename: str,
     repo_root: Path | None = None,
     run_id: str | None = None,
-    stdout: str | None = None,
-    stderr: str | None = None,
+    stdout: str = "",
+    stderr: str = "",
     tool_version: str | None = None,
+    evidence_root: Path | None = None,
 ) -> Path:
-    """Write a validated evidence record to .omo/evidence/static/{output_filename}."""
+    """Write a validated evidence record and its stdout/stderr artifacts.
+
+    *evidence_root* — writable directory for the evidence record and sidecar
+    artifacts.  When *None* (default) the legacy flat layout is used:
+    ``.omo/evidence/static/``.
+    """
     from work_frontier.contracts.evidence_record import (
         EvidenceRecord,
         Invocation,
@@ -332,21 +363,24 @@ def write_evidence(
         msg = f"empty tool version for {tool_name}"
         raise ValueError(msg)
 
-    stdout_artifact = None
-    stderr_artifact = None
+    if evidence_root is None:
+        evidence_root = repo_root / ".omo" / "evidence" / "static"
+
+    evidence_root.mkdir(parents=True, exist_ok=True)
+
     evidence_stem = Path(output_filename).stem
-    if stdout is not None:
-        stdout_artifact = write_text_artifact(
-            content=stdout,
-            relative_path=f".omo/evidence/static/{evidence_stem}.stdout.txt",
-            repo_root=repo_root,
-        )
-    if stderr is not None:
-        stderr_artifact = write_text_artifact(
-            content=stderr,
-            relative_path=f".omo/evidence/static/{evidence_stem}.stderr.txt",
-            repo_root=repo_root,
-        )
+    stdout_artifact = write_text_artifact_to_dir(
+        content=stdout or "",
+        dir_path=evidence_root,
+        filename=f"{evidence_stem}.stdout.txt",
+        repo_root=repo_root,
+    )
+    stderr_artifact = write_text_artifact_to_dir(
+        content=stderr or "",
+        dir_path=evidence_root,
+        filename=f"{evidence_stem}.stderr.txt",
+        repo_root=repo_root,
+    )
 
     invocation = Invocation(
         command=command,
@@ -380,10 +414,7 @@ def write_evidence(
         property_bag=property_bag,
     )
 
-    evidence_dir = repo_root / ".omo" / "evidence" / "static"
-    evidence_dir.mkdir(parents=True, exist_ok=True)
-    evidence_path = evidence_dir / output_filename
-
+    evidence_path = evidence_root / output_filename
     content = evidence.model_dump_json(indent=2, by_alias=False)
     _ = evidence_path.write_text(f"{content}\n", encoding="utf-8")
 
