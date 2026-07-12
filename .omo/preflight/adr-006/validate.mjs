@@ -55,6 +55,7 @@ const CANONICAL_MODULES = new Set([
  *   kind: "positive" | "negative",
  *   scenario: string,
  *   assertion: string,
+ *   payload?: object,
  *   mutation?: MutationDescriptor,
  *   expected_failure_id?: string
  * }} Fixture
@@ -824,13 +825,20 @@ export function validateManifestStructure(manifest, positive, negative, document
     }
   }
 
-  // Positive fixtures: baseline must pass its own contract validator
+  // Positive fixtures: the fixture's own payload must pass its own contract
+  // validator. A hard-coded baseline is no longer a substitute; the fixture
+  // is the executable proof of its own contract.
   for (const fixture of positive) {
-    const baseline = getBaselineDocument(fixture.contract_id);
-    const result = validateContract(fixture.contract_id, baseline);
+    if (fixture.payload == null || typeof fixture.payload !== "object") {
+      failures.push(
+        `${fixture.contract_id}: positive fixture ${fixture.scenario} must carry an executable payload`,
+      );
+      continue;
+    }
+    const result = validateContract(fixture.contract_id, fixture.payload);
     if (!result.success) {
       failures.push(
-        `${fixture.contract_id}: positive baseline rejected (${result.failureId ?? "unknown"})`,
+        `${fixture.contract_id}: positive fixture ${fixture.scenario} rejected (${result.failureId ?? "unknown"})`,
       );
     }
   }

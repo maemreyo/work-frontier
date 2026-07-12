@@ -1,1 +1,1 @@
-{"contract_id":"WF-P0-07","kind":"positive","scenario":"truthful-percentiles","assertion":"Percentiles retain valid completions and report failures and timeouts."}
+{"contract_id":"WF-P0-07","kind":"positive","scenario":"truthful-percentiles","assertion":"Percentiles retain valid completions and report failures and timeouts.","payload":{"valid_completions_ms":[100,110,120,130,140],"failures":2,"timeouts":1,"report_failures":true,"report_timeouts":true,"outlier_removal_before_percentile":false,"p95_ms":140}}

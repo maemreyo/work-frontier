@@ -1,1 +1,1 @@
-{"contract_id":"WF-P0-06","kind":"positive","scenario":"fair-leased-queue","assertion":"Queue claims use skip-locked leasing, CAS, dead letters, and controlled replay."}
+{"contract_id":"WF-P0-06","kind":"positive","scenario":"durable-queue-claim","assertion":"Active lease, skip_locked, no duplicate, no dead letter, no poison replay.","payload":{"claim_id":"claim-001","lease_owner":"worker-1","lease_state":"active","cas_version":1,"skip_locked":true,"dead_letter":false,"poison_replay":false,"duplicate_claim":false}}
