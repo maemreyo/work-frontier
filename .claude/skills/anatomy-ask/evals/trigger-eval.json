@@ -1,0 +1,62 @@
+[
+  {
+    "query": "quick one: what would break if I remove the notifications module? docs/anatomy was generated last week",
+    "should_trigger": true,
+    "note": "Read-only impact question against an existing anatomy trace belongs here, not in the full anatomy write workflow."
+  },
+  {
+    "query": "which module owns POST /orders/:id/ship according to the existing anatomy docs?",
+    "should_trigger": true,
+    "note": "Narrow route ownership lookup from an existing trace."
+  },
+  {
+    "query": "where does payment retry logic live? we already have docs/anatomy",
+    "should_trigger": true,
+    "note": "Narrow location lookup with an existing trace."
+  },
+  {
+    "query": "show me who depends on the db module from our current architecture trace",
+    "should_trigger": true,
+    "note": "Read-only dependency lookup from generated module docs/graph."
+  },
+  {
+    "query": "is the api module's anatomy page still fresh, and if so summarize its public interface",
+    "should_trigger": true,
+    "note": "Explicit freshness-aware read of one traced module."
+  },
+  {
+    "query": "the architecture docs exist already; answer whether changing the queue topic affects reports",
+    "should_trigger": true,
+    "note": "Read-only blast-radius question from an existing trace."
+  },
+  {
+    "query": "trace this repository and create docs/anatomy from scratch",
+    "should_trigger": false,
+    "note": "Create/write request belongs to anatomy."
+  },
+  {
+    "query": "refresh docs/anatomy after the services package changed",
+    "should_trigger": false,
+    "note": "Update/write request belongs to anatomy."
+  },
+  {
+    "query": "explain this one Python function",
+    "should_trigger": false,
+    "note": "No existing architecture trace lookup is requested."
+  },
+  {
+    "query": "check whether docs/anatomy is stale and fail CI if it is",
+    "should_trigger": false,
+    "note": "Pass/fail CI freshness gate belongs to anatomy-gate."
+  },
+  {
+    "query": "compare last month's _graph.json with today's and report structural drift",
+    "should_trigger": false,
+    "note": "Snapshot-to-snapshot drift belongs to anatomy-drift-watch."
+  },
+  {
+    "query": "draw an architecture diagram for this repo; there is no existing trace",
+    "should_trigger": false,
+    "note": "Generating the trace/diagram belongs to anatomy."
+  }
+]

@@ -1,0 +1,102 @@
+[
+  {
+    "query": "We just inherited this old Django monolith at work with basically zero documentation, previous team is gone. Can you trace through the whole repo and set up something under docs/ so new hires can actually understand how it fits together?",
+    "should_trigger": true,
+    "note": "Clean match: 'trace', 'whole repo', onboarding docs. Low risk."
+  },
+  {
+    "query": "vẽ giúp tôi sơ đồ kiến trúc app Express này, module nào gọi module nào -- code nằm trong src/, chia theo routes/controllers/services",
+    "should_trigger": true,
+    "note": "User's own flagged under-trigger risk case (architecture/dependency diagram of a whole repo, no explicit skill/file name). Should map via 'architecture, system, or dependency diagram of a codebase, service, or repo'."
+  },
+  {
+    "query": "Can you regenerate the docs/anatomy folder for this repo? We added the new billing-service package since the last run and I want the diagram and index updated.",
+    "should_trigger": true,
+    "note": "Direct docs/anatomy + refresh mention. Clean match."
+  },
+  {
+    "query": "I need a full list of every REST endpoint, cron job, and queue consumer across our microservices repo before the security audit next week.",
+    "should_trigger": true,
+    "note": "Matches 'full inventory of every endpoint, command, or background job' verbatim-ish. Clean."
+  },
+  {
+    "query": "Our README says the payment flow goes through the 'legacy-gateway' module but I genuinely don't think that's true anymore. Can you actually check the source and write up what's really there?",
+    "should_trigger": true,
+    "note": "Matches 'not stale docs' + reverse-engineer/document intent. Clean."
+  },
+  {
+    "query": "reverse-engineer this codebase for me, i just cloned it and have zero idea how the pieces connect",
+    "should_trigger": true,
+    "note": "Near-verbatim match to 'reverse-engineer a codebase's architecture'. Easy case, kept as a regression floor."
+  },
+  {
+    "query": "the notifications module changed this week; refresh the existing docs/anatomy output incrementally and make sure reverse dependencies and diagrams are current",
+    "should_trigger": true,
+    "note": "Incremental write request belongs to anatomy. A narrow read-only impact question against the existing trace is covered by anatomy-ask instead."
+  },
+  {
+    "query": "we have a docs/system-trace folder sitting around from some old Claude skill run, but I think it's stale now that we split out the auth service into its own thing. can you bring it up to date?",
+    "should_trigger": true,
+    "note": "Matches the explicit docs/system-trace migration clause. Clean."
+  },
+  {
+    "query": "map out how our packages/ monorepo talks to each other, I keep getting bitten by circular imports and want to see the actual dependency graph",
+    "should_trigger": true,
+    "note": "Matches 'understand how modules, services, or packages interact' + monorepo shape. Clean."
+  },
+  {
+    "query": "Can you write up a Word doc for new hires explaining our whole system architecture -- main services, how they talk to each other, and how it's deployed? We use docker-compose for staging.",
+    "should_trigger": true,
+    "note": "Competing-skill test: 'Word doc' could pull toward the docx skill instead. The underlying task is still a from-scratch architecture trace (docx skill has nothing to format without this skill's output first), so anatomy should still trigger, likely alongside docx for final formatting. Worth specifically checking this one in the real run_loop.py pass -- highest genuine ambiguity of the ten positives."
+  },
+  {
+    "query": "giải thích hàm calculateDiscount() này giúp tôi, nó đang tính sai discount cho đơn hàng trên 5 sản phẩm -- code ở src/pricing/discount.js dòng 40-70",
+    "should_trigger": false,
+    "note": "User's own flagged over-trigger risk case. Single-function explain/debug. Covered by the explicit 'NOT for explaining or diagramming a single function... in isolation' clause."
+  },
+  {
+    "query": "Can you explain what this UserSerializer class does? Looking at serializers.py lines 40-90, not sure why it's overriding to_representation.",
+    "should_trigger": false,
+    "note": "Single-class explain, same exclusion clause covers 'class'."
+  },
+  {
+    "query": "draw me a quick sequence diagram of just what happens inside the login() function -- not the whole app, just that one function's internal logic",
+    "should_trigger": false,
+    "note": "Trickiest negative: shares the word 'diagram' and even 'sequence' (system-diagram.md covers 'key-flow sequences'), but is explicitly scoped to one function's internals. Tests whether 'diagram' alone over-triggers regardless of scope."
+  },
+  {
+    "query": "what's actually the difference between a monorepo and a microservices architecture? not asking about our repo specifically, just trying to understand the terms before a system design interview",
+    "should_trigger": false,
+    "note": "Shares 'monorepo'/'microservices' keywords from the description's project-shape list, but is a definitional question with no actual codebase to trace."
+  },
+  {
+    "query": "can you add a mermaid diagram to our README showing the CI pipeline steps -- lint, test, build, deploy -- not the code architecture, just the build process",
+    "should_trigger": false,
+    "note": "Shares 'diagram' + 'CI' (ci_config is mentioned in the description-adjacent workflow), but this is a process diagram of the build pipeline, not module/service interaction. Moderate risk, worth a real run."
+  },
+  {
+    "query": "I want to draft a design doc proposing a brand new service we haven't built yet -- payment-reconciliation -- can you help me sketch out the architecture for it?",
+    "should_trigger": false,
+    "note": "Uses 'architecture' prominently but there's no existing source code to trace from -- this is greenfield design, not reverse-engineering."
+  },
+  {
+    "query": "can you refactor the imports in src/services/orderService.js to break the circular dependency with paymentService.js? getting a warning in the build",
+    "should_trigger": false,
+    "note": "Uses 'circular dependency', a term straight out of this skill's own health-signal vocabulary, but the task is a code edit, not documentation."
+  },
+  {
+    "query": "review my PR and leave comments on the new UserController.ts file I added, want to make sure the error handling is solid before I request review",
+    "should_trigger": false,
+    "note": "Single-file PR review, covered by the single-file exclusion."
+  },
+  {
+    "query": "what does 'orphan module' actually mean in software architecture -- is that the same thing as dead code or something narrower?",
+    "should_trigger": false,
+    "note": "Glossary/definition question using the exact term from rollup.py's own output vocabulary, but no codebase involved."
+  },
+  {
+    "query": "need help tracing why this keeps happening in prod -- here's the stack trace, error is coming from somewhere in orderService.processPayment() when cart has 10+ items: [TypeError: Cannot read properties of undefined ...]",
+    "should_trigger": false,
+    "note": "The word 'trace/tracing' collides with the skill's own name, but this is runtime error debugging via a stack trace, a completely different meaning. Realistic and common -- probably the single highest-value negative in the set."
+  }
+]

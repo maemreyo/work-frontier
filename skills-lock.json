@@ -1,0 +1,152 @@
+{
+  "version": 1,
+  "skills": {
+    "anatomy": {
+      "source": "maemreyo/zmr-skills",
+      "ref": "zmr-dev",
+      "sourceType": "github",
+      "skillPath": "skills/engineering/anatomy/SKILL.md",
+      "computedHash": "c719707d5f4f98b92c5d536c2e600086849a3a9be7deea1cc5c018619fc6d8fd"
+    },
+    "anatomy-ask": {
+      "source": "maemreyo/zmr-skills",
+      "ref": "zmr-dev",
+      "sourceType": "github",
+      "skillPath": "skills/engineering/anatomy-ask/SKILL.md",
+      "computedHash": "be0583d400ca8f4885605882854e2d96a3a70a809a422e5994313a95af45baa4"
+    },
+    "anatomy-drift-watch": {
+      "source": "maemreyo/zmr-skills",
+      "ref": "zmr-dev",
+      "sourceType": "github",
+      "skillPath": "skills/engineering/anatomy-drift-watch/SKILL.md",
+      "computedHash": "1850620b0a3563905b55165b04d96d162fd110ae247e27f70b20e92224c2b2d0"
+    },
+    "anatomy-gate": {
+      "source": "maemreyo/zmr-skills",
+      "ref": "zmr-dev",
+      "sourceType": "github",
+      "skillPath": "skills/engineering/anatomy-gate/SKILL.md",
+      "computedHash": "fc05708a1c4de1cef9bc06bee4b0404ce82169c49cb72f3c0a41ef6b26af60c2"
+    },
+    "anatomy-link": {
+      "source": "maemreyo/zmr-skills",
+      "ref": "zmr-dev",
+      "sourceType": "github",
+      "skillPath": "skills/engineering/anatomy-link/SKILL.md",
+      "computedHash": "5c037e01ca7baa8addddfe48ce5a92c0bae591c14b09267ec194ce4753f4f54c"
+    },
+    "code-review": {
+      "source": "maemreyo/zmr-skills",
+      "ref": "zmr-dev",
+      "sourceType": "github",
+      "skillPath": "skills/engineering/code-review/SKILL.md",
+      "computedHash": "4a17d9d3e0fc87ae48544d371a820fac5a4a78f4c05e7e6b3229094fbf8a7e26"
+    },
+    "codebase-design": {
+      "source": "maemreyo/zmr-skills",
+      "ref": "zmr-dev",
+      "sourceType": "github",
+      "skillPath": "skills/engineering/codebase-design/SKILL.md",
+      "computedHash": "2426dc4accf1a85dedfb560edb3a877ec8828b7375ea08c970df2b6c900a2a22"
+    },
+    "diagnosing-bugs": {
+      "source": "maemreyo/zmr-skills",
+      "ref": "zmr-dev",
+      "sourceType": "github",
+      "skillPath": "skills/engineering/diagnosing-bugs/SKILL.md",
+      "computedHash": "1a993ce9b2aaa653ee441c8d7efb7f27de03493c722be6dfb8137bcb8db1bc72"
+    },
+    "domain-modeling": {
+      "source": "maemreyo/zmr-skills",
+      "ref": "zmr-dev",
+      "sourceType": "github",
+      "skillPath": "skills/engineering/domain-modeling/SKILL.md",
+      "computedHash": "67343881f5def98487d56243155716110afbcbf22ec92421c882d532b941cb17"
+    },
+    "grill-me": {
+      "source": "maemreyo/zmr-skills",
+      "ref": "zmr-dev",
+      "sourceType": "github",
+      "skillPath": "skills/productivity/grill-me/SKILL.md",
+      "computedHash": "f321507f77702a54af1db66549ec1685fc625390d06c57d7949cdcda8eb1b5c7"
+    },
+    "grill-with-docs": {
+      "source": "maemreyo/zmr-skills",
+      "ref": "zmr-dev",
+      "sourceType": "github",
+      "skillPath": "skills/engineering/grill-with-docs/SKILL.md",
+      "computedHash": "e7ef25bbee50cda2eb7b3a8ef541db0a0396dad7d369f7d14fb610671dd1864b"
+    },
+    "grilling": {
+      "source": "maemreyo/zmr-skills",
+      "ref": "zmr-dev",
+      "sourceType": "github",
+      "skillPath": "skills/productivity/grilling/SKILL.md",
+      "computedHash": "1de9e777a60b184b29412fadacb7bbde8c14bb7037e5c4d9d086c941281d1742"
+    },
+    "implement": {
+      "source": "maemreyo/zmr-skills",
+      "ref": "zmr-dev",
+      "sourceType": "github",
+      "skillPath": "skills/engineering/implement/SKILL.md",
+      "computedHash": "0d51255cab5cf937b8fe41252f00213706e0175ca9607fc00409d29562b5b839"
+    },
+    "improve-codebase-architecture": {
+      "source": "maemreyo/zmr-skills",
+      "ref": "zmr-dev",
+      "sourceType": "github",
+      "skillPath": "skills/engineering/improve-codebase-architecture/SKILL.md",
+      "computedHash": "8bf292143ca93b00276a0de0fc5f84f2381f4690c5b0d32e99fa283a072f392f"
+    },
+    "qa": {
+      "source": "maemreyo/zmr-skills",
+      "ref": "zmr-dev",
+      "sourceType": "github",
+      "skillPath": "skills/deprecated/qa/SKILL.md",
+      "computedHash": "20c63e29b268b1f0762cff524b5e321d5e1a773b4f61b90d84811b755948a66c"
+    },
+    "research": {
+      "source": "maemreyo/zmr-skills",
+      "ref": "zmr-dev",
+      "sourceType": "github",
+      "skillPath": "skills/engineering/research/SKILL.md",
+      "computedHash": "87d17f5103899fbe179b552a85485d50f2316ca5b3128f5716af7d88817533e1"
+    },
+    "setup-matt-pocock-skills": {
+      "source": "maemreyo/zmr-skills",
+      "ref": "zmr-dev",
+      "sourceType": "github",
+      "skillPath": "skills/engineering/setup-matt-pocock-skills/SKILL.md",
+      "computedHash": "4abdce47b19a0aaf4bf526e2a79a7471d0e990b9ec8b3ecc8263aa333b7f2351"
+    },
+    "tdd": {
+      "source": "maemreyo/zmr-skills",
+      "ref": "zmr-dev",
+      "sourceType": "github",
+      "skillPath": "skills/engineering/tdd/SKILL.md",
+      "computedHash": "c9326b88419cfba1d54dd713b7ddb23020e6a93f4b0d13aea58cebba58cda2ee"
+    },
+    "to-spec": {
+      "source": "maemreyo/zmr-skills",
+      "ref": "zmr-dev",
+      "sourceType": "github",
+      "skillPath": "skills/engineering/to-spec/SKILL.md",
+      "computedHash": "c5d294a88d00942a38dc589299423e35ea07157cf29eed21434378edb5cfafa4"
+    },
+    "to-tickets": {
+      "source": "maemreyo/zmr-skills",
+      "ref": "zmr-dev",
+      "sourceType": "github",
+      "skillPath": "skills/engineering/to-tickets/SKILL.md",
+      "computedHash": "931fb4385e1f3e29bf2ae482166a86d5876e9e6c740609f3de09a6de8f2ba318"
+    },
+    "wayfinder": {
+      "source": "maemreyo/zmr-skills",
+      "ref": "zmr-dev",
+      "sourceType": "github",
+      "skillPath": "skills/engineering/wayfinder/SKILL.md",
+      "computedHash": "3eb72cd9abdfaa00e10fa69f0b4410ff8639a6cf4eb9e5d187b289c3aa9be2fc"
+    }
+  }
+}
