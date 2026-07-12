@@ -208,6 +208,143 @@ def test_recertify_foundation_records_subject_tree_sha_and_requires_tree_match()
 
 
 # ---------------------------------------------------------------------------
+# Stale artifact prevention
+# ---------------------------------------------------------------------------
+
+
+def _make_registry_with_local_artifact(path: Path) -> None:
+    """Write a registry whose artifact is a local file (not remote)."""
+    registry = {
+        "schema_version": "1.0.0",
+        "harness_count": 1,
+        "catalog_harness_count": 1,
+        "standard_blocker_count": 1,
+        "standard_blockers": ["WF-HAR-TEST-02"],
+        "harnesses": [
+            {
+                "id": "WF-HAR-TEST-02",
+                "name": "test-local",
+                "command": (
+                    "mkdir -p .omo/evidence/static && "
+                    "echo hello > .omo/evidence/static/test-output.txt"
+                ),
+                "artifact": ".omo/evidence/static/test-output.txt",
+                "blocks_release": True,
+                "what_it_runs": "creates output file",
+                "pass_criteria": "file exists",
+                "applicability": "standard",
+                "status": "implemented",
+            }
+        ],
+        "foundation_closure": ["WF-HAR-TEST-02"],
+    }
+    _ = path.write_text(json.dumps(registry))
+
+
+def test_recertify_deletes_stale_artifact_before_harness() -> None:
+    """A pre-existing stale artifact is deleted before the harness runs.
+
+    Without this guard a stale file from a previous run could be hashed
+    by the runner and attributed to the current HEAD, fabricating a pass.
+    """
+    clone = _make_clean_clone()
+    registry_path = Path(tempfile.mkstemp(suffix=".json")[1])
+    try:
+        _make_registry_with_local_artifact(registry_path)
+
+        stale_dir = clone / ".omo" / "evidence" / "static"
+        stale_dir.mkdir(parents=True, exist_ok=True)
+        stale_file = stale_dir / "test-output.txt"
+        _ = stale_file.write_text("stale content from previous run")
+
+        report = recertify_foundation(
+            repo_root=clone,
+            registry_path=registry_path,
+        )
+        assert report["certified"] is True
+        fresh_content = stale_file.read_text()
+        assert fresh_content != "stale content from previous run"
+        assert "hello" in fresh_content
+    finally:
+        shutil.rmtree(clone, ignore_errors=True)
+        registry_path.unlink(missing_ok=True)
+
+
+# ---------------------------------------------------------------------------
+# Cross-harness tamper detection
+# ---------------------------------------------------------------------------
+
+
+def _make_two_harness_registry(path: Path) -> None:
+    """Write a registry with two harnesses that share an artifact path.
+
+    The second harness overwrites the artifact produced by the first,
+    testing the post-closure revalidation guard.
+    """
+    registry = {
+        "schema_version": "1.0.0",
+        "harness_count": 2,
+        "catalog_harness_count": 2,
+        "standard_blocker_count": 2,
+        "standard_blockers": ["WF-HAR-TAMPER-01", "WF-HAR-TAMPER-02"],
+        "harnesses": [
+            {
+                "id": "WF-HAR-TAMPER-01",
+                "name": "producer",
+                "command": (
+                    "mkdir -p .omo/evidence/static && "
+                    "echo 'first content' > .omo/evidence/static/shared-output.txt"
+                ),
+                "artifact": ".omo/evidence/static/shared-output.txt",
+                "blocks_release": True,
+                "what_it_runs": "creates shared output",
+                "pass_criteria": "file exists",
+                "applicability": "standard",
+                "status": "implemented",
+            },
+            {
+                "id": "WF-HAR-TAMPER-02",
+                "name": "tamperer",
+                "command": (
+                    "mkdir -p .omo/evidence/static && "
+                    "echo 'tampered content' > .omo/evidence/static/shared-output.txt"
+                ),
+                "artifact": ".omo/evidence/static/shared-output.txt",
+                "blocks_release": True,
+                "what_it_runs": "overwrites shared output",
+                "pass_criteria": "file exists",
+                "applicability": "standard",
+                "status": "implemented",
+            },
+        ],
+        "foundation_closure": ["WF-HAR-TAMPER-01", "WF-HAR-TAMPER-02"],
+    }
+    _ = path.write_text(json.dumps(registry))
+
+
+def test_recertify_rejects_cross_harness_tamper() -> None:
+    """Post-closure revalidation catches artifact tampering between harnesses.
+
+    Harness B overwrites harness A's declared artifact after A was
+    validated.  The post-closure revalidation must detect the hash
+    mismatch and fail certification.
+    """
+    clone = _make_clean_clone()
+    registry_path = Path(tempfile.mkstemp(suffix=".json")[1])
+    try:
+        _make_two_harness_registry(registry_path)
+
+        with pytest.raises(CertificationError, match="hash mismatch"):
+            _ = recertify_foundation(
+                repo_root=clone,
+                registry_path=registry_path,
+            )
+    finally:
+        shutil.rmtree(clone, ignore_errors=True)
+        registry_path.unlink(missing_ok=True)
+
+
+# ---------------------------------------------------------------------------
 # Validator negative tests (no git clones needed)
 # ---------------------------------------------------------------------------
 

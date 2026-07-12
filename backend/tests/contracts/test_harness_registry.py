@@ -7,6 +7,9 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
+from scripts.build_harness_registry import (
+    _validate_artifact_modes,  # pyright: ignore[reportPrivateUsage]
+)
 
 from work_frontier.contracts.evidence_record import (
     Artifact,
@@ -108,3 +111,51 @@ def test_registry_file_is_valid_json_with_foundation_closure() -> None:
     assert "WF-HAR-STATIC-05" in data["foundation_closure"]
     assert all(harness["command"].strip() for harness in data["harnesses"])
     assert all(harness["artifact"].strip() for harness in data["harnesses"])
+
+
+def test_build_rejects_invalid_artifact_mode_value() -> None:
+    """Invalid artifact_mode values are rejected at build time."""
+    with pytest.raises(ValueError, match="invalid artifact_mode"):
+        _validate_artifact_modes(
+            [
+                {"id": "WF-HAR-TEST", "artifact_mode": "bogus_mode"},
+            ]
+        )
+
+
+def test_build_rejects_runner_evidence_on_unapproved_harness() -> None:
+    """runner_evidence mode is only allowed for whitelisted harnesses."""
+    with pytest.raises(ValueError, match="runner_evidence mode not allowed"):
+        _validate_artifact_modes(
+            [
+                {"id": "WF-HAR-STATIC-02", "artifact_mode": "runner_evidence"},
+            ]
+        )
+
+
+def test_build_rejects_wrong_runner_evidence_artifact_path() -> None:
+    """runner_evidence harness must declare artifact path matching its ID."""
+    with pytest.raises(ValueError, match="does not match expected"):
+        _validate_artifact_modes(
+            [
+                {
+                    "id": "WF-HAR-STATIC-01",
+                    "artifact_mode": "runner_evidence",
+                    "artifact": ".omo/evidence/static/wrong-path.json",
+                },
+            ]
+        )
+
+
+def test_build_rejects_runner_evidence_artifact_mismatch() -> None:
+    """runner_evidence harness must declare exact correct path, not just pattern."""
+    with pytest.raises(ValueError, match="does not match expected"):
+        _validate_artifact_modes(
+            [
+                {
+                    "id": "WF-HAR-STATIC-01",
+                    "artifact_mode": "runner_evidence",
+                    "artifact": ".omo/evidence/static/WF-HAR-STATIC-02.json",
+                },
+            ]
+        )
