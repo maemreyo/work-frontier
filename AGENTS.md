@@ -42,16 +42,38 @@ Keep the change scoped to one coherent outcome. Do not opportunistically impleme
 ## Golden-path commands
 
 ```sh
-make doctor       # validate local tools and pinned versions
-make bootstrap    # install locked Python and Node dependencies
-make check        # static checks, contract/registry drift, unit tests
-make verify       # full local CI path, including PostgreSQL and MinIO smokes
-make fix          # apply safe Python and frontend formatting/lint fixes
-make help         # list supported commands
+make doctor                 # validate local tools and pinned versions
+make bootstrap              # install locked Python and Node dependencies
+make check                  # static checks, contract/registry drift, unit tests
+make verify                 # full local CI path, including PostgreSQL and MinIO smokes
+make fix                    # apply safe Python and frontend formatting/lint fixes
+make help                   # list supported commands
+
+make harness ID=WF-HAR-...  # run one registry-backed harness by ID
+make recertify-foundation   # run the foundation closure and write supersession evidence
 ```
 
 Use `make` targets rather than inventing one-off command variants. CI must use the same targets
 developers use locally.
+
+### Harness and recertification commands
+
+- `make harness ID=WF-HAR-...` runs one registry-backed harness. The command, expected
+  artifact, and applicability come from `contracts/harness-registry.json` (which mirrors
+  `docs/quality/harness-catalog.md`). The runner fails closed on missing declared artifacts,
+  status/exit-code contradictions, and tool-version fabrication. The local evidence file is
+  written under `.omo/evidence/static/<harness_id>.json`.
+- `make recertify-foundation` runs the foundation closure (currently the eight blocking
+  harnesses that recertify P0 and Todos 1-4) and writes a supersession report to
+  `.omo/evidence/task-5-full-product-implementation/foundation-recertification.json`. The
+  report attests the exact subject SHA; any prior local claim against an older revision is
+  superseded, not silently retained. CI must invoke this runner on every push to `main`.
+- The registry is the source of truth for harness IDs, commands, and applicability. Do not
+  introduce alias harnesses (e.g., STATIC/SMOKE/OPS variants) that re-implement an existing
+  check. The catalog count and the registry count must always match.
+- Tool versions are captured by `get_tool_version()` in
+  `backend/src/work_frontier/contracts/evidence_writer.py`. Add a new entry there when
+  introducing a new harness tool.
 
 ## Architecture rules
 
@@ -119,6 +141,18 @@ Test real boundaries:
 Never delete or weaken a test merely to make CI green unless the underlying requirement was
 explicitly changed in the same patch.
 
+### Expected-failure pattern (migration smoke)
+
+`scripts/migration_smoke.py` injects a real failing Alembic revision
+(`0002_failing_revision_probe`) and asserts the upgrade fails for the **right** reason. The
+`_is_failing_revision_error()` classifier in that file requires both the injected
+`INVALID SQL FROM ALEMBIC REVISION` marker and a PostgreSQL syntax-error signature
+(SQLSTATE 42601) somewhere in the cause chain. A bare `except Exception` is a false-pass
+risk: config errors, DB outages, or unrelated import failures must surface as
+`FailingRevisionUnexpectedError`, not as a successful rollback. The companion test
+`backend/tests/test_migration_smoke.py` covers the classifier and the failure-injection
+round trip without needing a live Postgres.
+
 ## Security and tenancy invariants
 
 - No secrets in source, fixtures, logs, evidence payloads, or examples.
@@ -153,3 +187,12 @@ Before presenting work as complete:
 - Documentation and examples are current.
 - `git diff` contains only intended changes.
 - The final report lists commands actually run and any validation not run.
+
+When the change touches any foundation blocker (P0 or Todos 1-5), also run:
+
+```sh
+make recertify-foundation   # writes .omo/evidence/task-5-full-product-implementation/foundation-recertification.json
+```
+
+The recertification must report `"certified": true` and a `subject_sha` matching the
+commit you are about to present. If it reports failures, fix them before claiming completion.

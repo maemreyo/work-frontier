@@ -43,10 +43,12 @@ reportExplicitAny = "none"
 root = "scripts"
 extraPaths = ["backend/src"]
 reportUnknownMemberType = "none"
+reportImplicitStringConcatenation = "none"
 
 [[tool.basedpyright.executionEnvironments]]
 root = "."
 extraPaths = ["backend/src"]
+reportImplicitStringConcatenation = "none"
 
 [tool.ruff]
 target-version = "py313"

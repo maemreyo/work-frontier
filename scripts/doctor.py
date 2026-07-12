@@ -6,7 +6,7 @@ from __future__ import annotations
 import json
 import platform
 import shutil
-import subprocess  # noqa: S404 -- fixed tool-version probes only
+import subprocess  # nosec - fixed tool-version probes only
 import sys
 from pathlib import Path
 
@@ -42,6 +42,20 @@ def read_expected_versions() -> dict[str, str]:
     }
 
 
+def python_executable() -> list[str]:
+    """Return the Python interpreter uv would use for this repo.
+
+    The repo pins Python via ``.python-version`` and resolves it through uv.
+    Calling ``python3 --version`` from ``PATH`` returns the system Python,
+    which is not the Python that runs ``uv run`` commands. Prefer the uv
+    interpreter when uv is available; fall back to ``sys.executable``
+    only when uv is missing.
+    """
+    if shutil.which("uv") is not None:
+        return ["uv", "run", "python", "--version"]
+    return [sys.executable, "--version"]
+
+
 def normalized_version(text: str) -> str:
     for token in text.replace("v", " ").split():
         if token and token[0].isdigit():
@@ -53,7 +67,7 @@ def main() -> int:
     expected = read_expected_versions()
     checks = [
         ("git", ["git", "--version"], None, True),
-        ("python", [sys.executable, "--version"], expected["python"], True),
+        ("python", python_executable(), expected["python"], True),
         ("uv", ["uv", "--version"], None, True),
         ("node", ["node", "--version"], expected["node"], True),
         ("pnpm", ["pnpm", "--version"], expected["pnpm"], True),
@@ -89,10 +103,15 @@ def main() -> int:
     if env_file.exists():
         print("[OK  ] .env           present")
     else:
-        print("[INFO] .env           absent; copy .env.example for manual infrastructure work")
+        print(
+            "[INFO] .env           absent; copy .env.example for "
+            "manual infrastructure work"
+        )
 
     if failures:
-        print(f"\nDoctor found {failures} blocking problem(s) and {warnings} warning(s).")
+        print(
+            f"\nDoctor found {failures} blocking problem(s) and {warnings} warning(s)."
+        )
         return 1
     print(f"\nDoctor passed with {warnings} optional warning(s).")
     return 0

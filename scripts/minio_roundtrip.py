@@ -147,7 +147,7 @@ def main() -> int:
         working_directory=str(repo_root),
         start_time=start_time,
         end_time=end_time,
-        tool_name="minio_roundtrip",
+        tool_name="minio",
         artifacts=artifacts,
         results=results,
         property_bag={

@@ -35,6 +35,26 @@ const fixtureFiles = readdirSync(FIXTURES_DIR)
   .filter((f) => f.endsWith(".json"))
   .sort()
 
+const REQUIRED_VALID_FIXTURES: ReadonlySet<string> = new Set([
+  "valid-minimal.json",
+  "valid-maximal.json",
+])
+const REQUIRED_INVALID_FIXTURES: ReadonlySet<string> = new Set([
+  "invalid-missing-workspace-id.json",
+  "invalid-empty-decision-id.json",
+  "invalid-empty-source-revision-set.json",
+  "invalid-unknown-field.json",
+  "invalid-naive-datetime.json",
+  "invalid-uppercase-hash.json",
+  "invalid-non-hex-hash.json",
+  "invalid-coerce-int.json",
+  "invalid-coerce-bool.json",
+])
+const REQUIRED_FIXTURE_INVENTORY: ReadonlySet<string> = new Set([
+  ...REQUIRED_VALID_FIXTURES,
+  ...REQUIRED_INVALID_FIXTURES,
+])
+
 describe("DecisionRecordSchema", () => {
   it("round-trips a complete canonical envelope when parsed", () => {
     const result = DecisionRecordSchema.parse(validRecord)
@@ -66,5 +86,31 @@ describe("DecisionRecordSchema", () => {
     } else {
       expect(result.success).toBe(false)
     }
+  })
+
+  it("fixture inventory matches the shared corpus", () => {
+    const onDisk = new Set(
+      readdirSync(FIXTURES_DIR).filter((f) => f.endsWith(".json"))
+    )
+    const missing = [...REQUIRED_FIXTURE_INVENTORY].filter((n) => !onDisk.has(n))
+    const extras = [...onDisk].filter((n) => !REQUIRED_FIXTURE_INVENTORY.has(n))
+    expect({ missing, extras }).toEqual({ missing: [], extras: [] })
+  })
+
+  it("valid fixtures have paired golden hashes", () => {
+    for (const name of REQUIRED_VALID_FIXTURES) {
+      const fixturePath = join(FIXTURES_DIR, name)
+      const goldenPath = fixturePath.replace(/\.json$/, ".canonical.sha256")
+      const expected = readFileSync(goldenPath, "utf-8").trim()
+      expect(expected).toMatch(/^[0-9a-f]{64}$/)
+    }
+  })
+
+  it("breaking mutation changes the canonical digest", () => {
+    const canonical = canonicalJson(validRecord)
+    const originalDigest = createHash("sha256").update(canonical, "utf8").digest("hex")
+    const mutatedCanonical = canonical.replace(/"ranking_position":1/, '"ranking_position":null')
+    const mutatedDigest = createHash("sha256").update(mutatedCanonical, "utf8").digest("hex")
+    expect(mutatedDigest).not.toBe(originalDigest)
   })
 })

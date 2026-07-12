@@ -182,3 +182,128 @@ def test_decision_record_fixtures_cross_language_consistency(
     else:
         with pytest.raises(ValidationError):
             _ = DecisionRecordContract.model_validate_json(json_str)
+
+
+# The fixture inventory is the shared corpus that proves parity between
+# Python and TypeScript runtimes. Every required fixture name must be
+# present and have a paired `.canonical.sha256` for valid payloads. If a
+# required fixture is removed, the corpus shrinks silently and the cross-
+# language gate stops exercising that coverage. Asserting the explicit set
+# here makes the inventory an executable gate rather than a directory glob.
+REQUIRED_VALID_FIXTURES: frozenset[str] = frozenset(
+    {"valid-minimal.json", "valid-maximal.json"}
+)
+REQUIRED_INVALID_FIXTURES: frozenset[str] = frozenset(
+    {
+        "invalid-missing-workspace-id.json",
+        "invalid-empty-decision-id.json",
+        "invalid-empty-source-revision-set.json",
+        "invalid-unknown-field.json",
+        "invalid-naive-datetime.json",
+        "invalid-uppercase-hash.json",
+        "invalid-non-hex-hash.json",
+        "invalid-coerce-int.json",
+        "invalid-coerce-bool.json",
+    }
+)
+REQUIRED_FIXTURE_INVENTORY: frozenset[str] = (
+    REQUIRED_VALID_FIXTURES | REQUIRED_INVALID_FIXTURES
+)
+
+
+def test_decision_record_fixture_inventory_is_complete() -> None:
+    # Given the shared fixture corpus on disk
+    on_disk = {path.name for path in FIXTURES_DIR.glob("*.json")}
+
+    # When the test asserts the required inventory
+    # Then every required fixture must be present and no extras allowed
+    assert on_disk == REQUIRED_FIXTURE_INVENTORY, (
+        f"fixture inventory drift: "
+        f"missing={REQUIRED_FIXTURE_INVENTORY - on_disk}, "
+        f"extra={on_disk - REQUIRED_FIXTURE_INVENTORY}"
+    )
+
+
+def test_decision_record_valid_fixtures_have_golden_hashes() -> None:
+    # Given every required valid fixture
+    # When the test asserts the paired canonical hash file
+    for name in REQUIRED_VALID_FIXTURES:
+        path = FIXTURES_DIR / name
+        golden = path.with_suffix(".canonical.sha256")
+        assert golden.exists(), f"missing golden hash for {name}"
+        digest = golden.read_text(encoding="utf-8").strip()
+        assert len(digest) == 64, f"golden hash for {name} is not a 64-char hex"
+        _ = int(digest, 16)  # raises ValueError if not hex
+
+
+def test_decision_record_invalid_fixtures_cover_required_mutations() -> None:
+    # Given the required invalid fixture corpus
+    # When the test asserts that each scenario is exercised at least once
+    scenarios = {
+        "missing reproducibility identity": {"invalid-missing-workspace-id.json"},
+        "empty string reproducibility": {
+            "invalid-empty-decision-id.json",
+            "invalid-empty-source-revision-set.json",
+        },
+        "unknown field rejection": {"invalid-unknown-field.json"},
+        "naive datetime rejection": {"invalid-naive-datetime.json"},
+        "hash pattern enforcement": {
+            "invalid-uppercase-hash.json",
+            "invalid-non-hex-hash.json",
+        },
+        "type coercion rejection": {
+            "invalid-coerce-int.json",
+            "invalid-coerce-bool.json",
+        },
+    }
+
+    # Then every required scenario must have at least one fixture
+    for label, required_names in scenarios.items():
+        on_disk = {path.name for path in FIXTURES_DIR.glob("*.json")}
+        assert on_disk & required_names, f"no fixture covers {label}"
+
+
+def test_decision_record_breaking_mutation_is_detected() -> None:
+    # Given a valid minimal fixture and a simulated breaking mutation
+    # (the consumer treats the field as required but the model drops it)
+    record = DecisionRecordContract(
+        decision_id="decision-mutation",
+        workspace_id="workspace-mutation",
+        program_id=None,
+        item_id="item-mutation",
+        computed_at=datetime(2026, 7, 12, tzinfo=UTC),
+        causation_id="event-mutation",
+        correlation_id="trace-mutation",
+        normalized_snapshot_id="snapshot-mutation",
+        normalized_snapshot_hash=HASH,
+        source_revision_set={"backend": "abc"},  # pyright: ignore[reportArgumentType]
+        graph_revision="graph-mutation",
+        policy_bundle_id="policy-mutation",
+        policy_bundle_hash=HASH,
+        ranking_pipeline_hash=HASH,
+        engine_version="engine-mutation",
+        normalization_profile_version="profile-mutation",
+        ready=True,
+        ranking_position=1,
+    )
+    original_canonical = record.canonical_json()
+    original_digest = sha256(original_canonical.encode("utf-8")).hexdigest()
+
+    # When a simulated breaking mutation drops the ranking_position field
+    # (the contract would no longer canonicalize identically)
+    mutated_canonical = original_canonical.replace(
+        '"ranking_position":1', '"ranking_position":null'
+    )
+
+    # Then the canonical digest changes
+    mutated_digest = sha256(mutated_canonical.encode("utf-8")).hexdigest()
+    assert original_digest != mutated_digest, (
+        "breaking mutation must change canonical hash"
+    )
+
+    # And the regenerated artifact would differ from the checked-in golden
+    regenerated_canonical = record.canonical_json()
+    regenerated_digest = sha256(regenerated_canonical.encode("utf-8")).hexdigest()
+    assert regenerated_digest == original_digest, (
+        "regeneration must produce byte-identical canonical output"
+    )

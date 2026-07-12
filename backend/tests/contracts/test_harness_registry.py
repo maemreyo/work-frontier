@@ -100,9 +100,5 @@ def test_registry_file_is_valid_json_with_foundation_closure() -> None:
     assert data["harness_count"] == data["catalog_harness_count"] == 68
     assert "WF-HAR-PREFLIGHT-01" in data["foundation_closure"]
     assert "WF-HAR-STATIC-05" in data["foundation_closure"]
-    assert all(
-        harness["command"].strip() for harness in data["harnesses"]
-    )
-    assert all(
-        harness["artifact"].strip() for harness in data["harnesses"]
-    )
+    assert all(harness["command"].strip() for harness in data["harnesses"])
+    assert all(harness["artifact"].strip() for harness in data["harnesses"])

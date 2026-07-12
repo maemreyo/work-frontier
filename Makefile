@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY: bootstrap check check-architecture check-contracts check-harness-registry check-preflight check-static clean doctor fix generate-contracts generate-harness-registry help infra-down infra-up migration-smoke storage-smoke test test-frontend test-python verify
+.PHONY: bootstrap check check-architecture check-contracts check-harness-registry check-preflight check-static clean doctor fix generate-contracts generate-harness-registry harness help infra-down infra-up migration-smoke recertify-foundation storage-smoke test test-frontend test-python verify
 
 help: ## Show supported development commands
 	@awk 'BEGIN {FS = ":.*## "; printf "Usage: make <target>\n\nTargets:\n"} /^[a-zA-Z0-9_.-]+:.*## / {printf "  %-28s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -63,6 +63,12 @@ test-python: ## Run Python tests
 
 test-frontend: ## Run frontend tests
 	pnpm --dir frontend run test
+
+harness: ## Run one registry-backed harness by ID (use ID=...)
+	uv run python scripts/run_harness.py --id $(ID) --repo-root .
+
+recertify-foundation: ## Run the foundation closure and write supersession evidence
+	uv run python scripts/run_harness.py --recertify-foundation --repo-root .
 
 verify: check ## Run the full local CI-equivalent path with guaranteed infrastructure cleanup
 	@set -eu; \

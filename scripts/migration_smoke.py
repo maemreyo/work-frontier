@@ -22,6 +22,8 @@ FAILED_REVISION_VERSION_ADVANCED: Final = (
 REUPGRADE_MISSING_MARKER: Final = "re-upgrade missing bootstrap marker"
 UNSUPPORTED_MIGRATION_OPERATION: Final = "unsupported migration operation"
 UPGRADE_MISSING_MARKER: Final = "upgrade missing bootstrap marker"
+SEED_ROW_LOST_AFTER_FAILURE: Final = "seed row lost after failed revision rollback"
+SEED_ROW_NOT_FOUND_AFTER_SEEDING: Final = "seed row not found after seeding"
 FAILING_REVISION_ID: Final = "0002_failing_revision_probe"
 VERSIONS_DIR: Final = Path("infra/alembic/versions")
 FAILING_REVISION_PATH: Final = VERSIONS_DIR / f"{FAILING_REVISION_ID}.py"
@@ -141,18 +143,71 @@ def remove_failing_revision() -> None:
             path.unlink(missing_ok=True)
 
 
+FAILED_REVISION_NOT_REVISION_ERROR: Final = "upgrade failed with non-revision error"
+
+
+class FailingRevisionUnexpectedError(MigrationSmokeError):
+    """Upgrade failure did not originate from the injected failing revision."""
+
+    cause: BaseException
+
+    def __init__(self, cause: BaseException) -> None:
+        """Build an unexpected-error record from the captured upgrade cause."""
+        detail = f"{type(cause).__name__}: {cause}"
+        super().__init__(f"{FAILED_REVISION_NOT_REVISION_ERROR}: {detail}")
+        self.cause = cause
+
+
+def _is_failing_revision_error(exc: BaseException) -> bool:
+    """Return True when the Alembic failure traces back to the injected revision.
+
+    The injected revision runs ``op.execute("THIS IS INVALID SQL FROM ALEMBIC
+    REVISION")`` inside ``upgrade``. PostgreSQL raises
+    ``ProgrammingError`` with a SQLSTATE 42601 (``syntax_error``) message
+    containing the literal token. Any other exception type, message, or
+    context means the failure came from Alembic configuration, the
+    connection, or an unrelated import — not the failing revision itself.
+    """
+    cause_chain: list[BaseException] = []
+    current: BaseException | None = exc
+    while current is not None and current not in cause_chain:
+        cause_chain.append(current)
+        current = current.__cause__ or current.__context__
+
+    has_revision_marker = any(
+        "INVALID SQL FROM ALEMBIC REVISION" in str(cause) for cause in cause_chain
+    )
+    has_sqlstate_42601 = any(
+        "syntax error" in str(cause).lower() or "42601" in str(cause)
+        for cause in cause_chain
+    )
+
+    return has_revision_marker and has_sqlstate_42601
+
+
 def failing_alembic_revision_rolls_back(url: str) -> None:
-    """Inject a real failing revision, upgrade through Alembic, assert full rollback."""
+    """Inject a real failing revision, upgrade through Alembic, assert full rollback.
+
+    The upgrade MUST fail with an exception that traces back to the injected
+    revision's ``op.execute("THIS IS INVALID SQL FROM ALEMBIC REVISION")`` —
+    PostgreSQL syntax error (SQLSTATE 42601). Other exception types or
+    messages mean the failure came from Alembic configuration, DB outage,
+    or an unrelated import; the probe must surface that, not silently pass.
+    """
     version_before = current_alembic_version(url)
     _ = install_failing_revision()
     try:
-        failed = False
+        captured: BaseException | None = None
         try:
             run_alembic("upgrade", "head")
-        except Exception:
-            failed = True
-        if not failed:
+        except BaseException as exc:
+            captured = exc
+
+        if captured is None:
             raise MigrationSmokeError(FAILED_REVISION_NOT_ROLLED_BACK)
+
+        if not _is_failing_revision_error(captured):
+            raise FailingRevisionUnexpectedError(captured) from captured
 
         if table_exists(url, FAIL_TABLE):
             raise MigrationSmokeError(FAILED_REVISION_NOT_ROLLED_BACK)
@@ -201,7 +256,7 @@ def main() -> int:
         )
 
         if not marker_row_exists(url, "seeded"):
-            raise MigrationSmokeError("seed row not found after seeding")
+            raise MigrationSmokeError(SEED_ROW_NOT_FOUND_AFTER_SEEDING)
         results.append(
             Result(
                 kind="seed_verified",
@@ -220,7 +275,7 @@ def main() -> int:
         )
 
         if not marker_row_exists(url, "seeded"):
-            raise MigrationSmokeError("seed row lost after failed revision rollback")
+            raise MigrationSmokeError(SEED_ROW_LOST_AFTER_FAILURE)
         results.append(
             Result(
                 kind="seed_preserved_after_failure",
@@ -300,7 +355,7 @@ def main() -> int:
         working_directory=str(repo_root),
         start_time=start_time,
         end_time=end_time,
-        tool_name="migration_smoke",
+        tool_name="migration-smoke",
         artifacts=artifacts,
         results=results,
         property_bag={

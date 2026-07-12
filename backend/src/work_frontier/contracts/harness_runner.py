@@ -146,6 +146,16 @@ def run_harness(
                     )
                 )
 
+    evidence_filename = f"{harness_id}.json"
+    evidence_relpath = f".omo/evidence/static/{evidence_filename}"
+    # The harness's own evidence file is the certification record, not an
+    # artifact to re-hash. Drop it from the artifact list so a re-validation
+    # round-trip stays stable across runs and the validator does not see an
+    # ever-shifting hash on the self-referential file.
+    artifacts = [
+        artifact for artifact in artifacts if artifact.path != evidence_relpath
+    ]
+
     evidence_path = write_evidence(
         harness_id=harness_id,
         status=status,
@@ -165,9 +175,7 @@ def run_harness(
         stderr=stderr,
     )
 
-    return EvidenceRecord.model_validate_json(
-        evidence_path.read_text(encoding="utf-8")
-    )
+    return EvidenceRecord.model_validate_json(evidence_path.read_text(encoding="utf-8"))
 
 
 def validate_evidence_record(
@@ -318,8 +326,7 @@ def recertify_foundation(
             for record in records
         ],
         "supersedes": (
-            "prior local foundation claims for Todos 1-4 "
-            "and P0 inventory-only reports"
+            "prior local foundation claims for Todos 1-4 and P0 inventory-only reports"
         ),
     }
 
