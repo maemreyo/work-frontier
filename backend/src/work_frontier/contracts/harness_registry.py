@@ -3,10 +3,24 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, Final, cast
 
-HARNESS_ID_PATTERN = r"^WF-HAR-[A-Z0-9]+(?:-[A-Z0-9]+)*$"
+HARNESS_ID_PATTERN: Final = re.compile(r"^WF-HAR-[A-Z0-9]+(?:-[A-Z0-9]+)*$")
+APPLICABILITY: Final = frozenset({"standard", "large", "tenant"})
+STATUS: Final = frozenset({"specified", "implemented", "deferred"})
+REQUIRED_FIELDS: Final = (
+    "id",
+    "name",
+    "command",
+    "artifact",
+    "blocks_release",
+    "what_it_runs",
+    "pass_criteria",
+    "applicability",
+    "status",
+)
 
 
 class HarnessRegistryError(ValueError):
@@ -37,20 +51,41 @@ def validate_registry(data: dict[str, Any]) -> None:
 
     seen: set[str] = set()
     for harness_entry in harnesses:
-        harness_id = str(harness_entry.get("id", ""))
-        if not harness_id.startswith("WF-HAR-"):
+        for field in REQUIRED_FIELDS:
+            if field not in harness_entry:
+                msg = f"harness missing required field {field}"
+                raise HarnessRegistryError(msg)
+        harness_id = str(harness_entry["id"])
+        if HARNESS_ID_PATTERN.fullmatch(harness_id) is None:
             msg = f"invalid harness id: {harness_id!r}"
             raise HarnessRegistryError(msg)
         if harness_id in seen:
             msg = f"duplicate harness id: {harness_id}"
             raise HarnessRegistryError(msg)
         seen.add(harness_id)
-        if not harness_entry.get("command"):
+        if not str(harness_entry.get("command", "")).strip():
             msg = f"{harness_id}: command is required"
+            raise HarnessRegistryError(msg)
+        if not str(harness_entry.get("artifact", "")).strip():
+            msg = f"{harness_id}: artifact is required"
+            raise HarnessRegistryError(msg)
+        applicability = str(harness_entry.get("applicability", ""))
+        if applicability not in APPLICABILITY:
+            msg = f"{harness_id}: invalid applicability {applicability!r}"
+            raise HarnessRegistryError(msg)
+        status = str(harness_entry.get("status", ""))
+        if status not in STATUS:
+            msg = f"{harness_id}: invalid status {status!r}"
+            raise HarnessRegistryError(msg)
+        if not isinstance(harness_entry.get("blocks_release"), bool):
+            msg = f"{harness_id}: blocks_release must be bool"
             raise HarnessRegistryError(msg)
 
     if data.get("harness_count") != len(harnesses):
         msg = "harness_count does not match harnesses length"
+        raise HarnessRegistryError(msg)
+    if data.get("catalog_harness_count") != len(harnesses):
+        msg = "catalog_harness_count must equal harness_count (catalog is sole source)"
         raise HarnessRegistryError(msg)
 
     standard_blockers: list[str] = [
@@ -66,6 +101,19 @@ def validate_registry(data: dict[str, Any]) -> None:
     if declared != standard_blockers:
         msg = "standard_blockers list is inconsistent with harness entries"
         raise HarnessRegistryError(msg)
+
+    closure_raw = data.get("foundation_closure")
+    if not isinstance(closure_raw, list) or not closure_raw:
+        msg = "foundation_closure missing from registry"
+        raise HarnessRegistryError(msg)
+    closure = [str(item) for item in cast("list[Any]", closure_raw)]
+    if len(closure) != len(set(closure)):
+        msg = "foundation_closure contains duplicates"
+        raise HarnessRegistryError(msg)
+    for harness_id in closure:
+        if harness_id not in seen:
+            msg = f"foundation_closure references unknown harness {harness_id}"
+            raise HarnessRegistryError(msg)
 
 
 def get_harness(registry: dict[str, Any], harness_id: str) -> dict[str, Any]:

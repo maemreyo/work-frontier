@@ -95,6 +95,9 @@ def get_tool_version(tool_name: str) -> str:
             msg = f"package metadata unavailable for tool {tool_name}"
             raise LookupError(msg) from exc
 
+    if name in {"gitleaks", "secret-detection"}:
+        return _run_version(["gitleaks", "version"])
+
     msg = f"no version capture strategy for tool {tool_name!r}"
     raise LookupError(msg)
 

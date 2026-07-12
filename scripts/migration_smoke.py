@@ -115,6 +115,17 @@ def seed_marker(url: str) -> None:
         )
 
 
+def marker_row_exists(url: str, label: str) -> bool:
+    """Return whether a row with the given label exists."""
+    engine = create_engine(url)
+    with engine.connect() as connection:
+        cursor = connection.execute(
+            text("SELECT 1 FROM bootstrap_markers WHERE label = :label"),
+            {"label": label},
+        )
+        return cursor.first() is not None
+
+
 def install_failing_revision() -> Path:
     VERSIONS_DIR.mkdir(parents=True, exist_ok=True)
     _ = FAILING_REVISION_PATH.write_text(FAILING_REVISION_SOURCE, encoding="utf-8")
@@ -189,12 +200,32 @@ def main() -> int:
             Result(kind="seed_marker", passed=True, detail="Seeded marker data")
         )
 
+        if not marker_row_exists(url, "seeded"):
+            raise MigrationSmokeError("seed row not found after seeding")
+        results.append(
+            Result(
+                kind="seed_verified",
+                passed=True,
+                detail="Seed row confirmed present",
+            )
+        )
+
         failing_alembic_revision_rolls_back(url)
         results.append(
             Result(
                 kind="failed_revision_rollback",
                 passed=True,
                 detail="Failed Alembic revision rolled back schema and version",
+            )
+        )
+
+        if not marker_row_exists(url, "seeded"):
+            raise MigrationSmokeError("seed row lost after failed revision rollback")
+        results.append(
+            Result(
+                kind="seed_preserved_after_failure",
+                passed=True,
+                detail="Seed row survives failed revision",
             )
         )
 

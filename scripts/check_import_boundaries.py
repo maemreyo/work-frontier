@@ -229,16 +229,18 @@ class ImportCollector(ast.NodeVisitor):
         if resolved is None:
             return
 
-        self.modules.append((resolved, node.lineno))
+        if not resolved.startswith(PACKAGE):
+            return
 
-        if resolved == PACKAGE or resolved.startswith(f"{PACKAGE}."):
-            for alias in node.names:
-                if alias.name == "*":
-                    continue
-                if alias.name in LAYERS:
-                    self.modules.append((f"{PACKAGE}.{alias.name}", node.lineno))
-                elif resolved == PACKAGE:
-                    self.modules.append((f"{resolved}.{alias.name}", node.lineno))
+        if not node.names:
+            self.modules.append((resolved, node.lineno))
+            return
+
+        for alias in node.names:
+            if alias.name == "*":
+                self.modules.append((resolved, node.lineno))
+                continue
+            self.modules.append((f"{resolved}.{alias.name}", node.lineno))
 
 
 def imported_modules(

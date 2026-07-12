@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""Build or check the machine-readable harness registry from the catalog."""
+"""Build or check the machine-readable harness registry from the catalog.
+
+Catalog is the sole semantic source of truth. This builder only:
+- parses catalog entries
+- marks foundation-closure IDs as implemented when their catalog command is local
+- does not rewrite harness meaning, name, or artifact semantics
+"""
 
 from __future__ import annotations
 
@@ -13,14 +19,24 @@ ROOT = Path(__file__).resolve().parents[1]
 CATALOG = ROOT / "docs" / "quality" / "harness-catalog.md"
 REGISTRY = ROOT / "contracts" / "harness-registry.json"
 
-HEADER_RE = re.compile(r"^### (WF-HAR-\S+):\s*(.+)$", re.MULTILINE)
+# Foundation dependency closure for Todo 5 recertification of Todos 1-4 / P0.
+FOUNDATION_CLOSURE: tuple[str, ...] = (
+    "WF-HAR-PREFLIGHT-01",
+    "WF-HAR-STATIC-01",
+    "WF-HAR-STATIC-02",
+    "WF-HAR-STATIC-04",
+    "WF-HAR-STATIC-05",
+    "WF-HAR-CONTRACT-05",
+    "WF-HAR-INTEG-01",
+    "WF-HAR-INTEG-02",
+)
+
 FIELD_RE = re.compile(r"\|\s*\*\*([^*]+)\*\*\s*\|\s*(.*?)\s*\|")
 
 
 def _clean_cell(value: str) -> str:
     value = value.strip()
     value = value.strip("`")
-    # Drop trailing markdown residue such as "` (intended)"
     value = re.sub(r"`\s*\(.*$", "", value).strip()
     value = value.rstrip("`").strip()
     return value
@@ -46,6 +62,7 @@ def parse_catalog(text: str) -> list[dict[str, object]]:
             applicability = "large"
         elif harness_id.endswith("-T"):
             applicability = "tenant"
+        status = "implemented" if harness_id in FOUNDATION_CLOSURE else "specified"
         harnesses.append(
             {
                 "id": harness_id,
@@ -56,68 +73,33 @@ def parse_catalog(text: str) -> list[dict[str, object]]:
                 "what_it_runs": fields.get("What it runs", ""),
                 "pass_criteria": fields.get("Pass criteria", ""),
                 "applicability": applicability,
-                "status": "specified",
+                "status": status,
             }
         )
     return harnesses
 
 
 def build_registry(harnesses: list[dict[str, object]]) -> dict[str, object]:
-    foundation_closure = [
-        "WF-HAR-STATIC-01",
-        "WF-HAR-STATIC-02",
-        "WF-HAR-STATIC-04",
-        "WF-HAR-STATIC-05",
-        "WF-HAR-CONTRACT-05",
-        "WF-HAR-INTEG-01",
-        "WF-HAR-INTEG-02",
-    ]
-    command_overrides = {
-        "WF-HAR-STATIC-01": (
-            "uv run basedpyright && pnpm --dir frontend exec tsc --noEmit"
-        ),
-        "WF-HAR-STATIC-02": "uv run python scripts/check_import_boundaries.py",
-        "WF-HAR-STATIC-04": (
-            "uv run ruff check backend/src backend/tests scripts && "
-            "uv run ruff format --check backend/src backend/tests scripts && "
-            "pnpm --dir frontend run check"
-        ),
-        "WF-HAR-STATIC-05": (
-            "node .omo/preflight/adr-006/validate.mjs && "
-            "node --test .omo/preflight/adr-006/validate.test.mjs"
-        ),
-        "WF-HAR-CONTRACT-05": "uv run python scripts/generate_contracts.py --check",
-        "WF-HAR-INTEG-01": "make migration-smoke",
-        "WF-HAR-INTEG-02": "make storage-smoke",
-    }
     by_id = {str(item["id"]): item for item in harnesses}
-    for harness_id, command in command_overrides.items():
-        if harness_id in by_id:
-            by_id[harness_id]["command"] = command
-            by_id[harness_id]["status"] = "implemented"
-            if harness_id == "WF-HAR-STATIC-05":
-                by_id[harness_id]["artifact"] = (
-                    ".omo/evidence/preflight-adr-006/validation.json"
-                )
-                by_id[harness_id]["name"] = (
-                    "Secret Detection + ADR-006 Foundation Preflight"
-                )
+    for harness_id in FOUNDATION_CLOSURE:
+        if harness_id not in by_id:
+            msg = f"foundation closure harness missing from catalog: {harness_id}"
+            raise ValueError(msg)
 
-    all_harnesses = list(by_id.values())
     standard_blockers = [
         str(item["id"])
-        for item in all_harnesses
+        for item in harnesses
         if item.get("blocks_release") and item.get("applicability") == "standard"
     ]
     return {
         "schema_version": "1.0.0",
         "source": "docs/quality/harness-catalog.md",
-        "harness_count": len(all_harnesses),
+        "harness_count": len(harnesses),
         "catalog_harness_count": len(harnesses),
         "standard_blocker_count": len(standard_blockers),
         "standard_blockers": standard_blockers,
-        "foundation_closure": foundation_closure,
-        "harnesses": all_harnesses,
+        "foundation_closure": list(FOUNDATION_CLOSURE),
+        "harnesses": harnesses,
     }
 
 
@@ -140,16 +122,16 @@ def main() -> int:
             return 1
         existing = REGISTRY.read_text(encoding="utf-8")
         if existing != rendered:
-            stale_msg = (
-                "harness registry is out of date; run scripts/build_harness_registry.py"
+            print(
+                "harness registry is out of date; "
+                "run scripts/build_harness_registry.py",
+                file=sys.stderr,
             )
-            print(stale_msg, file=sys.stderr)
             return 1
-        ok_msg = (
+        print(
             f"registry ok: {registry['harness_count']} harnesses, "
             f"{registry['standard_blocker_count']} standard blockers"
         )
-        print(ok_msg)
         return 0
 
     REGISTRY.parent.mkdir(parents=True, exist_ok=True)

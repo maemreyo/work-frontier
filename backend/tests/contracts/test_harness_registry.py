@@ -31,12 +31,16 @@ REGISTRY_PATH = ROOT / "contracts" / "harness-registry.json"
 def test_registry_loads_and_matches_catalog_counts() -> None:
     registry = load_registry(REGISTRY_PATH)
     assert registry["schema_version"] == "1.0.0"
-    assert registry["catalog_harness_count"] == 67
-    assert registry["harness_count"] == 67
-    assert registry["standard_blocker_count"] == 64
-    assert "WF-HAR-STATIC-05" in registry["foundation_closure"]
+    assert registry["catalog_harness_count"] == registry["harness_count"] == 68
+    assert "WF-HAR-PREFLIGHT-01" in registry["foundation_closure"]
     assert "WF-HAR-STATIC-01" in registry["foundation_closure"]
-    assert get_harness(registry, "WF-HAR-STATIC-02")["status"] == "implemented"
+    assert "WF-HAR-STATIC-05" in registry["foundation_closure"]
+    preflight = get_harness(registry, "WF-HAR-PREFLIGHT-01")
+    assert preflight["status"] == "implemented"
+    assert "validate.test.mjs" in preflight["command"]
+    static05 = get_harness(registry, "WF-HAR-STATIC-05")
+    assert "gitleaks" in static05["command"].lower()
+    assert "validate.mjs" not in static05["command"]
 
 
 def test_registry_rejects_duplicate_ids() -> None:
@@ -93,6 +97,12 @@ def test_validate_evidence_rejects_fabricated_version_and_stale_subject() -> Non
 
 def test_registry_file_is_valid_json_with_foundation_closure() -> None:
     data = json.loads(REGISTRY_PATH.read_text(encoding="utf-8"))
-    assert data["harness_count"] == data["catalog_harness_count"] == 67
-    assert "WF-HAR-CONTRACT-05" in data["foundation_closure"]
+    assert data["harness_count"] == data["catalog_harness_count"] == 68
+    assert "WF-HAR-PREFLIGHT-01" in data["foundation_closure"]
     assert "WF-HAR-STATIC-05" in data["foundation_closure"]
+    assert all(
+        harness["command"].strip() for harness in data["harnesses"]
+    )
+    assert all(
+        harness["artifact"].strip() for harness in data["harnesses"]
+    )

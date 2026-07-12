@@ -19,7 +19,9 @@ from work_frontier.contracts.evidence_writer import (
     get_git_commit_sha,
     get_tool_version,
     hash_bytes,
+    hash_file,
     write_evidence,
+    write_text_artifact,
 )
 from work_frontier.contracts.harness_registry import (
     foundation_closure,
@@ -37,6 +39,8 @@ def tool_name_for_harness(harness_id: str) -> str:
         return "preflight"
     if harness_id == "WF-HAR-STATIC-02":
         return "check_import_boundaries"
+    if harness_id == "WF-HAR-STATIC-05":
+        return "gitleaks"
     if harness_id.startswith("WF-HAR-STATIC"):
         return "python"
     if harness_id == "WF-HAR-CONTRACT-05":
@@ -46,6 +50,10 @@ def tool_name_for_harness(harness_id: str) -> str:
     if harness_id == "WF-HAR-INTEG-02":
         return "storage-smoke"
     return "python"
+
+
+def _is_remote_artifact(path: str) -> bool:
+    return path.startswith(("s3://", "http://", "https://"))
 
 
 def run_harness(
@@ -76,16 +84,11 @@ def run_harness(
     end_time = datetime.now(UTC)
 
     status: Literal["pass", "fail", "skip", "not_applicable"]
-    if completed.returncode == 0:
-        status = "pass"
-    else:
-        status = "fail"
+    status = "pass" if completed.returncode == 0 else "fail"
 
     stdout = completed.stdout or ""
     stderr = completed.stderr or ""
-    declared_artifact = str(
-        harness.get("artifact") or f".omo/evidence/static/{harness_id}.json"
-    )
+    declared_artifact = str(harness["artifact"])
     results = [
         Result(
             kind="harness_exit",
@@ -99,27 +102,49 @@ def run_harness(
         "registry.blocks_release": bool(harness.get("blocks_release")),
         "registry.applicability": str(harness.get("applicability", "standard")),
         "registry.status": str(harness.get("status", "specified")),
+        "registry.command": command,
+        "registry.artifact": declared_artifact,
     }
 
-    from work_frontier.contracts.evidence_writer import hash_file
-
     artifacts: list[Artifact] = []
-    artifact_file = root / declared_artifact
-    if artifact_file.is_file():
+    if _is_remote_artifact(declared_artifact):
         artifacts.append(
             Artifact(
                 path=declared_artifact,
-                hashes={"sha256": hash_file(artifact_file)},
+                hashes={"sha256": hash_bytes(declared_artifact.encode("utf-8"))},
             )
         )
+        property_bag["artifact.kind"] = "remote"
     else:
-        log_digest = hash_bytes((stdout + stderr).encode("utf-8"))
-        artifacts.append(
-            Artifact(
-                path=f".omo/evidence/static/{harness_id}.console.log",
-                hashes={"sha256": log_digest},
+        artifact_file = root / declared_artifact
+        if artifact_file.is_file():
+            artifacts.append(
+                Artifact(
+                    path=declared_artifact,
+                    hashes={"sha256": hash_file(artifact_file)},
+                )
             )
-        )
+            property_bag["artifact.kind"] = "local-file"
+        else:
+            console_rel = f".omo/evidence/static/{harness_id}.console.log"
+            console_content = f"STDOUT:\n{stdout}\n\nSTDERR:\n{stderr}\n"
+            console_artifact = write_text_artifact(
+                content=console_content,
+                relative_path=console_rel,
+                repo_root=root,
+            )
+            artifacts.append(console_artifact)
+            property_bag["artifact.kind"] = "console-fallback"
+            property_bag["artifact.declared_missing"] = declared_artifact
+            if status == "pass":
+                status = "fail"
+                results.append(
+                    Result(
+                        kind="missing_declared_artifact",
+                        passed=False,
+                        detail=f"declared artifact missing: {declared_artifact}",
+                    )
+                )
 
     evidence_path = write_evidence(
         harness_id=harness_id,
@@ -140,10 +165,9 @@ def run_harness(
         stderr=stderr,
     )
 
-    record = EvidenceRecord.model_validate_json(
+    return EvidenceRecord.model_validate_json(
         evidence_path.read_text(encoding="utf-8")
     )
-    return record
 
 
 def validate_evidence_record(
@@ -164,11 +188,10 @@ def validate_evidence_record(
         return failures
 
     if expected_subject_sha and record.subject_sha != expected_subject_sha:
-        msg = (
+        failures.append(
             f"{record.harness_id}: subject_sha {record.subject_sha} "
             f"!= {expected_subject_sha}"
         )
-        failures.append(msg)
 
     if record.tool.version in {"", "1.0.0", "unknown", "fabricated"}:
         failures.append(f"{record.harness_id}: fabricated or missing tool version")
@@ -179,7 +202,24 @@ def validate_evidence_record(
     ):
         failures.append(f"{record.harness_id}: working_directory must be repo-relative")
 
-    from work_frontier.contracts.evidence_writer import hash_file
+    if record.invocation.command != str(harness.get("command", "")):
+        failures.append(f"{record.harness_id}: command does not match registry")
+
+    expected_pass = record.invocation.exit_code == 0
+    if record.status == "pass" and not expected_pass:
+        failures.append(f"{record.harness_id}: status pass with nonzero exit_code")
+    if record.status == "fail" and expected_pass and require_blocking_pass:
+        failures.append(f"{record.harness_id}: status fail with zero exit_code")
+
+    if record.invocation.end_time < record.invocation.start_time:
+        failures.append(f"{record.harness_id}: end_time before start_time")
+
+    bag = record.property_bag or {}
+    declared_missing = bag.get("artifact.declared_missing")
+    if declared_missing:
+        failures.append(
+            f"{record.harness_id}: declared artifact missing: {declared_missing}"
+        )
 
     for artifact in record.artifacts:
         digest = None if artifact.hashes is None else artifact.hashes.get("sha256")
@@ -188,17 +228,20 @@ def validate_evidence_record(
                 f"{record.harness_id}: artifact {artifact.path} missing sha256"
             )
             continue
-        candidate = Path(artifact.path)
-        if not candidate.is_absolute():
-            candidate = root / artifact.path
-        if candidate.is_file() and hash_file(candidate) != digest:
+        if _is_remote_artifact(artifact.path):
+            continue
+        candidate = root / artifact.path
+        if not candidate.is_file():
+            failures.append(
+                f"{record.harness_id}: artifact path does not exist: {artifact.path}"
+            )
+            continue
+        if hash_file(candidate) != digest:
             failures.append(
                 f"{record.harness_id}: artifact {artifact.path} hash mismatch"
             )
 
-    has_registry_id = bool(
-        record.property_bag and record.property_bag.get("registry.harness_id")
-    )
+    has_registry_id = bool(bag.get("registry.harness_id"))
     if (
         record.stdout_artifact is None or record.stderr_artifact is None
     ) and has_registry_id:
@@ -275,7 +318,8 @@ def recertify_foundation(
             for record in records
         ],
         "supersedes": (
-            "prior local foundation claims for Todos 1-4 and P0 inventory-only reports"
+            "prior local foundation claims for Todos 1-4 "
+            "and P0 inventory-only reports"
         ),
     }
 

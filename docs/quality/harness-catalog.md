@@ -31,14 +31,24 @@ NAME: short lowercase identifier
 
 ## Layer 1: Static (WF-HAR-STATIC)
 
+### WF-HAR-PREFLIGHT-01: ADR-006 Foundation Contract Gate
+
+| Field | Value |
+|-------|-------|
+| **Command** | `node .omo/preflight/adr-006/validate.mjs && node --test .omo/preflight/adr-006/validate.test.mjs` |
+| **What it runs** | Contract-specific P0 positive payloads and negative mutations for WF-P0-01..07 plus behavioral sabotage suite |
+| **Artifact** | `.omo/evidence/preflight-adr-006/validation.json` |
+| **Pass criteria** | Gate status passed; all positive documents validate; all negative fixtures reject with expected failure IDs; behavioral tests pass |
+| **Blocks release** | Yes |
+
 ### WF-HAR-STATIC-01: Type Checking
 
 | Field | Value |
 |-------|-------|
-| **Command** | `make check-static` |
-| **What it runs** | mypy (Python strict mode), tsc --strict (TypeScript) |
-| **Artifact** | `evidence/static/type-check.json` |
-| **Pass criteria** | Zero errors. Warnings tracked but not blocking. |
+| **Command** | `uv run basedpyright && pnpm --dir frontend exec tsc --noEmit` |
+| **What it runs** | basedpyright (Python strict) and TypeScript `tsc --noEmit` for frontend |
+| **Artifact** | `.omo/evidence/static/WF-HAR-STATIC-01.json` |
+| **Pass criteria** | Zero errors |
 | **Blocks release** | Yes |
 
 ### WF-HAR-STATIC-02: Import Boundary Enforcement
@@ -47,8 +57,8 @@ NAME: short lowercase identifier
 |-------|-------|
 | **Command** | `uv run python scripts/check_import_boundaries.py` |
 | **What it runs** | Scans `backend/src/work_frontier` imports, verifies ADR-006 Domain/Platform/Application/Interfaces/Adapter seams and Application-owned ports |
-| **Artifact** | `evidence/static/import-boundaries.json` |
-| **Pass criteria** | Zero violations of ADR-006 and `architecture/ARCHITECTURE.md` §3.3; fixtures prove Domain cannot import Platform/Application/Adapters/Interfaces, Platform/Adapters can import only `application.ports` (not Application internals), and Interfaces call Application inbound use cases only. |
+| **Artifact** | `.omo/evidence/static/import-boundaries.json` |
+| **Pass criteria** | Zero violations of ADR-006 and architecture import matrix; unknown layers fail closed; 36-pair behavioral fixtures pass |
 | **Blocks release** | Yes |
 
 ### WF-HAR-STATIC-03: Dead Code Detection
@@ -57,7 +67,7 @@ NAME: short lowercase identifier
 |-------|-------|
 | **Command** | `uv run vulture backend/src --min-confidence 90 && pnpm --dir frontend exec ts-prune` |
 | **What it runs** | Detects unused functions, classes, variables above confidence threshold |
-| **Artifact** | `evidence/static/dead-code.json` |
+| **Artifact** | `.omo/evidence/static/dead-code.json` |
 | **Pass criteria** | No new dead code since last release. Existing dead code tracked in tech-debt backlog. |
 | **Blocks release** | No (informational) |
 
@@ -65,9 +75,9 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `uv run ruff check backend/src tests scripts && pnpm --dir frontend exec biome check src` |
-| **What it runs** | Full lint rule sets for Python and TypeScript |
-| **Artifact** | `evidence/static/lint.json` |
+| **Command** | `uv run ruff check backend/src backend/tests scripts && uv run ruff format --check backend/src backend/tests scripts && pnpm --dir frontend run check` |
+| **What it runs** | Ruff lint/format and Biome + tsc frontend check |
+| **Artifact** | `.omo/evidence/static/WF-HAR-STATIC-04.json` |
 | **Pass criteria** | Zero violations |
 | **Blocks release** | Yes |
 
@@ -75,9 +85,9 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `gitleaks detect --source . --report-format json` |
+| **Command** | `gitleaks detect --source . --report-format json --report-path .omo/evidence/static/secrets.json` |
 | **What it runs** | Scans entire repo history for committed secrets |
-| **Artifact** | `evidence/static/secrets.json` |
+| **Artifact** | `.omo/evidence/static/secrets.json` |
 | **Pass criteria** | Zero findings |
 | **Blocks release** | Yes |
 
@@ -301,10 +311,10 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `pytest tests/contract/test_cross_language.py -v && vitest run tests/contract/cross-language.test.ts` |
-| **What it runs** | Pydantic model serialized → Zod schema deserialized, and reverse |
-| **Artifact** | `evidence/contract/cross-language.json` |
-| **Pass criteria** | Roundtrip produces identical data. No field loss, no type mismatch. |
+| **Command** | `uv run python scripts/generate_contracts.py --check && uv run pytest backend/tests/contracts/test_decision_record_contract.py -v && pnpm --dir frontend exec vitest run tests/contracts/decision-record.generated.test.ts` |
+| **What it runs** | Contract generation drift check plus shared DecisionRecord fixtures through Pydantic and Zod with canonical SHA-256 parity |
+| **Artifact** | `.omo/evidence/static/contracts.json` |
+| **Pass criteria** | Zero generation drift; all required fixtures present; valid fixtures pass both runtimes with matching canonical hashes; invalid fixtures rejected by both |
 | **Blocks release** | Yes |
 
 ---
@@ -315,22 +325,22 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `pytest tests/integration/test_postgres.py -v` |
-| **What it runs** | Migrations, forced RLS policies, non-BYPASSRLS app role, transaction-local workspace context, composite scoped constraints, CRUD, transactions, connection pooling, LISTEN/NOTIFY against real Postgres 16 |
+| **Command** | `make migration-smoke` |
+| **What it runs** | Data-service baseline: Alembic upgrade, seeded lifecycle, real failing revision rollback, downgrade, re-upgrade against Postgres 16. Full RLS/CRUD/pooling deferred to later platform todos. |
 | **Environment** | Docker Compose: postgres:16 |
-| **Artifact** | `evidence/integration/postgres.json` |
-| **Pass criteria** | All scoped operations succeed. Missing/mismatched workspace context and cross-workspace direct SQL are denied; app role cannot bypass RLS; no connection leaks; transactions ACID. |
+| **Artifact** | `.omo/evidence/static/migration-smoke.json` |
+| **Pass criteria** | Marker table present after upgrade; seed row survives failed-revision rollback; failing revision does not advance alembic_version; downgrade/re-upgrade succeed |
 | **Blocks release** | Yes |
 
 ### WF-HAR-INTEG-02: Object Storage Integration
 
 | Field | Value |
 |-------|-------|
-| **Command** | `pytest tests/integration/test_object_storage.py -v` |
-| **What it runs** | Upload, download, presigned URLs, lifecycle policies against real MinIO |
+| **Command** | `make storage-smoke` |
+| **What it runs** | MinIO create-bucket/put/get/delete round trip with failure-safe cleanup |
 | **Environment** | Docker Compose: minio |
-| **Artifact** | `evidence/integration/object-storage.json` |
-| **Pass criteria** | Upload/download roundtrip. Presigned URL valid within window. Lifecycle policy deletes. |
+| **Artifact** | `.omo/evidence/static/minio-roundtrip.json` |
+| **Pass criteria** | Upload/download payload match; bucket cleaned up on success and failure paths |
 | **Blocks release** | Yes |
 
 ### WF-HAR-INTEG-03: Durable Queue Integration

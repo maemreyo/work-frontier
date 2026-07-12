@@ -38,6 +38,12 @@ migration-smoke:
 storage-smoke:
 	MINIO_ENDPOINT_URL=http://localhost:9002 MINIO_ROOT_USER=work-frontier MINIO_ROOT_PASSWORD=work-frontier-minio uv run python scripts/minio_roundtrip.py
 
+harness:
+	uv run python scripts/run_harness.py --id $(ID) --repo-root .
+
+recertify-foundation:
+	uv run python scripts/run_harness.py --recertify-foundation --repo-root .
+
 test:
 	uv run pytest
 	pnpm --dir frontend run test

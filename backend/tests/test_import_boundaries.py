@@ -202,3 +202,17 @@ class TestImportBoundaryFixes:
         violations = validate(tmp_path)
 
         assert violations == ()
+
+    def test_from_application_import_ports_is_allowed_for_platform(
+        self, tmp_path: Path
+    ) -> None:
+        src = tmp_path / "work_frontier" / "platform"
+        src.mkdir(parents=True)
+        module = src / "connector.py"
+        _ = module.write_text(
+            "from work_frontier.application import ports\n", encoding="utf-8"
+        )
+
+        violations = validate(tmp_path)
+
+        assert violations == ()
