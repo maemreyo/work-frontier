@@ -2,20 +2,20 @@
   "schema_version": "1.0.0",
   "harness_id": "WF-HAR-STATIC-02",
   "status": "pass",
-  "run_id": "run-1783845614698",
-  "subject_sha": "1995430924108c4cd9d62fae8bb16cb6748a1f31",
+  "run_id": "run-1783848446447",
+  "subject_sha": "35e29a933534452757fe0515e29af7e6c6189b52",
   "invocation": {
     "command": "uv run python scripts/check_import_boundaries.py",
     "exit_code": 0,
     "working_directory": ".",
-    "start_time": "2026-07-12T08:40:14.571492Z",
-    "end_time": "2026-07-12T08:40:14.594436Z",
-    "duration_seconds": 0.022944
+    "start_time": "2026-07-12T09:27:26.415674Z",
+    "end_time": "2026-07-12T09:27:26.425918Z",
+    "duration_seconds": 0.010244
   },
   "tool": {
     "name": "check_import_boundaries",
     "version": "3.13.5",
-    "commit_sha": "1995430924108c4cd9d62fae8bb16cb6748a1f31"
+    "commit_sha": "35e29a933534452757fe0515e29af7e6c6189b52"
   },
   "environment": {
     "python": "3.13.5",
@@ -76,7 +76,7 @@
     {
       "path": "backend/src/work_frontier/contracts/harness_runner.py",
       "hashes": {
-        "sha256": "5587f8e9703c7ecf6f3bfed7d3547f04de512416a1512dfcf16d02d13c802ccb"
+        "sha256": "4117c6c703ec48ddb852283f678eaf49f8a0db368fc043d728fde15882e06684"
       }
     },
     {

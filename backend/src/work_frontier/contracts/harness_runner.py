@@ -83,7 +83,7 @@ def run_harness(
 
     stdout = completed.stdout or ""
     stderr = completed.stderr or ""
-    artifact_path = str(
+    declared_artifact = str(
         harness.get("artifact") or f".omo/evidence/static/{harness_id}.json"
     )
     results = [
@@ -101,6 +101,26 @@ def run_harness(
         "registry.status": str(harness.get("status", "specified")),
     }
 
+    from work_frontier.contracts.evidence_writer import hash_file
+
+    artifacts: list[Artifact] = []
+    artifact_file = root / declared_artifact
+    if artifact_file.is_file():
+        artifacts.append(
+            Artifact(
+                path=declared_artifact,
+                hashes={"sha256": hash_file(artifact_file)},
+            )
+        )
+    else:
+        log_digest = hash_bytes((stdout + stderr).encode("utf-8"))
+        artifacts.append(
+            Artifact(
+                path=f".omo/evidence/static/{harness_id}.console.log",
+                hashes={"sha256": log_digest},
+            )
+        )
+
     evidence_path = write_evidence(
         harness_id=harness_id,
         status=status,
@@ -111,14 +131,9 @@ def run_harness(
         end_time=end_time,
         tool_name=tool_name,
         tool_version=tool_version,
-        artifacts=[
-            Artifact(
-                path=artifact_path,
-                hashes={"sha256": hash_bytes((stdout + stderr).encode("utf-8"))},
-            )
-        ],
+        artifacts=artifacts,
         results=results,
-        property_bag=property_bag,  # type: ignore[arg-type]
+        property_bag=property_bag,
         output_filename=f"{harness_id}.json",
         repo_root=root,
         stdout=stdout,
@@ -137,9 +152,11 @@ def validate_evidence_record(
     registry: dict[str, Any],
     expected_subject_sha: str | None = None,
     require_blocking_pass: bool = False,
+    repo_root: Path | None = None,
 ) -> list[str]:
     """Return certification failures for one evidence record."""
     failures: list[str] = []
+    root = repo_root or Path.cwd()
     try:
         harness = get_harness(registry, record.harness_id)
     except Exception as exc:  # noqa: BLE001 - surface as certification failure
@@ -162,11 +179,22 @@ def validate_evidence_record(
     ):
         failures.append(f"{record.harness_id}: working_directory must be repo-relative")
 
-    failures.extend(
-        f"{record.harness_id}: artifact {artifact.path} missing sha256"
-        for artifact in record.artifacts
-        if artifact.hashes is None or not artifact.hashes.get("sha256")
-    )
+    from work_frontier.contracts.evidence_writer import hash_file
+
+    for artifact in record.artifacts:
+        digest = None if artifact.hashes is None else artifact.hashes.get("sha256")
+        if not digest:
+            failures.append(
+                f"{record.harness_id}: artifact {artifact.path} missing sha256"
+            )
+            continue
+        candidate = Path(artifact.path)
+        if not candidate.is_absolute():
+            candidate = root / artifact.path
+        if candidate.is_file() and hash_file(candidate) != digest:
+            failures.append(
+                f"{record.harness_id}: artifact {artifact.path} hash mismatch"
+            )
 
     has_registry_id = bool(
         record.property_bag and record.property_bag.get("registry.harness_id")
@@ -174,7 +202,6 @@ def validate_evidence_record(
     if (
         record.stdout_artifact is None or record.stderr_artifact is None
     ) and has_registry_id:
-        # Runner-produced records must include logs; legacy may omit them.
         failures.append(f"{record.harness_id}: missing stdout/stderr artifacts")
 
     if (
@@ -225,6 +252,7 @@ def recertify_foundation(
                 registry=registry,
                 expected_subject_sha=subject_sha,
                 require_blocking_pass=True,
+                repo_root=root,
             )
         )
 

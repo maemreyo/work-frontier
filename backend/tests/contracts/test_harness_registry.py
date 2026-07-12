@@ -32,8 +32,10 @@ def test_registry_loads_and_matches_catalog_counts() -> None:
     registry = load_registry(REGISTRY_PATH)
     assert registry["schema_version"] == "1.0.0"
     assert registry["catalog_harness_count"] == 67
-    assert registry["harness_count"] == 68  # + PREFLIGHT-01
-    assert "WF-HAR-PREFLIGHT-01" in registry["foundation_closure"]
+    assert registry["harness_count"] == 67
+    assert registry["standard_blocker_count"] == 64
+    assert "WF-HAR-STATIC-05" in registry["foundation_closure"]
+    assert "WF-HAR-STATIC-01" in registry["foundation_closure"]
     assert get_harness(registry, "WF-HAR-STATIC-02")["status"] == "implemented"
 
 
@@ -82,6 +84,7 @@ def test_validate_evidence_rejects_fabricated_version_and_stale_subject() -> Non
         registry=registry,
         expected_subject_sha="c" * 40,
         require_blocking_pass=True,
+        repo_root=ROOT,
     )
     assert any("subject_sha" in item for item in failures)
     assert any("tool version" in item for item in failures)
@@ -90,5 +93,6 @@ def test_validate_evidence_rejects_fabricated_version_and_stale_subject() -> Non
 
 def test_registry_file_is_valid_json_with_foundation_closure() -> None:
     data = json.loads(REGISTRY_PATH.read_text(encoding="utf-8"))
-    assert data["foundation_closure"][0] == "WF-HAR-PREFLIGHT-01"
+    assert data["harness_count"] == data["catalog_harness_count"] == 67
     assert "WF-HAR-CONTRACT-05" in data["foundation_closure"]
+    assert "WF-HAR-STATIC-05" in data["foundation_closure"]

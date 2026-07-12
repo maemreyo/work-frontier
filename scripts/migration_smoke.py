@@ -1,4 +1,4 @@
-"""Exercise Alembic upgrade, downgrade, and re-upgrade against PostgreSQL."""
+"""Exercise Alembic upgrade, failed-revision, downgrade, and re-upgrade."""
 
 from __future__ import annotations
 
@@ -10,17 +10,51 @@ from typing import Final
 from alembic import command
 from alembic.config import Config
 from sqlalchemy import create_engine, inspect, text
-from sqlalchemy.exc import DBAPIError
 
 DATABASE_URL_ENVIRONMENT: Final = "DATABASE_URL"
 MARKER_TABLE: Final = "bootstrap_markers"
-MIGRATION_FAILURE_PROBE: Final = "migration_failure_probe"
+FAIL_TABLE: Final = "failing_revision_probe"
 DOWNGRADE_RETAINED_MARKER: Final = "downgrade retained bootstrap marker"
-INVALID_DDL: Final = "THIS IS INVALID SQL"
-INVALID_DDL_PARTIAL_SCHEMA: Final = "invalid DDL left partial schema"
+FAILED_REVISION_NOT_ROLLED_BACK: Final = "failed Alembic revision left partial schema"
+FAILED_REVISION_VERSION_ADVANCED: Final = (
+    "failed Alembic revision advanced alembic_version"
+)
 REUPGRADE_MISSING_MARKER: Final = "re-upgrade missing bootstrap marker"
 UNSUPPORTED_MIGRATION_OPERATION: Final = "unsupported migration operation"
 UPGRADE_MISSING_MARKER: Final = "upgrade missing bootstrap marker"
+FAILING_REVISION_ID: Final = "0002_failing_revision_probe"
+VERSIONS_DIR: Final = Path("infra/alembic/versions")
+FAILING_REVISION_PATH: Final = VERSIONS_DIR / f"{FAILING_REVISION_ID}.py"
+
+FAILING_REVISION_SOURCE: Final = '''"""Temporary failing revision for smoke probe.
+
+Revision ID: 0002_failing_revision_probe
+Revises: 0001_bootstrap_marker
+Create Date: 2026-07-12
+"""
+
+from __future__ import annotations
+
+import sqlalchemy as sa
+from alembic import op
+
+revision = "0002_failing_revision_probe"
+down_revision = "0001_bootstrap_marker"
+branch_labels = None
+depends_on = None
+
+
+def upgrade() -> None:
+    op.create_table(
+        "failing_revision_probe",
+        sa.Column("id", sa.Integer(), primary_key=True),
+    )
+    op.execute("THIS IS INVALID SQL FROM ALEMBIC REVISION")
+
+
+def downgrade() -> None:
+    op.drop_table("failing_revision_probe")
+'''
 
 
 class MigrationSmokeError(RuntimeError):
@@ -54,6 +88,23 @@ def marker_table_exists(url: str) -> bool:
         return MARKER_TABLE in inspect(connection).get_table_names()
 
 
+def table_exists(url: str, table_name: str) -> bool:
+    engine = create_engine(url)
+    with engine.connect() as connection:
+        return table_name in inspect(connection).get_table_names()
+
+
+def current_alembic_version(url: str) -> str | None:
+    engine = create_engine(url)
+    with engine.connect() as connection:
+        if "alembic_version" not in inspect(connection).get_table_names():
+            return None
+        row = connection.execute(
+            text("SELECT version_num FROM alembic_version")
+        ).first()
+        return None if row is None else str(row[0])
+
+
 def seed_marker(url: str) -> None:
     """Insert a seed row into the migrated baseline table."""
     engine = create_engine(url)
@@ -64,22 +115,47 @@ def seed_marker(url: str) -> None:
         )
 
 
-def invalid_ddl_rolls_back(url: str) -> bool:
-    """Return whether PostgreSQL rolls back a failed transactional DDL batch."""
-    engine = create_engine(url)
+def install_failing_revision() -> Path:
+    VERSIONS_DIR.mkdir(parents=True, exist_ok=True)
+    _ = FAILING_REVISION_PATH.write_text(FAILING_REVISION_SOURCE, encoding="utf-8")
+    return FAILING_REVISION_PATH
+
+
+def remove_failing_revision() -> None:
+    if FAILING_REVISION_PATH.exists():
+        FAILING_REVISION_PATH.unlink()
+    pycache = VERSIONS_DIR / "__pycache__"
+    if pycache.exists():
+        for path in pycache.glob(f"{FAILING_REVISION_ID}*"):
+            path.unlink(missing_ok=True)
+
+
+def failing_alembic_revision_rolls_back(url: str) -> None:
+    """Inject a real failing revision, upgrade through Alembic, assert full rollback."""
+    version_before = current_alembic_version(url)
+    _ = install_failing_revision()
     try:
-        with engine.begin() as connection:
-            create_probe = f"CREATE TABLE {MIGRATION_FAILURE_PROBE} (id int)"
-            _ = connection.execute(text(create_probe))
-            _ = connection.execute(text(INVALID_DDL))
-    except DBAPIError:
-        with engine.connect() as connection:
-            return MIGRATION_FAILURE_PROBE not in inspect(connection).get_table_names()
-    return False
+        failed = False
+        try:
+            run_alembic("upgrade", "head")
+        except Exception:
+            failed = True
+        if not failed:
+            raise MigrationSmokeError(FAILED_REVISION_NOT_ROLLED_BACK)
+
+        if table_exists(url, FAIL_TABLE):
+            raise MigrationSmokeError(FAILED_REVISION_NOT_ROLLED_BACK)
+
+        version_after = current_alembic_version(url)
+        if version_after != version_before:
+            raise MigrationSmokeError(FAILED_REVISION_VERSION_ADVANCED)
+    finally:
+        remove_failing_revision()
+        run_alembic("upgrade", "head")
 
 
 def main() -> int:
-    """Verify upgrade, downgrade, and re-upgrade behavior."""
+    """Verify upgrade, failed revision, downgrade, and re-upgrade behavior."""
     from work_frontier.contracts.evidence_record import Artifact, Result
     from work_frontier.contracts.evidence_writer import hash_file, write_evidence
 
@@ -113,13 +189,12 @@ def main() -> int:
             Result(kind="seed_marker", passed=True, detail="Seeded marker data")
         )
 
-        if not invalid_ddl_rolls_back(url):
-            raise MigrationSmokeError(INVALID_DDL_PARTIAL_SCHEMA)
+        failing_alembic_revision_rolls_back(url)
         results.append(
             Result(
-                kind="ddl_rollback_check",
+                kind="failed_revision_rollback",
                 passed=True,
-                detail="Invalid DDL rolled back correctly",
+                detail="Failed Alembic revision rolled back schema and version",
             )
         )
 
@@ -169,14 +244,21 @@ def main() -> int:
         results.append(
             Result(kind="unexpected_error", passed=False, detail=error_detail)
         )
+    finally:
+        remove_failing_revision()
 
     end_time = datetime.now(UTC)
 
+    versions_dir = repo_root / "infra" / "alembic" / "versions"
     artifacts = [
         Artifact(
-            path="alembic.ini", hashes={"sha256": hash_file(repo_root / "alembic.ini")}
+            path="alembic.ini",
+            hashes={"sha256": hash_file(repo_root / "alembic.ini")},
         ),
-        Artifact(path="backend/migrations"),
+        Artifact(
+            path="infra/alembic/versions/0001_bootstrap_marker.py",
+            hashes={"sha256": hash_file(versions_dir / "0001_bootstrap_marker.py")},
+        ),
     ]
 
     _ = write_evidence(

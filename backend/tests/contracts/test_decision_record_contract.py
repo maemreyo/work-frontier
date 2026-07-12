@@ -173,9 +173,12 @@ def test_decision_record_fixtures_cross_language_consistency(
 
     # When the Pydantic contract validates it
     if expected_valid:
-        # Then valid fixtures should pass
         result = DecisionRecordContract.model_validate_json(json_str)
         assert result is not None
+        digest = sha256(result.canonical_json().encode("utf-8")).hexdigest()
+        golden_path = fixture_file.with_suffix(".canonical.sha256")
+        assert golden_path.exists(), f"missing golden hash for {fixture_file.name}"
+        assert digest == golden_path.read_text(encoding="utf-8").strip()
     else:
         with pytest.raises(ValidationError):
             _ = DecisionRecordContract.model_validate_json(json_str)

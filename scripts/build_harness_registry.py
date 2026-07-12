@@ -63,39 +63,28 @@ def parse_catalog(text: str) -> list[dict[str, object]]:
 
 
 def build_registry(harnesses: list[dict[str, object]]) -> dict[str, object]:
-    # Foundation dependency closure currently executable without full product stack.
     foundation_closure = [
+        "WF-HAR-STATIC-01",
         "WF-HAR-STATIC-02",
         "WF-HAR-STATIC-04",
+        "WF-HAR-STATIC-05",
         "WF-HAR-CONTRACT-05",
         "WF-HAR-INTEG-01",
         "WF-HAR-INTEG-02",
     ]
-    # Local foundation preflight is not in the catalog but is required by ADR-006.
-    local = [
-        {
-            "id": "WF-HAR-PREFLIGHT-01",
-            "name": "ADR-006 Foundation Contract Gate",
-            "command": "node .omo/preflight/adr-006/validate.mjs",
-            "artifact": ".omo/evidence/preflight-adr-006/validation.json",
-            "blocks_release": True,
-            "what_it_runs": "Contract-specific P0 mutation validators for WF-P0-01..07",
-            "pass_criteria": (
-                "All negative fixtures reject with expected failure IDs; "
-                "no false positives"
-            ),
-            "applicability": "standard",
-            "status": "implemented",
-        }
-    ]
-    # Mark implemented foundation harnesses with concrete local commands where catalog
-    # paths are aspirational.
     command_overrides = {
+        "WF-HAR-STATIC-01": (
+            "uv run basedpyright && pnpm --dir frontend exec tsc --noEmit"
+        ),
         "WF-HAR-STATIC-02": "uv run python scripts/check_import_boundaries.py",
         "WF-HAR-STATIC-04": (
             "uv run ruff check backend/src backend/tests scripts && "
             "uv run ruff format --check backend/src backend/tests scripts && "
             "pnpm --dir frontend run check"
+        ),
+        "WF-HAR-STATIC-05": (
+            "node .omo/preflight/adr-006/validate.mjs && "
+            "node --test .omo/preflight/adr-006/validate.test.mjs"
         ),
         "WF-HAR-CONTRACT-05": "uv run python scripts/generate_contracts.py --check",
         "WF-HAR-INTEG-01": "make migration-smoke",
@@ -106,8 +95,15 @@ def build_registry(harnesses: list[dict[str, object]]) -> dict[str, object]:
         if harness_id in by_id:
             by_id[harness_id]["command"] = command
             by_id[harness_id]["status"] = "implemented"
+            if harness_id == "WF-HAR-STATIC-05":
+                by_id[harness_id]["artifact"] = (
+                    ".omo/evidence/preflight-adr-006/validation.json"
+                )
+                by_id[harness_id]["name"] = (
+                    "Secret Detection + ADR-006 Foundation Preflight"
+                )
 
-    all_harnesses = local + list(by_id.values())
+    all_harnesses = list(by_id.values())
     standard_blockers = [
         str(item["id"])
         for item in all_harnesses
@@ -120,7 +116,7 @@ def build_registry(harnesses: list[dict[str, object]]) -> dict[str, object]:
         "catalog_harness_count": len(harnesses),
         "standard_blocker_count": len(standard_blockers),
         "standard_blockers": standard_blockers,
-        "foundation_closure": ["WF-HAR-PREFLIGHT-01", *foundation_closure],
+        "foundation_closure": foundation_closure,
         "harnesses": all_harnesses,
     }
 

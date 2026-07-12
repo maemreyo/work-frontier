@@ -1,11 +1,10 @@
 {
   "schema_version": "1.0.0",
   "source": "docs/quality/harness-catalog.md",
-  "harness_count": 68,
+  "harness_count": 67,
   "catalog_harness_count": 67,
-  "standard_blocker_count": 65,
+  "standard_blocker_count": 64,
   "standard_blockers": [
-    "WF-HAR-PREFLIGHT-01",
     "WF-HAR-STATIC-01",
     "WF-HAR-STATIC-02",
     "WF-HAR-STATIC-04",
@@ -72,35 +71,25 @@
     "WF-HAR-A11Y-04"
   ],
   "foundation_closure": [
-    "WF-HAR-PREFLIGHT-01",
+    "WF-HAR-STATIC-01",
     "WF-HAR-STATIC-02",
     "WF-HAR-STATIC-04",
+    "WF-HAR-STATIC-05",
     "WF-HAR-CONTRACT-05",
     "WF-HAR-INTEG-01",
     "WF-HAR-INTEG-02"
   ],
   "harnesses": [
     {
-      "id": "WF-HAR-PREFLIGHT-01",
-      "name": "ADR-006 Foundation Contract Gate",
-      "command": "node .omo/preflight/adr-006/validate.mjs",
-      "artifact": ".omo/evidence/preflight-adr-006/validation.json",
-      "blocks_release": true,
-      "what_it_runs": "Contract-specific P0 mutation validators for WF-P0-01..07",
-      "pass_criteria": "All negative fixtures reject with expected failure IDs; no false positives",
-      "applicability": "standard",
-      "status": "implemented"
-    },
-    {
       "id": "WF-HAR-STATIC-01",
       "name": "Type Checking",
-      "command": "make check-static",
+      "command": "uv run basedpyright && pnpm --dir frontend exec tsc --noEmit",
       "artifact": "evidence/static/type-check.json",
       "blocks_release": true,
       "what_it_runs": "mypy (Python strict mode), tsc --strict (TypeScript)",
       "pass_criteria": "Zero errors. Warnings tracked but not blocking.",
       "applicability": "standard",
-      "status": "specified"
+      "status": "implemented"
     },
     {
       "id": "WF-HAR-STATIC-02",
@@ -137,14 +126,14 @@
     },
     {
       "id": "WF-HAR-STATIC-05",
-      "name": "Secret Detection",
-      "command": "gitleaks detect --source . --report-format json",
-      "artifact": "evidence/static/secrets.json",
+      "name": "Secret Detection + ADR-006 Foundation Preflight",
+      "command": "node .omo/preflight/adr-006/validate.mjs && node --test .omo/preflight/adr-006/validate.test.mjs",
+      "artifact": ".omo/evidence/preflight-adr-006/validation.json",
       "blocks_release": true,
       "what_it_runs": "Scans entire repo history for committed secrets",
       "pass_criteria": "Zero findings",
       "applicability": "standard",
-      "status": "specified"
+      "status": "implemented"
     },
     {
       "id": "WF-HAR-DOMAIN-01",

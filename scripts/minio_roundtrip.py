@@ -37,7 +37,7 @@ def required_environment(name: str) -> str:
 def main() -> int:
     """Verify an object storage write, read, and deletion cycle."""
     from work_frontier.contracts.evidence_record import Artifact, Result
-    from work_frontier.contracts.evidence_writer import write_evidence
+    from work_frontier.contracts.evidence_writer import hash_bytes, write_evidence
 
     start_time = datetime.now(UTC)
     repo_root = Path(__file__).parent.parent
@@ -45,10 +45,11 @@ def main() -> int:
     results: list[Result] = []
     error_detail = None
     exit_code = 0
-    bucket_name = None
+    bucket_name: str | None = None
+    client: S3Client | None = None
 
     try:
-        client: S3Client = Session().client(
+        client = Session().client(
             "s3",
             aws_access_key_id=required_environment(ACCESS_KEY_ENVIRONMENT),
             aws_secret_access_key=required_environment(SECRET_KEY_ENVIRONMENT),
@@ -104,6 +105,7 @@ def main() -> int:
                 kind="delete_bucket", passed=True, detail=f"Deleted bucket: {bucket}"
             )
         )
+        bucket_name = None
 
     except StorageSmokeError as e:
         error_detail = str(e)
@@ -115,12 +117,25 @@ def main() -> int:
         results.append(
             Result(kind="unexpected_error", passed=False, detail=error_detail)
         )
+    finally:
+        if client is not None and bucket_name is not None:
+            import contextlib
+
+            with contextlib.suppress(Exception):
+                _ = client.delete_object(Bucket=bucket_name, Key=OBJECT_KEY)
+            with contextlib.suppress(Exception):
+                _ = client.delete_bucket(Bucket=bucket_name)
 
     end_time = datetime.now(UTC)
 
     artifacts = [
         Artifact(
-            path=f"s3://{bucket_name}/{OBJECT_KEY}" if bucket_name else "s3://[bucket]"
+            path=(
+                f"s3://{bucket_name}/{OBJECT_KEY}"
+                if bucket_name
+                else f"s3://{BUCKET_PREFIX}/[cleaned]"
+            ),
+            hashes={"sha256": hash_bytes(PAYLOAD)},
         )
     ]
 

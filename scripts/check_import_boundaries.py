@@ -81,17 +81,17 @@ class BoundaryViolation:
 
 
 def is_composition_root(path: Path, source_root: Path) -> bool:
-    """Return True if path is a composition root allowed to import everything."""
+    """True only for package-root composition entrypoints (not nested)."""
     relative_parts = path.relative_to(source_root).parts
     return (
-        len(relative_parts) >= MIN_PACKAGE_PARTS
+        len(relative_parts) == MIN_PACKAGE_PARTS
         and relative_parts[0] == PACKAGE
-        and relative_parts[-1] in COMPOSITION_ROOT_FILES
+        and relative_parts[1] in COMPOSITION_ROOT_FILES
     )
 
 
 def layer_for_path(path: Path, source_root: Path) -> str | None:
-    """Return the ADR-006 layer owning a Python source path."""
+    """Return the ADR-006 layer owning a Python source path, if known."""
     relative_parts = path.relative_to(source_root).parts
     if len(relative_parts) < MIN_PACKAGE_PARTS or relative_parts[0] != PACKAGE:
         return None
@@ -99,31 +99,38 @@ def layer_for_path(path: Path, source_root: Path) -> str | None:
     return candidate if candidate in LAYERS else None
 
 
+def unknown_source_layer(path: Path, source_root: Path) -> bool:
+    """True when a file lives under an undeclared package sub-layer."""
+    relative_parts = path.relative_to(source_root).parts
+    if len(relative_parts) < MIN_PACKAGE_PARTS or relative_parts[0] != PACKAGE:
+        return False
+    second = relative_parts[1]
+    if second.endswith(".py"):
+        return False
+    return second not in LAYERS
+
+
 def resolve_relative_import(
     file_path: Path, source_root: Path, module: str | None, level: int
 ) -> str | None:
     """Resolve a relative import to an absolute module path.
 
-    level=0: absolute import (return module as-is)
-    level=1: from . import X (current package)
-    level=2: from .. import X (parent package)
-    level=N: go up N-1 levels from current package
+    Always strips the importing file's stem so both regular modules and
+    ``__init__.py`` resolve relative to their containing package.
     """
     if level == 0:
         return module
 
     relative_path = file_path.relative_to(source_root)
-    module_parts = list(relative_path.with_suffix("").parts)
+    package_parts = list(relative_path.with_suffix("").parts)
+    if package_parts:
+        _ = package_parts.pop()
 
-    if module_parts and module_parts[-1] == "__init__":
-        _ = module_parts.pop()
-
-    # level=N means go up N-1 levels from current package
     levels_up = level - 1
-    if len(module_parts) < levels_up:
+    if len(package_parts) < levels_up:
         return None
 
-    base_parts = module_parts[:-levels_up] if levels_up > 0 else module_parts
+    base_parts = package_parts[:-levels_up] if levels_up > 0 else package_parts
 
     if module:
         base_parts.extend(module.split("."))
@@ -131,15 +138,24 @@ def resolve_relative_import(
     return ".".join(base_parts) if base_parts else None
 
 
+UNKNOWN_TARGET_LAYER: Final = "__unknown__"
+
+
 def target_for_module(module: str) -> tuple[str, bool] | None:
-    """Return the target layer and whether it is the public ports package."""
+    """Return the target layer and whether it is the public ports package.
+
+    Unknown layers under the package root are returned as
+    ``(UNKNOWN_TARGET_LAYER, False)`` so callers fail closed.
+    """
     parts = module.split(".")
-    if len(parts) < MIN_PACKAGE_PARTS or parts[0] != PACKAGE:
+    if not parts or parts[0] != PACKAGE:
+        return None
+    if len(parts) < MIN_PACKAGE_PARTS:
         return None
 
     target_layer = parts[1]
     if target_layer not in LAYERS:
-        return None
+        return (UNKNOWN_TARGET_LAYER, False)
 
     is_ports = parts[:3] == [PACKAGE, "application", "ports"]
     return (target_layer, is_ports)
@@ -149,6 +165,8 @@ def violation_rule(  # noqa: PLR0912
     source_layer: str, target_layer: str, target_is_ports: bool
 ) -> str | None:
     """Return the ADR-006 rule violated by a layer-to-layer import."""
+    if target_layer == UNKNOWN_TARGET_LAYER:
+        return "unknown-target-layer"
     if (
         source_layer not in ALLOW_MATRIX
         or target_layer not in ALLOW_MATRIX[source_layer]
@@ -168,11 +186,11 @@ def violation_rule(  # noqa: PLR0912
         if target_layer == "contracts":
             return "domain-cannot-import-contracts"
         return "domain-cannot-import-non-domain"
-    if source_layer == "platform" and target_layer == "application":
-        return "platform-may-import-only-application-ports"
+    if source_layer == "platform":
+        if target_layer == "application":
+            return "platform-may-import-only-application-ports"
+        return "platform-cannot-import-implementation"
     if source_layer == "application":
-        if target_layer in {"platform", "adapters", "interfaces"}:
-            return "application-cannot-import-implementation"
         return "application-cannot-import-implementation"
     if source_layer == "adapters":
         if target_layer == "domain":
@@ -181,14 +199,13 @@ def violation_rule(  # noqa: PLR0912
             return "adapters-may-import-only-application-ports"
         if target_layer == "interfaces":
             return "adapters-cannot-import-interfaces"
+        return "adapters-cannot-import-target"
     if source_layer == "interfaces":
-        if target_layer in {"domain", "platform", "adapters"}:
-            return "interfaces-must-call-application"
         return "interfaces-must-call-application"
     if source_layer == "contracts":
         return "contracts-cannot-import-other-layers"
 
-    return "unknown-violation"
+    return f"forbidden-import-{source_layer}-to-{target_layer}"
 
 
 class ImportCollector(ast.NodeVisitor):
@@ -214,10 +231,13 @@ class ImportCollector(ast.NodeVisitor):
 
         self.modules.append((resolved, node.lineno))
 
-        # Expand "from work_frontier import platform" to catch aliased imports
-        if resolved == PACKAGE:
+        if resolved == PACKAGE or resolved.startswith(f"{PACKAGE}."):
             for alias in node.names:
-                if alias.name != "*":
+                if alias.name == "*":
+                    continue
+                if alias.name in LAYERS:
+                    self.modules.append((f"{PACKAGE}.{alias.name}", node.lineno))
+                elif resolved == PACKAGE:
                     self.modules.append((f"{resolved}.{alias.name}", node.lineno))
 
 
@@ -235,6 +255,16 @@ def validate(source_root: Path) -> tuple[BoundaryViolation, ...]:
     violations: list[BoundaryViolation] = []
     for path in sorted(source_root.rglob("*.py")):
         if is_composition_root(path, source_root):
+            continue
+
+        if unknown_source_layer(path, source_root):
+            violations.append(
+                BoundaryViolation(
+                    path=path,
+                    line=1,
+                    rule="unknown-source-layer",
+                )
+            )
             continue
 
         source_layer = layer_for_path(path, source_root)

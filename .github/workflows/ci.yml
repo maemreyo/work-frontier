@@ -5,6 +5,12 @@ on:
   push:
     branches: [main]
 
+env:
+  PYTHON_VERSION: "3.13.5"
+  NODE_VERSION: "22.23.1"
+  PNPM_VERSION: "10.20.0"
+  COMPOSE_PROJECT_NAME: work-frontier-ci
+
 jobs:
   preflight-gate:
     runs-on: ubuntu-latest
@@ -12,9 +18,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: ${{ env.NODE_VERSION }}
       - name: Run preflight validation
         run: node .omo/preflight/adr-006/validate.mjs
+      - name: Run preflight behavioral tests
+        run: node --test .omo/preflight/adr-006/validate.test.mjs
 
   contract-drift-check:
     runs-on: ubuntu-latest
@@ -22,13 +30,13 @@ jobs:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
         with:
-          python-version: "3.13"
+          python-version: ${{ env.PYTHON_VERSION }}
       - uses: pnpm/action-setup@v4
         with:
-          version: "10"
+          version: ${{ env.PNPM_VERSION }}
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
       - name: Bootstrap Python dependencies
         run: uv sync --all-groups
@@ -36,6 +44,8 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Check contract drift
         run: uv run python scripts/generate_contracts.py --check
+      - name: Check harness registry drift
+        run: uv run python scripts/build_harness_registry.py --check
 
   verify:
     runs-on: ubuntu-latest
@@ -44,13 +54,13 @@ jobs:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
         with:
-          python-version: "3.13"
+          python-version: ${{ env.PYTHON_VERSION }}
       - uses: pnpm/action-setup@v4
         with:
-          version: "10"
+          version: ${{ env.PNPM_VERSION }}
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
       - run: make bootstrap
       - run: make check-architecture

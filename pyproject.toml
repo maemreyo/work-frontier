@@ -64,7 +64,7 @@ fixable = ["ALL"]
 "backend/src/work_frontier/contracts/decision_record.py" = ["D105", "D107", "PERF403", "PLW0108"]
 "backend/src/work_frontier/contracts/harness_*.py" = ["D103", "C901", "PLR0911", "S602", "SIM108", "RET504", "PLR0912", "PLR0913", "PLC0415", "S603"]
 "backend/tests/**/*.py" = ["D", "PLC0415", "PLR2004", "S101", "S607"]
-"scripts/**/*.py" = ["C901", "INP001", "PLC0415", "PLR0911", "PLR2004", "S603", "S607", "SIM102", "T201", "TRY301", "BLE001", "EXE001", "D103", "RET504"]
+"scripts/**/*.py" = ["C901", "INP001", "PLC0415", "PLR0911", "PLR0915", "PLR2004", "S603", "S607", "SIM102", "T201", "TRY301", "BLE001", "EXE001", "D103", "RET504"]
 "scripts/minio_roundtrip.py" = ["S105"]
 
 [tool.ruff.lint.pydocstyle]

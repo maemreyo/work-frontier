@@ -146,3 +146,59 @@ class TestImportBoundaryFixes:
         violations = validate(tmp_path)
 
         assert violations == ()
+
+    def test_relative_import_in_regular_module_is_checked(self, tmp_path: Path) -> None:
+        src = tmp_path / "work_frontier" / "domain"
+        src.mkdir(parents=True)
+        module = src / "entity.py"
+        _ = module.write_text("from .. import platform\n", encoding="utf-8")
+
+        violations = validate(tmp_path)
+
+        assert any("domain-cannot-import-non-domain" in v.rule for v in violations)
+
+    def test_unknown_source_layer_fails_closed(self, tmp_path: Path) -> None:
+        src = tmp_path / "work_frontier" / "services"
+        src.mkdir(parents=True)
+        module = src / "foo.py"
+        _ = module.write_text("x = 1\n", encoding="utf-8")
+
+        violations = validate(tmp_path)
+
+        assert any(v.rule == "unknown-source-layer" for v in violations)
+
+    def test_unknown_target_layer_fails_closed(self, tmp_path: Path) -> None:
+        src = tmp_path / "work_frontier" / "domain"
+        src.mkdir(parents=True)
+        module = src / "entity.py"
+        _ = module.write_text(
+            "from work_frontier.infrastructure import db\n", encoding="utf-8"
+        )
+
+        violations = validate(tmp_path)
+
+        assert any(v.rule == "unknown-target-layer" for v in violations)
+
+    def test_nested_composition_py_is_not_exempt(self, tmp_path: Path) -> None:
+        src = tmp_path / "work_frontier" / "domain"
+        src.mkdir(parents=True)
+        module = src / "composition.py"
+        _ = module.write_text(
+            "from work_frontier.adapters import github\n", encoding="utf-8"
+        )
+
+        violations = validate(tmp_path)
+
+        assert any("domain-cannot-import-non-domain" in v.rule for v in violations)
+
+    def test_package_root_composition_py_is_exempt(self, tmp_path: Path) -> None:
+        pkg = tmp_path / "work_frontier"
+        pkg.mkdir(parents=True)
+        module = pkg / "composition.py"
+        _ = module.write_text(
+            "from work_frontier.adapters import github\n", encoding="utf-8"
+        )
+
+        violations = validate(tmp_path)
+
+        assert violations == ()

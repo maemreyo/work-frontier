@@ -24,6 +24,7 @@ check-contracts:
 
 check-preflight:
 	node .omo/preflight/adr-006/validate.mjs
+	node --test .omo/preflight/adr-006/validate.test.mjs
 
 infra-up:
 	docker compose up -d --wait

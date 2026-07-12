@@ -125,10 +125,21 @@ def main(arguments: list[str]) -> int:
     end_time = datetime.now(UTC)
 
     if exit_code != 2:
-        artifacts = [
-            Artifact(path=str(path), hashes={"sha256": hash_file(path)})
-            for path, _ in expected_artifacts()
-        ]
+        artifacts: list[Artifact] = []
+        for path, content in expected_artifacts():
+            if path.exists():
+                artifacts.append(
+                    Artifact(path=str(path), hashes={"sha256": hash_file(path)})
+                )
+            else:
+                from work_frontier.contracts.evidence_writer import hash_bytes
+
+                artifacts.append(
+                    Artifact(
+                        path=str(path),
+                        hashes={"sha256": hash_bytes(content.encode("utf-8"))},
+                    )
+                )
 
         _ = write_evidence(
             harness_id="WF-HAR-CONTRACT-05",
