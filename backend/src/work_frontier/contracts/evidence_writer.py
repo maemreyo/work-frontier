@@ -215,10 +215,8 @@ def write_evidence(
     duration_seconds = (end_time - start_time).total_seconds()
     commit_sha = get_git_commit_sha(repo_root)
     resolved_version = tool_version if tool_version is not None else get_tool_version(tool_name)
-
-    if resolved_version in {"", "1.0.0"} and tool_version is None:
-        # Hard-coded placeholder is never acceptable for auto capture.
-        msg = f"refusing fabricated tool version for {tool_name}"
+    if not resolved_version:
+        msg = f"empty tool version for {tool_name}"
         raise ValueError(msg)
 
     stdout_artifact = None

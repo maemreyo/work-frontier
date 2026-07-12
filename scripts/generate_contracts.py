@@ -78,7 +78,7 @@ def write_artifacts() -> None:
 def main(arguments: list[str]) -> int:
     """Generate artifacts or report whether checked-in artifacts drifted."""
     from work_frontier.contracts.evidence_record import Artifact, Result
-    from work_frontier.contracts.evidence_writer import write_evidence
+    from work_frontier.contracts.evidence_writer import hash_file, write_evidence
 
     start_time = datetime.now(UTC)
     repo_root = Path(__file__).parent.parent
@@ -125,12 +125,15 @@ def main(arguments: list[str]) -> int:
     end_time = datetime.now(UTC)
 
     if exit_code != 2:
-        artifacts = [Artifact(path=str(path)) for path, _ in expected_artifacts()]
+        artifacts = [
+            Artifact(path=str(path), hashes={"sha256": hash_file(path)})
+            for path, _ in expected_artifacts()
+        ]
 
         _ = write_evidence(
-            harness_id="WF-HAR-STATIC-02",
+            harness_id="WF-HAR-CONTRACT-05",
             status=status,
-            command=f"python {' '.join(['generate_contracts.py', *arguments])}",
+            command=f"uv run python scripts/generate_contracts.py{' ' + ' '.join(arguments) if arguments else ''}",
             exit_code=exit_code,
             working_directory=str(repo_root),
             start_time=start_time,

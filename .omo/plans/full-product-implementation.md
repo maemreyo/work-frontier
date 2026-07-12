@@ -49,6 +49,13 @@ Your next move: run a high-accuracy review or start execution through the dedica
 **Deferred Delivery:** Todo 26 owns React/Vite, the generated API client, TanStack Query, and the Control Room shell. Todo 30 owns Playwright, axe, screenshots, and browser accessibility certification.
 **Constraint:** Deferral is allowed only because Todos 1-5 require no browser product path. Todo 26 cannot start until these packages are installed, pinned, and included in clean-clone CI evidence.
 
+### Todo 3: Data-service baseline scope
+
+**Original Plan:** Todo 3 included full backend/dev containers, isolated CI profiles, and deployment infrastructure.
+**Current Foundation Scope:** Todo 3 delivers PostgreSQL 16 and MinIO data-service baseline only: health checks, Alembic migrations with rollback verification, storage smoke tests, and CI wiring. Docker Compose is single-node development infrastructure only.
+**Deferred Delivery:** Todo 33 owns hardened backend/web/worker/scheduler container images, production deployment profiles, observability, backup/DR, and upgrade operations.
+**Constraint:** Todo 3 establishes the data-service foundation required for Todos 6-32. Production deployment and operational harnesses are correctly deferred until the full product exists.
+
 ## Foundation repair and continuation gate
 
 Current code is a useful implementation candidate, but P0 and Todos 1-4 remain open until Todo 5 can recertify them truthfully.

@@ -81,7 +81,7 @@ def invalid_ddl_rolls_back(url: str) -> bool:
 def main() -> int:
     """Verify upgrade, downgrade, and re-upgrade behavior."""
     from work_frontier.contracts.evidence_record import Artifact, Result
-    from work_frontier.contracts.evidence_writer import write_evidence
+    from work_frontier.contracts.evidence_writer import hash_file, write_evidence
 
     start_time = datetime.now(UTC)
     repo_root = Path(__file__).parent.parent
@@ -173,12 +173,12 @@ def main() -> int:
     end_time = datetime.now(UTC)
 
     artifacts = [
-        Artifact(path="alembic.ini"),
+        Artifact(path="alembic.ini", hashes={"sha256": hash_file(repo_root / "alembic.ini")}),
         Artifact(path="backend/migrations"),
     ]
 
     _ = write_evidence(
-        harness_id="WF-HAR-SMOKE-01",
+        harness_id="WF-HAR-INTEG-01",
         status="fail" if exit_code != 0 else "pass",
         command="python migration_smoke.py",
         exit_code=exit_code,

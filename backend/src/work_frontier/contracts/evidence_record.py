@@ -84,8 +84,8 @@ class EvidenceRecord(BaseModel):
         description="Schema version for forward compatibility"
     )
     harness_id: str = Field(
-        pattern=r"^WF-HAR-[A-Z]+-\d{2}$",
-        description="Harness identifier: WF-HAR-{CATEGORY}-{NN}",
+        pattern=r"^WF-HAR-[A-Z0-9]+(?:-[A-Z0-9]+)*$",
+        description="Harness identifier matching the authoritative registry",
     )
     status: Literal["pass", "fail", "skip", "not_applicable"] = Field(
         description="Overall harness execution status"

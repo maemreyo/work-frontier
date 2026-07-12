@@ -265,7 +265,7 @@ def parse_source_root(arguments: list[str]) -> Path | None:
 def main() -> int:
     """Print violations and return a nonzero status when an import boundary fails."""
     from work_frontier.contracts.evidence_record import Artifact, Result
-    from work_frontier.contracts.evidence_writer import write_evidence
+    from work_frontier.contracts.evidence_writer import hash_file, write_evidence
 
     start_time = datetime.now(UTC)
     repo_root = Path(__file__).parent.parent
@@ -283,7 +283,10 @@ def main() -> int:
     end_time = datetime.now(UTC)
 
     artifacts = [
-        Artifact(path=str(path.relative_to(repo_root)))
+        Artifact(
+            path=str(path.relative_to(repo_root)),
+            hashes={"sha256": hash_file(path)},
+        )
         for path in sorted(source_root.rglob("*.py"))
         if layer_for_path(path, source_root) is not None
     ]
@@ -298,9 +301,9 @@ def main() -> int:
     ]
 
     _ = write_evidence(
-        harness_id="WF-HAR-STATIC-01",
+        harness_id="WF-HAR-STATIC-02",
         status="fail" if violations else "pass",
-        command=f"python {' '.join(sys.argv)}",
+        command=f"uv run python {' '.join(sys.argv)}",
         exit_code=exit_code,
         working_directory=str(repo_root),
         start_time=start_time,

@@ -19,9 +19,9 @@
     },
     "harness_id": {
       "type": "string",
-      "pattern": "^WF-HAR-[A-Z]+-\\d{2}$",
-      "description": "Unique harness identifier following pattern WF-HAR-{CATEGORY}-{NN}",
-      "examples": ["WF-HAR-PREFLIGHT-01", "WF-HAR-CONTRACT-03"]
+      "pattern": "^WF-HAR-[A-Z0-9]+(?:-[A-Z0-9]+)*$",
+      "description": "Unique harness identifier from the authoritative registry (catalog + foundation local harnesses)",
+      "examples": ["WF-HAR-PREFLIGHT-01", "WF-HAR-CONTRACT-03", "WF-HAR-OPS-02-L"]
     },
     "status": {
       "type": "string",

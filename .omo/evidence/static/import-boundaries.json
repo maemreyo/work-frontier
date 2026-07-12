@@ -1,67 +1,101 @@
 {
   "schema_version": "1.0.0",
-  "harness_id": "WF-HAR-STATIC-01",
+  "harness_id": "WF-HAR-STATIC-02",
   "status": "pass",
-  "run_id": "run-1783840455692",
-  "subject_sha": "9b8da6834d96ae0f4d9f7480ce643023bfda6f16",
+  "run_id": "run-1783842902579",
+  "subject_sha": "67468c35f56a28b6a46c7bbb8c3416431eaa5836",
   "invocation": {
-    "command": "python scripts/check_import_boundaries.py",
+    "command": "uv run python scripts/check_import_boundaries.py",
     "exit_code": 0,
     "working_directory": ".",
-    "start_time": "2026-07-12T07:14:15.658149Z",
-    "end_time": "2026-07-12T07:14:15.662937Z",
-    "duration_seconds": 0.004788
+    "start_time": "2026-07-12T07:55:02.547073Z",
+    "end_time": "2026-07-12T07:55:02.557965Z",
+    "duration_seconds": 0.010892
   },
   "tool": {
     "name": "check_import_boundaries",
-    "version": "1.0.0",
-    "commit_sha": "9b8da6834d96ae0f4d9f7480ce643023bfda6f16"
+    "version": "3.13.5",
+    "commit_sha": "67468c35f56a28b6a46c7bbb8c3416431eaa5836"
   },
   "environment": {
     "python": "3.13.5",
     "os": "darwin-arm64",
-    "platform": "macOS-26.4.1-arm64-arm-64bit-Mach-O"
+    "platform": "macOS-26.4.1-arm64-arm-64bit-Mach-O",
+    "node": "22.23.1",
+    "pnpm": "10.20.0"
   },
   "artifacts": [
     {
       "path": "backend/src/work_frontier/adapters/__init__.py",
-      "hashes": null
+      "hashes": {
+        "sha256": "d1dcbd755bb51a143ef66073abbe2a848a389fb5cc80269a2029fb7697588c70"
+      }
     },
     {
       "path": "backend/src/work_frontier/application/__init__.py",
-      "hashes": null
+      "hashes": {
+        "sha256": "45d5f14dbea583c608763cb0f81e1627b9fd0b4eb0b1648b5e8fc4fa52d88fe8"
+      }
     },
     {
       "path": "backend/src/work_frontier/application/ports/__init__.py",
-      "hashes": null
+      "hashes": {
+        "sha256": "7454cfe60a7c71b9f786034ccf5da36f7f2b0f0e980f270ba8da3bdbc979006a"
+      }
     },
     {
       "path": "backend/src/work_frontier/contracts/__init__.py",
-      "hashes": null
+      "hashes": {
+        "sha256": "72e463f198df097950069b90fcd491452127c54d00e5b22532bdd8ed89ac9f1f"
+      }
     },
     {
       "path": "backend/src/work_frontier/contracts/decision_record.py",
-      "hashes": null
+      "hashes": {
+        "sha256": "ae9b2a626ece73b409318c063b3b1354eda3c9b775e3be08451129a1af3f3f7f"
+      }
     },
     {
       "path": "backend/src/work_frontier/contracts/evidence_record.py",
-      "hashes": null
+      "hashes": {
+        "sha256": "fab59e3e5ee277c0978a2416579ca8e5c0f91f50032da4be0d256b37be3986bc"
+      }
     },
     {
       "path": "backend/src/work_frontier/contracts/evidence_writer.py",
-      "hashes": null
+      "hashes": {
+        "sha256": "1b67c930d3c05a9e0c4cde0a35d1a8faf35ba83ad1b7a5291f414ce2a3215ac5"
+      }
+    },
+    {
+      "path": "backend/src/work_frontier/contracts/harness_registry.py",
+      "hashes": {
+        "sha256": "8249c936d795f0366d54aae07aca8f257771c5c3df006b9489b7d2b8511c7422"
+      }
+    },
+    {
+      "path": "backend/src/work_frontier/contracts/harness_runner.py",
+      "hashes": {
+        "sha256": "ed051e247b23bbc7bd87d7443b21eff3a202ad2cb3bfd3e852ec596df9e6017e"
+      }
     },
     {
       "path": "backend/src/work_frontier/domain/__init__.py",
-      "hashes": null
+      "hashes": {
+        "sha256": "c586a392662faf4b63b86e73fb090b53141d29ff12ea786f488c6a527fc414b3"
+      }
     },
     {
       "path": "backend/src/work_frontier/interfaces/__init__.py",
-      "hashes": null
+      "hashes": {
+        "sha256": "05e68ddc2a77cce3a6fe180e5870a6f7e9ea6c4a3cd69e2e760df55a32d2331b"
+      }
     },
     {
       "path": "backend/src/work_frontier/platform/__init__.py",
-      "hashes": null
+      "hashes": {
+        "sha256": "468abd78918c4246355fa3e89521a13c38c093d5865fa4f70b43669a73ff8c97"
+      }
     }
   ],
   "results": [],

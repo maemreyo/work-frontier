@@ -125,7 +125,7 @@ def main() -> int:
     ]
 
     _ = write_evidence(
-        harness_id="WF-HAR-SMOKE-02",
+        harness_id="WF-HAR-INTEG-02",
         status="fail" if exit_code != 0 else "pass",
         command="python minio_roundtrip.py",
         exit_code=exit_code,
