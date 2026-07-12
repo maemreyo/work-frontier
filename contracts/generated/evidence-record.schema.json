@@ -5,12 +5,8 @@
       "description": "File or resource examined or produced during execution.",
       "properties": {
         "hashes": {
-          "additionalProperties": {
-            "type": "string"
-          },
-          "description": "Content hashes keyed by algorithm name (e.g., sha256)",
-          "title": "Hashes",
-          "type": "object"
+          "$ref": "#/$defs/ArtifactHashes",
+          "description": "Content hashes with required canonical sha256"
         },
         "path": {
           "description": "File path relative to repository root",
@@ -24,6 +20,23 @@
         "hashes"
       ],
       "title": "Artifact",
+      "type": "object"
+    },
+    "ArtifactHashes": {
+      "additionalProperties": true,
+      "description": "Typed content hashes with required canonical SHA-256.\n\nThe ``sha256`` field is required and must be a lowercase 64-char hex\nstring. Additional hash algorithms may be stored as extra fields for\ninteroperability (e.g. md5 for legacy tools), but ``sha256`` is the\nauthoritative content identity for certification.",
+      "properties": {
+        "sha256": {
+          "description": "Lowercase SHA-256 hex digest (required, canonical)",
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "sha256"
+      ],
+      "title": "ArtifactHashes",
       "type": "object"
     },
     "Invocation": {

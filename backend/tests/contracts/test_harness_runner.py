@@ -29,8 +29,11 @@ import pytest
 if TYPE_CHECKING:
     from types import ModuleType
 
+from pydantic import ValidationError
+
 from work_frontier.contracts.evidence_record import (
     Artifact,
+    ArtifactHashes,
     EvidenceRecord,
     Invocation,
     JsonValue,
@@ -529,13 +532,13 @@ def _make_two_harness_evidence_status_tamper_registry(path: Path) -> None:
     (status changed) and revalidation must catch the tamper.
     """
     sed_command = (
-        "EVIDENCE_FILE=$(find .omo/evidence/runs -name "
-        "'WF-HAR-TAMPER-ST-01.json' -type f 2>/dev/null | head -1) && "
-        '[ -n "$EVIDENCE_FILE" ] && '
-        r"sed -i '' 's/\"status\": \"pass\"/\"status\": \"fail\"/' "
-        '"$EVIDENCE_FILE" || true'
+        'python -c "import json,pathlib; '
+        "p=next(pathlib.Path('.').rglob('WF-HAR-TAMPER-ST-01.json')); "
+        "d=json.loads(p.read_text()); "
+        "d['status']='fail'; "
+        'p.write_text(json.dumps(d))"'
     )
-    # macOS sed needs -i '' for in-place without backup
+    # Portable Python one-liner replaces the file's JSON status
     registry = {
         "schema_version": "1.0.0",
         "harness_count": 2,
@@ -668,11 +671,11 @@ def validator_env(tmp_path: Path) -> tuple[Path, EvidenceRecord]:
         environment={"os": "test"},
         stdout_artifact=Artifact(
             path="stdout.txt",
-            hashes={"sha256": hash_bytes(stdout_content.encode("utf-8"))},
+            hashes=ArtifactHashes(sha256=hash_bytes(stdout_content.encode("utf-8"))),
         ),
         stderr_artifact=Artifact(
             path="stderr.txt",
-            hashes={"sha256": hash_bytes(stderr_content.encode("utf-8"))},
+            hashes=ArtifactHashes(sha256=hash_bytes(stderr_content.encode("utf-8"))),
         ),
         property_bag={"registry.harness_id": "WF-HAR-VALIDATE-TEST-01"},
     )
@@ -786,48 +789,22 @@ def test_validate_rejects_stdout_hash_mismatch(
     assert any("hash mismatch" in f for f in failures)
 
 
-def test_validate_rejects_stdout_without_sha256(
-    validator_env: tuple[Path, EvidenceRecord],
-) -> None:
-    """stdout_artifact with no sha256 hash -> failure."""
-    root, _ = validator_env
-    record = _make_record(
-        env=validator_env,
-        stdout=Artifact(
+def test_validate_rejects_stdout_without_sha256() -> None:
+    """Artifact without sha256 is rejected at the model level."""
+    with pytest.raises(ValidationError, match="sha256"):
+        _ = Artifact(
             path="stdout.txt",
-            hashes={"md5": "d41d8cd98f00b204e9800998ecf8427e"},
-        ),
-    )
-    failures = validate_evidence_record(
-        record,
-        registry=_REGISTRY,
-        expected_subject_sha="a" * 40,
-        repo_root=root,
-    )
-    assert any("sha256" in f for f in failures)
+            hashes={"md5": "d41d8cd98f00b204e9800998ecf8427e"},  # pyright: ignore[reportArgumentType]
+        )
 
 
-def test_validate_rejects_artifact_without_sha256(
-    validator_env: tuple[Path, EvidenceRecord],
-) -> None:
-    """Declared artifact with no sha256 hash -> failure."""
-    root, _ = validator_env
-    record = _make_record(
-        env=validator_env,
-        artifacts=[
-            Artifact(
-                path="output.json",
-                hashes={"md5": "d41d8cd98f00b204e9800998ecf8427e"},
-            )
-        ],
-    )
-    failures = validate_evidence_record(
-        record,
-        registry=_REGISTRY,
-        expected_subject_sha="a" * 40,
-        repo_root=root,
-    )
-    assert any("sha256" in f for f in failures)
+def test_validate_rejects_artifact_without_sha256() -> None:
+    """Declared artifact without sha256 is rejected at the model level."""
+    with pytest.raises(ValidationError, match="sha256"):
+        _ = Artifact(
+            path="output.json",
+            hashes={"md5": "d41d8cd98f00b204e9800998ecf8427e"},  # pyright: ignore[reportArgumentType]
+        )
 
 
 def test_validate_rejects_missing_declared_artifact_when_flag_set(

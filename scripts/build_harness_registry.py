@@ -20,12 +20,10 @@ _BACKEND_SRC = ROOT / "backend" / "src"
 if str(_BACKEND_SRC) not in sys.path:
     sys.path.insert(0, str(_BACKEND_SRC))
 
-# Import runtime constants and validation from the shared module so we
-# don't maintain a separate copy of artifact-mode rules.
+# Import runtime validation and constants from the shared module.
 from work_frontier.contracts.harness_registry import (  # noqa: E402
-    RUNNER_EVIDENCE_EXPECTED_PATTERN,
     RUNNER_EVIDENCE_HARNESSES,
-    VALID_ARTIFACT_MODES,
+    validate_registry,
 )
 
 CATALOG = ROOT / "docs" / "quality" / "harness-catalog.md"
@@ -91,40 +89,6 @@ def parse_catalog(text: str) -> list[dict[str, object]]:
     return harnesses
 
 
-def _validate_artifact_modes(harnesses: list[dict[str, object]]) -> None:
-    """Validate artifact_mode values and runner_evidence path contracts.
-
-    Uses shared constants from harness_registry.py to avoid duplication.
-    """
-    for h in harnesses:
-        h_id = str(h["id"])
-        mode = h.get("artifact_mode", "declared_file")
-        if mode not in VALID_ARTIFACT_MODES:
-            msg = (
-                f"invalid artifact_mode {mode!r} for {h_id}; "
-                f"valid values: {sorted(VALID_ARTIFACT_MODES)}"
-            )
-            raise ValueError(msg)
-        if mode == "runner_evidence":
-            if h_id not in RUNNER_EVIDENCE_HARNESSES:
-                msg = f"{h_id}: runner_evidence mode not allowed for this harness"
-                raise ValueError(msg)
-            declared = str(h.get("artifact", ""))
-            if not RUNNER_EVIDENCE_EXPECTED_PATTERN.match(declared):
-                msg = (
-                    f"{h_id}: runner_evidence artifact {declared!r} does not "
-                    f"match expected pattern .omo/evidence/static/<HARNESS_ID>.json"
-                )
-                raise ValueError(msg)
-            expected_path = f".omo/evidence/static/{h_id}.json"
-            if declared != expected_path:
-                msg = (
-                    f"{h_id}: runner_evidence artifact {declared!r} "
-                    f"does not match expected path {expected_path!r}"
-                )
-                raise ValueError(msg)
-
-
 def build_registry(harnesses: list[dict[str, object]]) -> dict[str, object]:
     by_id = {str(item["id"]): item for item in harnesses}
     for harness_id in FOUNDATION_CLOSURE:
@@ -132,14 +96,12 @@ def build_registry(harnesses: list[dict[str, object]]) -> dict[str, object]:
             msg = f"foundation closure harness missing from catalog: {harness_id}"
             raise ValueError(msg)
 
-    _validate_artifact_modes(harnesses)
-
     standard_blockers = [
         str(item["id"])
         for item in harnesses
         if item.get("blocks_release") and item.get("applicability") == "standard"
     ]
-    return {
+    registry: dict[str, object] = {
         "schema_version": "1.0.0",
         "source": "docs/quality/harness-catalog.md",
         "harness_count": len(harnesses),
@@ -149,6 +111,8 @@ def build_registry(harnesses: list[dict[str, object]]) -> dict[str, object]:
         "foundation_closure": list(FOUNDATION_CLOSURE),
         "harnesses": harnesses,
     }
+    validate_registry(registry)
+    return registry
 
 
 def main() -> int:

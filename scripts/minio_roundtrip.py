@@ -36,7 +36,7 @@ def required_environment(name: str) -> str:
 
 def main() -> int:
     """Verify an object storage write, read, and deletion cycle."""
-    from work_frontier.contracts.evidence_record import Artifact, Result
+    from work_frontier.contracts.evidence_record import Artifact, ArtifactHashes, Result
     from work_frontier.contracts.evidence_writer import hash_bytes, write_evidence
 
     start_time = datetime.now(UTC)
@@ -135,7 +135,7 @@ def main() -> int:
                 if bucket_name
                 else f"s3://{BUCKET_PREFIX}/[cleaned]"
             ),
-            hashes={"sha256": hash_bytes(PAYLOAD)},
+            hashes=ArtifactHashes(sha256=hash_bytes(PAYLOAD)),
         )
     ]
 

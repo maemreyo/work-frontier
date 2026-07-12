@@ -66,7 +66,7 @@ def test_valid_full_fixture_validates() -> None:
     assert record.artifacts[0].path == "backend/app/models/user.py"
     assert record.artifacts[0].hashes is not None
     expected_sha = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-    assert record.artifacts[0].hashes["sha256"] == expected_sha
+    assert record.artifacts[0].hashes.sha256 == expected_sha
     assert len(record.results) == 2
     assert record.results[0].kind == "type_error"
     assert record.results[0].passed is False

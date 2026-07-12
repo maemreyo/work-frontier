@@ -4,12 +4,15 @@ Models match the JSON Schema at contracts/generated/evidence-record.schema.json 
 Schema version: 1.0.0
 """
 
+import re
 from datetime import datetime
 from typing import ClassVar, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 JsonValue = str | int | float | bool | None | dict[str, object] | list[object]
+
+_SHA256_PATTERN = re.compile(r"^[a-f0-9]{64}$")
 
 
 class Invocation(BaseModel):
@@ -46,14 +49,31 @@ class Tool(BaseModel):
     )
 
 
+class ArtifactHashes(BaseModel):
+    """Typed content hashes with required canonical SHA-256.
+
+    The ``sha256`` field is required and must be a lowercase 64-char hex
+    string. Additional hash algorithms may be stored as extra fields for
+    interoperability (e.g. md5 for legacy tools), but ``sha256`` is the
+    authoritative content identity for certification.
+    """
+
+    model_config: ClassVar[ConfigDict] = ConfigDict(extra="allow")
+
+    sha256: str = Field(
+        pattern=r"^[a-f0-9]{64}$",
+        description="Lowercase SHA-256 hex digest (required, canonical)",
+    )
+
+
 class Artifact(BaseModel):
     """File or resource examined or produced during execution."""
 
     model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
 
     path: str = Field(min_length=1, description="File path relative to repository root")
-    hashes: dict[str, str] = Field(
-        description="Content hashes keyed by algorithm name (e.g., sha256)",
+    hashes: ArtifactHashes = Field(
+        description="Content hashes with required canonical sha256",
     )
 
 
@@ -142,3 +162,13 @@ class EvidenceRecord(BaseModel):
         if not v or "os" not in v:
             raise ValueError(msg)
         return v
+
+    @model_validator(mode="after")
+    def validate_applicability_reason(self) -> "EvidenceRecord":
+        """Validate applicability_reason is present when status is not_applicable."""
+        if self.status == "not_applicable" and (
+            not self.applicability_reason or not self.applicability_reason.strip()
+        ):
+            msg = "applicability_reason is required when status is 'not_applicable'"
+            raise ValueError(msg)
+        return self

@@ -222,7 +222,7 @@ def failing_alembic_revision_rolls_back(url: str) -> None:
 
 def main() -> int:
     """Verify upgrade, failed revision, downgrade, and re-upgrade behavior."""
-    from work_frontier.contracts.evidence_record import Artifact, Result
+    from work_frontier.contracts.evidence_record import Artifact, ArtifactHashes, Result
     from work_frontier.contracts.evidence_writer import hash_file, write_evidence
 
     start_time = datetime.now(UTC)
@@ -339,11 +339,13 @@ def main() -> int:
     artifacts = [
         Artifact(
             path="alembic.ini",
-            hashes={"sha256": hash_file(repo_root / "alembic.ini")},
+            hashes=ArtifactHashes(sha256=hash_file(repo_root / "alembic.ini")),
         ),
         Artifact(
             path="infra/alembic/versions/0001_bootstrap_marker.py",
-            hashes={"sha256": hash_file(versions_dir / "0001_bootstrap_marker.py")},
+            hashes=ArtifactHashes(
+                sha256=hash_file(versions_dir / "0001_bootstrap_marker.py")
+            ),
         ),
     ]
 

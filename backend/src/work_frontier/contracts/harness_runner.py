@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shlex
 import subprocess
 from datetime import UTC, datetime
@@ -11,6 +12,7 @@ from typing import Any, Literal, cast
 
 from work_frontier.contracts.evidence_record import (
     Artifact,
+    ArtifactHashes,
     EvidenceRecord,
     JsonValue,
     Result,
@@ -84,6 +86,12 @@ def run_harness(  # noqa: PLR0915 - harness lifecycle spans pre/post validation
         stale_path.unlink(missing_ok=True)
 
     start_time = datetime.now(UTC)
+    harness_env = {
+        **os.environ,
+        "WF_EVIDENCE_ROOT": str(evidence_root),
+    }
+    if artifact_mode == "declared_file" and not _is_remote_artifact(declared_artifact):
+        harness_env["WF_HARNESS_ARTIFACT"] = str(root / declared_artifact)
     completed = subprocess.run(
         command,
         shell=True,
@@ -91,6 +99,7 @@ def run_harness(  # noqa: PLR0915 - harness lifecycle spans pre/post validation
         capture_output=True,
         text=True,
         check=False,
+        env=harness_env,
     )
     end_time = datetime.now(UTC)
 
@@ -113,7 +122,7 @@ def run_harness(  # noqa: PLR0915 - harness lifecycle spans pre/post validation
         "registry.applicability": str(harness.get("applicability", "standard")),
         "registry.status": str(harness.get("status", "specified")),
         "registry.command": command,
-        "registry.artifact": declared_artifact,
+        "registry.declared_artifact": declared_artifact,
     }
 
     if evidence_root is None:
@@ -128,13 +137,15 @@ def run_harness(  # noqa: PLR0915 - harness lifecycle spans pre/post validation
         # run-scoped path rather than the static registry path so
         # downstream consumers can locate it.
         ev_rel = str((evidence_root / evidence_filename).relative_to(root))
-        property_bag["registry.artifact"] = ev_rel
+        property_bag["artifact.resolved_path"] = ev_rel
         property_bag["artifact.runner_evidence_path"] = ev_rel
     elif _is_remote_artifact(declared_artifact):
         artifacts.append(
             Artifact(
                 path=declared_artifact,
-                hashes={"sha256": hash_bytes(declared_artifact.encode("utf-8"))},
+                hashes=ArtifactHashes(
+                    sha256=hash_bytes(declared_artifact.encode("utf-8"))
+                ),
             )
         )
         property_bag["artifact.kind"] = "remote"
@@ -144,10 +155,11 @@ def run_harness(  # noqa: PLR0915 - harness lifecycle spans pre/post validation
             artifacts.append(
                 Artifact(
                     path=declared_artifact,
-                    hashes={"sha256": hash_file(artifact_file)},
+                    hashes=ArtifactHashes(sha256=hash_file(artifact_file)),
                 )
             )
             property_bag["artifact.kind"] = "local-file"
+            property_bag["artifact.resolved_path"] = declared_artifact
         else:
             evidence_root_rel = evidence_root.relative_to(root)
             console_rel = f"{evidence_root_rel}/{harness_id}.console.log"
@@ -221,7 +233,7 @@ def _validate_artifact(
 ) -> list[str]:
     """Return certification failures for one artifact (regular or stdout/stderr)."""
     failures: list[str] = []
-    digest = artifact.hashes.get("sha256")
+    digest = artifact.hashes.sha256
     if not digest:
         failures.append(
             f"{harness_id}: {label} artifact {artifact.path} missing sha256"
@@ -382,6 +394,7 @@ def recertify_foundation(  # noqa: PLR0915 - certification lifecycle spans 8 har
     evidence_root = root / ".omo" / "evidence" / "runs" / subject_sha[:12] / run_id
 
     records: list[EvidenceRecord] = []
+    initial_record_hashes: dict[str, str] = {}
     if not failures:
         for harness_id in closure:
             harness = get_harness(registry, harness_id)
@@ -405,6 +418,11 @@ def recertify_foundation(  # noqa: PLR0915 - certification lifecycle spans 8 har
                     repo_root=root,
                 )
             )
+            # Capture the initial record hash immediately after writing, before
+            # any subsequent harness can tamper with it.
+            record_path = evidence_root / f"{harness_id}.json"
+            if record_path.is_file():
+                initial_record_hashes[harness_id] = hash_file(record_path)
 
     # TOCTOU guard: recheck commit identity, tree identity, and tree
     # cleanliness after full harness closure.  Harness execution must not
@@ -452,6 +470,18 @@ def recertify_foundation(  # noqa: PLR0915 - certification lifecycle spans 8 har
                     f"{expected_id}: evidence record file missing from disk"
                 )
                 continue
+
+            # Tamper detection: check if the file hash changed since creation.
+            expected_initial = initial_record_hashes.get(expected_id)
+            current_hash = hash_file(record_path) if record_path.is_file() else ""
+            if expected_initial is not None and current_hash != expected_initial:
+                failures.append(
+                    f"{expected_id}: evidence record content changed after "
+                    f"creation (initial hash={expected_initial[:16]}..., "
+                    f"current hash={current_hash[:16]}...)"
+                )
+                continue
+
             try:
                 record = EvidenceRecord.model_validate_json(
                     record_path.read_text(encoding="utf-8")
@@ -459,6 +489,11 @@ def recertify_foundation(  # noqa: PLR0915 - certification lifecycle spans 8 har
             except Exception as exc:  # noqa: BLE001 - surface as certification failure
                 failures.append(
                     f"{expected_id}: evidence record file is invalid JSON: {exc}"
+                )
+                continue
+            if record.harness_id != expected_id:
+                failures.append(
+                    f"{expected_id}: file contains record for {record.harness_id}"
                 )
                 continue
             disk_records.append(record)
@@ -496,6 +531,14 @@ def recertify_foundation(  # noqa: PLR0915 - certification lifecycle spans 8 har
             failures.append(
                 f"evidence manifest has extra records: {sorted(extra_manifest)}"
             )
+    if not failures:
+        disk_ids = [record.harness_id for record in disk_records]
+        if disk_ids != closure:
+            failures.append(
+                f"evidence record IDs {disk_ids} do not match closure {closure}"
+            )
+        if len(disk_ids) != len(set(disk_ids)):
+            failures.append("duplicate harness IDs in disk records")
 
     # For runner_evidence mode harnesses, include the evidence file path
     # to prove the record was actually written.
@@ -534,7 +577,7 @@ def recertify_foundation(  # noqa: PLR0915 - certification lifecycle spans 8 har
                 "exit_code": record.invocation.exit_code,
                 "subject_tree_sha": record.subject_tree_sha,
             }
-            for record in records
+            for record in (disk_records or records)
         ],
         "supersedes": (
             "prior local foundation claims for Todos 1-4 and P0 inventory-only reports"

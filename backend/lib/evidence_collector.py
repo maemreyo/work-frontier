@@ -5,7 +5,6 @@ harness execution, then finalizing with invocation metadata.
 """
 
 import hashlib
-import subprocess
 from datetime import datetime
 from pathlib import Path
 from typing import Literal
@@ -20,6 +19,7 @@ from work_frontier.contracts.evidence_record import (
 from work_frontier.contracts.evidence_writer import (
     generate_run_id,
     get_environment_fingerprint,
+    get_git_commit_sha,
     get_git_tree_sha,
     hash_bytes,
 )
@@ -44,33 +44,29 @@ class EvidenceCollector:
         )
     """
 
-    def __init__(self, harness_id: str, tool_name: str, tool_version: str) -> None:
+    def __init__(
+        self,
+        harness_id: str,
+        tool_name: str,
+        tool_version: str,
+        repo_root: Path | None = None,
+    ) -> None:
         """Initialize collector with harness and tool metadata.
 
         Args:
             harness_id: Harness identifier matching WF-HAR-{CATEGORY}-{NN}
             tool_name: Name of the tool being executed
             tool_version: Version string of the tool
+            repo_root: Repository root for git operations (default: CWD)
         """
         self.harness_id: str = harness_id
         self.tool_name: str = tool_name
         self.tool_version: str = tool_version
-        self.commit_sha: str = self._get_commit_sha()
+        self.repo_root: Path = repo_root if repo_root is not None else Path.cwd()
+        self.commit_sha: str = get_git_commit_sha(self.repo_root)
+        self.tree_sha: str = get_git_tree_sha(self.repo_root)
         self.results: list[Result] = []
         self.artifacts: list[Artifact] = []
-
-    def _get_commit_sha(self) -> str:
-        """Get current git commit SHA.
-
-        Returns:
-            40-character hexadecimal commit SHA
-
-        Raises:
-            subprocess.CalledProcessError: If git command fails
-        """
-        return subprocess.check_output(
-            ["git", "rev-parse", "HEAD"], text=True
-        ).strip()
 
     def add_result(self, kind: str, passed: bool, detail: str | None = None) -> None:
         """Add a test result or finding.
@@ -107,6 +103,7 @@ class EvidenceCollector:
         repo_root: Path | None = None,
         evidence_root: Path | None = None,
         applicability: Literal["standard", "large", "tenant"] = "standard",
+        applicability_reason: str | None = None,
     ) -> EvidenceRecord:
         """Build the final EvidenceRecord.
 
@@ -136,8 +133,13 @@ class EvidenceCollector:
         else:
             status = "fail"
 
-        if repo_root is None:
-            repo_root = Path.cwd()
+        if repo_root is not None and repo_root != self.repo_root:
+            msg = (
+                f"repo_root passed to build() ({repo_root}) does not match "
+                f"constructor repo_root ({self.repo_root})"
+            )
+            raise ValueError(msg)
+        repo_root = self.repo_root
         if evidence_root is None:
             evidence_root = repo_root / ".omo" / "evidence"
 
@@ -168,7 +170,7 @@ class EvidenceCollector:
             status=status,
             run_id=run_id or generate_run_id(),
             subject_sha=self.commit_sha,
-            subject_tree_sha=get_git_tree_sha(),
+            subject_tree_sha=self.tree_sha,
             invocation=Invocation(
                 command=command,
                 exit_code=exit_code,
@@ -183,6 +185,7 @@ class EvidenceCollector:
                 commit_sha=self.commit_sha,
             ),
             applicability=applicability,
+            applicability_reason=applicability_reason,
             environment=get_environment_fingerprint(),
             artifacts=self.artifacts,
             results=self.results,

@@ -13,6 +13,7 @@ from typing import Final
 from work_frontier.contracts import DecisionRecordContract
 from work_frontier.contracts.evidence_record import (
     Artifact,
+    ArtifactHashes,
     EvidenceRecord,
     Result,
 )
@@ -149,7 +150,10 @@ def main(arguments: list[str]) -> int:
         for path, content in expected_artifacts():
             if path.exists():
                 artifacts.append(
-                    Artifact(path=str(path), hashes={"sha256": hash_file(path)})
+                    Artifact(
+                        path=str(path),
+                        hashes=ArtifactHashes(sha256=hash_file(path)),
+                    )
                 )
             else:
                 from work_frontier.contracts.evidence_writer import hash_bytes
@@ -157,7 +161,9 @@ def main(arguments: list[str]) -> int:
                 artifacts.append(
                     Artifact(
                         path=str(path),
-                        hashes={"sha256": hash_bytes(content.encode("utf-8"))},
+                        hashes=ArtifactHashes(
+                            sha256=hash_bytes(content.encode("utf-8"))
+                        ),
                     )
                 )
 

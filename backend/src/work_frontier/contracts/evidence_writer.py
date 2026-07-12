@@ -242,10 +242,10 @@ def get_environment_fingerprint() -> dict[str, str]:
 
 
 def generate_run_id() -> str:
-    """Generate a unique run identifier from timestamp and PID."""
-    import time
+    """Generate a unique run identifier using UUIDv4."""
+    import uuid
 
-    return f"run-{int(time.time() * 1000)}"
+    return f"run-{uuid.uuid4().hex[:12]}"
 
 
 def hash_bytes(content: bytes) -> str:
@@ -265,13 +265,15 @@ def write_text_artifact(
     repo_root: Path,
 ) -> Artifact:
     """Write a text artifact under *relative_path* relative to *repo_root*."""
-    from work_frontier.contracts.evidence_record import Artifact
+    from work_frontier.contracts.evidence_record import Artifact, ArtifactHashes
 
     path = repo_root / relative_path
     path.parent.mkdir(parents=True, exist_ok=True)
     encoded = content.encode("utf-8")
     _ = path.write_bytes(encoded)
-    return Artifact(path=relative_path, hashes={"sha256": hash_bytes(encoded)})
+    return Artifact(
+        path=relative_path, hashes=ArtifactHashes(sha256=hash_bytes(encoded))
+    )
 
 
 def write_text_artifact_to_dir(
@@ -282,7 +284,7 @@ def write_text_artifact_to_dir(
     repo_root: Path | None = None,
 ) -> Artifact:
     """Write a text artifact into *dir_path* and return a hashed Artifact."""
-    from work_frontier.contracts.evidence_record import Artifact
+    from work_frontier.contracts.evidence_record import Artifact, ArtifactHashes
 
     if repo_root is None:
         repo_root = Path.cwd()
@@ -296,7 +298,7 @@ def write_text_artifact_to_dir(
         rel_path = str(file_path.relative_to(repo_root))
     except ValueError:
         rel_path = str(file_path)
-    return Artifact(path=rel_path, hashes={"sha256": hash_bytes(encoded)})
+    return Artifact(path=rel_path, hashes=ArtifactHashes(sha256=hash_bytes(encoded)))
 
 
 def _relative_workdir(working_directory: str | None, repo_root: Path) -> str:
@@ -338,6 +340,7 @@ def write_evidence(
     tool_version: str | None = None,
     evidence_root: Path | None = None,
     applicability: Literal["standard", "large", "tenant"] = "standard",
+    applicability_reason: str | None = None,
 ) -> Path:
     """Write a validated evidence record and its stdout/stderr artifacts.
 
@@ -408,6 +411,7 @@ def write_evidence(
         invocation=invocation,
         tool=tool,
         applicability=applicability,
+        applicability_reason=applicability_reason,
         environment=get_environment_fingerprint(),
         artifacts=artifacts or [],
         results=results or [],

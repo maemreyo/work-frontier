@@ -11,7 +11,48 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+import pytest
 from backend.lib.evidence_collector import EvidenceCollector
+
+
+def _init_temp_git_repo(path: Path, filename: str, content: str) -> str:
+    """Initialize a git repo at *path* with one commit containing *content*.
+
+    Returns the commit SHA.
+    """
+    path.mkdir(parents=True, exist_ok=True)
+    _ = subprocess.run(["git", "init"], cwd=path, capture_output=True, check=True)
+    _ = subprocess.run(
+        ["git", "config", "user.email", "test@test.test"],
+        cwd=path,
+        capture_output=True,
+        check=True,
+    )
+    _ = subprocess.run(
+        ["git", "config", "user.name", "Test"],
+        cwd=path,
+        capture_output=True,
+        check=True,
+    )
+    file_path = path / filename
+    _ = file_path.write_text(content, encoding="utf-8")
+    _ = subprocess.run(  # noqa: S603 - controlled test input
+        ["git", "add", filename], cwd=path, capture_output=True, check=True
+    )
+    _ = subprocess.run(  # noqa: S603 - controlled test input
+        ["git", "commit", "-m", f"initial commit: {filename}"],
+        cwd=path,
+        capture_output=True,
+        check=True,
+    )
+    result = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=path,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return result.stdout.strip()
 
 
 class TestEvidenceCollectorInitialization:
@@ -126,7 +167,7 @@ class TestEvidenceCollectorArtifactHandling:
         assert len(collector.artifacts) == 1
         assert collector.artifacts[0].path == str(test_file)
         assert collector.artifacts[0].hashes is not None
-        assert collector.artifacts[0].hashes["sha256"] == expected_hash
+        assert collector.artifacts[0].hashes.sha256 == expected_hash
 
     def test_add_multiple_artifacts(self, tmp_path: Path) -> None:
         """Test that multiple artifacts can be added.
@@ -383,3 +424,126 @@ class TestEvidenceRecordSerialization:
         assert parsed["results"][0]["passed"] is True
         assert len(parsed["artifacts"]) == 1
         assert "sha256" in parsed["artifacts"][0]["hashes"]
+
+
+class TestEvidenceCollectorRepoRoot:
+    """Tests for EvidenceCollector repo_root handling."""
+
+    def test_build_repo_root_mismatch_raises_error(self, tmp_path: Path) -> None:
+        """Test that build() raises ValueError when repo_root doesn't match constructor.
+
+        Given: A collector constructed with a specific repo_root
+        When: build() is called with a different repo_root
+        Then: ValueError is raised
+        """
+        # Given
+        repo_a = tmp_path / "repo_a"
+        _ = _init_temp_git_repo(repo_a, "file_a.txt", "content a")
+        collector = EvidenceCollector(
+            harness_id="WF-HAR-PYTHON-01",
+            tool_name="pytest",
+            tool_version="8.1.0",
+            repo_root=repo_a,
+        )
+        start = datetime.now(UTC)
+        end = start + timedelta(seconds=1)
+
+        # When / Then
+        with pytest.raises(ValueError, match="repo_root passed to build"):
+            _ = collector.build(
+                command="echo hello",
+                exit_code=0,
+                start_time=start,
+                end_time=end,
+                repo_root=tmp_path / "other_repo",
+            )
+
+    def test_evidence_attests_constructor_repo_root(self, tmp_path: Path) -> None:
+        """Test that commit and tree SHAs always come from constructor's repo_root.
+
+        Given: Two separate git repos with different commits
+        When: EvidenceCollector is created for each repo
+        Then: The commit and tree SHAs match the respective repo
+        """
+        # Given
+        repo_a = tmp_path / "repo_a"
+        repo_b = tmp_path / "repo_b"
+        sha_a = _init_temp_git_repo(repo_a, "alpha.txt", "alpha content")
+        sha_b = _init_temp_git_repo(repo_b, "beta.txt", "beta content")
+
+        # When — collector for repo_a
+        collector_a = EvidenceCollector(
+            harness_id="WF-HAR-A",
+            tool_name="pytest",
+            tool_version="8.1.0",
+            repo_root=repo_a,
+        )
+        collector_b = EvidenceCollector(
+            harness_id="WF-HAR-B",
+            tool_name="pytest",
+            tool_version="8.1.0",
+            repo_root=repo_b,
+        )
+
+        # Then — each collector attests its own repo's SHAs
+        assert collector_a.commit_sha == sha_a
+        assert collector_b.commit_sha == sha_b
+        assert collector_a.commit_sha != collector_b.commit_sha
+        assert collector_a.tree_sha != collector_b.tree_sha
+        assert all(c in "0123456789abcdef" for c in collector_a.tree_sha)
+        assert len(collector_a.tree_sha) == 40
+
+        # When — build() uses the same repo (matching)
+        start = datetime.now(UTC)
+        end = start + timedelta(seconds=1)
+        record_a = collector_a.build(
+            command="echo alpha",
+            exit_code=0,
+            start_time=start,
+            end_time=end,
+        )
+        record_b = collector_b.build(
+            command="echo beta",
+            exit_code=0,
+            start_time=start,
+            end_time=end,
+        )
+
+        # Then — subject_sha and subject_tree_sha match constructor-captured values
+        assert record_a.subject_sha == sha_a
+        assert record_a.subject_sha == collector_a.commit_sha
+        assert record_a.subject_tree_sha == collector_a.tree_sha
+        assert record_b.subject_sha == sha_b
+        assert record_b.subject_tree_sha == collector_b.tree_sha
+
+    def test_build_with_matching_repo_root_works(self, tmp_path: Path) -> None:
+        """Test that passing the same repo_root to build() works fine.
+
+        Given: A collector with a specific repo_root
+        When: build() is called with the same repo_root
+        Then: No error is raised and the record is valid
+        """
+        # Given
+        repo = tmp_path / "repo"
+        _ = _init_temp_git_repo(repo, "file.txt", "content")
+        collector = EvidenceCollector(
+            harness_id="WF-HAR-TEST",
+            tool_name="pytest",
+            tool_version="8.1.0",
+            repo_root=repo,
+        )
+        start = datetime.now(UTC)
+        end = start + timedelta(seconds=1)
+
+        # When — pass explicit repo_root matching constructor
+        record = collector.build(
+            command="echo test",
+            exit_code=0,
+            start_time=start,
+            end_time=end,
+            repo_root=repo,
+        )
+
+        # Then
+        assert record.status == "pass"
+        assert record.harness_id == "WF-HAR-TEST"
