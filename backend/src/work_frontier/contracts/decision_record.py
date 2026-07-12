@@ -19,7 +19,7 @@ class DecisionRecordContract(BaseModel):
 
     decision_id: str = Field(min_length=1)
     workspace_id: str = Field(min_length=1)
-    program_id: str | None
+    program_id: str | None = Field(min_length=1)
     item_id: str = Field(min_length=1)
     computed_at: datetime
     causation_id: str = Field(min_length=1)

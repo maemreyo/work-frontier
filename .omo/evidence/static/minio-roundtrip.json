@@ -1,0 +1,39 @@
+{
+  "schema_version": "1.0.0",
+  "harness_id": "WF-HAR-SMOKE-02",
+  "status": "fail",
+  "invocation": {
+    "command": "python minio_roundtrip.py",
+    "exit_code": 1,
+    "working_directory": "/Users/trung.ngo/Documents/zaob-dev/work-frontier",
+    "start_time": "2026-07-12T05:07:14.771675Z",
+    "end_time": "2026-07-12T05:07:14.776297Z",
+    "duration_seconds": 0.004622
+  },
+  "tool": {
+    "name": "minio_roundtrip",
+    "version": "1.0.0",
+    "commit_sha": "90313816252cd00309f98297ad40f44bc5a4dfce"
+  },
+  "artifacts": [
+    {
+      "path": "s3://[bucket]",
+      "hashes": null
+    }
+  ],
+  "results": [
+    {
+      "kind": "storage_error",
+      "passed": false,
+      "detail": "MINIO_ROOT_USER"
+    }
+  ],
+  "property_bag": {
+    "minio_roundtrip": {
+      "endpoint_configured": false,
+      "bucket_name": null,
+      "object_key": "smoke/hello.txt",
+      "error": "MINIO_ROOT_USER"
+    }
+  }
+}

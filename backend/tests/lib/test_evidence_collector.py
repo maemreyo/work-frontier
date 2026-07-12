@@ -7,10 +7,9 @@ computes hashes, determines status, and builds valid EvidenceRecord instances.
 import hashlib
 import json
 import subprocess
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
-
-import pytest
+from typing import Any
 
 from backend.lib.evidence_collector import EvidenceCollector
 
@@ -117,7 +116,7 @@ class TestEvidenceCollectorArtifactHandling:
         )
         test_file = tmp_path / "test_artifact.txt"
         test_content = b"test content for hashing"
-        test_file.write_bytes(test_content)
+        _ = test_file.write_bytes(test_content)
         expected_hash = hashlib.sha256(test_content).hexdigest()
 
         # When
@@ -144,8 +143,8 @@ class TestEvidenceCollectorArtifactHandling:
         )
         file1 = tmp_path / "artifact1.txt"
         file2 = tmp_path / "artifact2.txt"
-        file1.write_bytes(b"content 1")
-        file2.write_bytes(b"content 2")
+        _ = file1.write_bytes(b"content 1")
+        _ = file2.write_bytes(b"content 2")
 
         # When
         collector.add_artifact(file1)
@@ -175,7 +174,7 @@ class TestEvidenceCollectorBuildLogic:
         )
         collector.add_result(kind="test", passed=True)
         collector.add_result(kind="test", passed=True)
-        start = datetime.now(timezone.utc)
+        start = datetime.now(UTC)
         end = start + timedelta(seconds=5)
 
         # When
@@ -204,7 +203,7 @@ class TestEvidenceCollectorBuildLogic:
         )
         collector.add_result(kind="test", passed=True)
         collector.add_result(kind="test", passed=False, detail="assertion failed")
-        start = datetime.now(timezone.utc)
+        start = datetime.now(UTC)
         end = start + timedelta(seconds=5)
 
         # When
@@ -232,7 +231,7 @@ class TestEvidenceCollectorBuildLogic:
             tool_version="8.1.0",
         )
         collector.add_result(kind="test", passed=True)
-        start = datetime.now(timezone.utc)
+        start = datetime.now(UTC)
         end = start + timedelta(seconds=5)
 
         # When
@@ -259,8 +258,8 @@ class TestEvidenceCollectorBuildLogic:
             tool_name="pytest",
             tool_version="8.1.0",
         )
-        start = datetime(2026, 7, 12, 10, 0, 0, tzinfo=timezone.utc)
-        end = datetime(2026, 7, 12, 10, 2, 30, tzinfo=timezone.utc)
+        start = datetime(2026, 7, 12, 10, 0, 0, tzinfo=UTC)
+        end = datetime(2026, 7, 12, 10, 2, 30, tzinfo=UTC)
         expected_duration = 150.0  # 2 minutes 30 seconds
 
         # When
@@ -287,7 +286,7 @@ class TestEvidenceCollectorBuildLogic:
             tool_name="pytest",
             tool_version="8.1.0",
         )
-        start = datetime.now(timezone.utc)
+        start = datetime.now(UTC)
         end = start + timedelta(seconds=5)
 
         # When
@@ -315,7 +314,7 @@ class TestEvidenceCollectorBuildLogic:
             tool_name="pytest",
             tool_version="8.1.0",
         )
-        start = datetime.now(timezone.utc)
+        start = datetime.now(UTC)
         end = start + timedelta(seconds=5)
 
         # When
@@ -352,9 +351,9 @@ class TestEvidenceRecordSerialization:
         )
         collector.add_result(kind="test", passed=True, detail="test passed")
         test_file = tmp_path / "artifact.txt"
-        test_file.write_bytes(b"test content")
+        _ = test_file.write_bytes(b"test content")
         collector.add_artifact(test_file)
-        start = datetime(2026, 7, 12, 10, 0, 0, tzinfo=timezone.utc)
+        start = datetime(2026, 7, 12, 10, 0, 0, tzinfo=UTC)
         end = start + timedelta(seconds=10)
 
         # When
@@ -366,7 +365,7 @@ class TestEvidenceRecordSerialization:
             working_directory="/workspace",
         )
         json_str = record.model_dump_json()
-        parsed = json.loads(json_str)
+        parsed: dict[str, Any] = json.loads(json_str)
 
         # Then
         assert parsed["schema_version"] == "1.0.0"

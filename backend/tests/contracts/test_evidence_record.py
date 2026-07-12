@@ -11,18 +11,20 @@ from typing import cast
 import pytest
 from pydantic import ValidationError
 
-from backend.contracts.evidence_record import EvidenceRecord
+from work_frontier.contracts.evidence_record import EvidenceRecord
 
 # Path to fixtures directory
-FIXTURES_DIR = Path(__file__).parent.parent.parent.parent / "contracts" / "fixtures" / "evidence"
+FIXTURES_DIR = (
+    Path(__file__).parent.parent.parent.parent / "contracts" / "fixtures" / "evidence"
+)
 
 
-def test_valid_minimal_fixture_validates():
+def test_valid_minimal_fixture_validates() -> None:
     """Test that valid-minimal.json validates correctly."""
     # Given: a minimal valid fixture
     fixture_path = FIXTURES_DIR / "valid-minimal.json"
     with fixture_path.open() as f:
-        data = cast(dict[str, object], json.load(f))
+        data = cast("dict[str, object]", json.load(f))
 
     # When: validating via Pydantic
     record = EvidenceRecord.model_validate(data)
@@ -41,12 +43,12 @@ def test_valid_minimal_fixture_validates():
     assert record.property_bag is None
 
 
-def test_valid_full_fixture_validates():
+def test_valid_full_fixture_validates() -> None:
     """Test that valid-full.json validates correctly."""
     # Given: a full valid fixture with all optional fields
     fixture_path = FIXTURES_DIR / "valid-full.json"
     with fixture_path.open() as f:
-        data = cast(dict[str, object], json.load(f))
+        data = cast("dict[str, object]", json.load(f))
 
     # When: validating via Pydantic
     record = EvidenceRecord.model_validate(data)
@@ -57,12 +59,16 @@ def test_valid_full_fixture_validates():
     assert record.status == "fail"
     assert record.invocation.command == "mypy backend/app --strict"
     assert record.invocation.exit_code == 1
-    assert record.invocation.working_directory == "/Users/trung.ngo/Documents/zaob-dev/work-frontier"
+    assert (
+        record.invocation.working_directory
+        == "/Users/trung.ngo/Documents/zaob-dev/work-frontier"
+    )
     assert record.tool.name == "mypy"
     assert len(record.artifacts) == 2
     assert record.artifacts[0].path == "backend/app/models/user.py"
     assert record.artifacts[0].hashes is not None
-    assert record.artifacts[0].hashes["sha256"] == "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    expected_sha = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    assert record.artifacts[0].hashes["sha256"] == expected_sha
     assert record.artifacts[1].path == "backend/app/services/auth.py"
     assert record.artifacts[1].hashes is None
     assert len(record.results) == 2
@@ -72,12 +78,12 @@ def test_valid_full_fixture_validates():
     assert record.property_bag["contract.service_name"] == "backend"
 
 
-def test_roundtrip_minimal_preserves_data():
+def test_roundtrip_minimal_preserves_data() -> None:
     """Test that fixture → Pydantic → dict → Pydantic → dict is stable."""
     # Given: a minimal fixture loaded once
     fixture_path = FIXTURES_DIR / "valid-minimal.json"
     with fixture_path.open() as f:
-        original_data = cast(dict[str, object], json.load(f))
+        original_data = cast("dict[str, object]", json.load(f))
 
     # When: roundtripping through Pydantic twice
     record1 = EvidenceRecord.model_validate(original_data)
@@ -89,12 +95,12 @@ def test_roundtrip_minimal_preserves_data():
     assert dict1 == dict2
 
 
-def test_roundtrip_full_preserves_data():
+def test_roundtrip_full_preserves_data() -> None:
     """Test that full fixture roundtrip preserves all data."""
     # Given: a full fixture with optional fields
     fixture_path = FIXTURES_DIR / "valid-full.json"
     with fixture_path.open() as f:
-        original_data = cast(dict[str, object], json.load(f))
+        original_data = cast("dict[str, object]", json.load(f))
 
     # When: roundtripping through Pydantic twice
     record1 = EvidenceRecord.model_validate(original_data)
@@ -106,7 +112,7 @@ def test_roundtrip_full_preserves_data():
     assert dict1 == dict2
 
 
-def test_missing_required_field_raises_validation_error():
+def test_missing_required_field_raises_validation_error() -> None:
     """Test that missing required field raises ValidationError."""
     # Given: data missing the required 'status' field
     data = {
@@ -135,7 +141,7 @@ def test_missing_required_field_raises_validation_error():
     assert "status" in str(exc_info.value)
 
 
-def test_invalid_harness_id_pattern_raises_validation_error():
+def test_invalid_harness_id_pattern_raises_validation_error() -> None:
     """Test that invalid harness_id pattern raises ValidationError."""
     # Given: data with invalid harness_id pattern (missing digits)
     data = {
@@ -164,7 +170,7 @@ def test_invalid_harness_id_pattern_raises_validation_error():
     assert "harness_id" in str(exc_info.value)
 
 
-def test_invalid_commit_sha_pattern_raises_validation_error():
+def test_invalid_commit_sha_pattern_raises_validation_error() -> None:
     """Test that invalid commit_sha pattern raises ValidationError."""
     # Given: data with invalid commit_sha (not 40 hex chars)
     data = {
@@ -193,12 +199,12 @@ def test_invalid_commit_sha_pattern_raises_validation_error():
     assert "commit_sha" in str(exc_info.value)
 
 
-def test_extra_field_in_evidence_record_raises_validation_error():
+def test_extra_field_in_evidence_record_raises_validation_error() -> None:
     """Test that extra fields are rejected due to extra='forbid'."""
     # Given: valid data with an extra unknown field
     fixture_path = FIXTURES_DIR / "valid-minimal.json"
     with fixture_path.open() as f:
-        data = cast(dict[str, object], json.load(f))
+        data = cast("dict[str, object]", json.load(f))
     data["unknown_field"] = "should_fail"
 
     # When/Then: validation should raise ValidationError
@@ -206,10 +212,11 @@ def test_extra_field_in_evidence_record_raises_validation_error():
         _ = EvidenceRecord.model_validate(data)
 
     # And: the error should mention extra fields not permitted
-    assert "extra" in str(exc_info.value).lower() or "unexpected" in str(exc_info.value).lower()
+    error_msg = str(exc_info.value).lower()
+    assert "extra" in error_msg or "unexpected" in error_msg
 
 
-def test_negative_duration_raises_validation_error():
+def test_negative_duration_raises_validation_error() -> None:
     """Test that negative duration_seconds raises ValidationError."""
     # Given: data with negative duration
     data = {

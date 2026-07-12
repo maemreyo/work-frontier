@@ -17,7 +17,9 @@ class Invocation(BaseModel):
 
     model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
 
-    command: str = Field(min_length=1, description="Full command invoked by the harness")
+    command: str = Field(
+        min_length=1, description="Full command invoked by the harness"
+    )
     exit_code: int = Field(description="Process exit code")
     working_directory: str | None = Field(
         default=None, description="Working directory where command was executed"
@@ -28,9 +30,7 @@ class Invocation(BaseModel):
     end_time: datetime = Field(
         description="ISO 8601 timestamp when execution completed"
     )
-    duration_seconds: float = Field(
-        ge=0, description="Execution duration in seconds"
-    )
+    duration_seconds: float = Field(ge=0, description="Execution duration in seconds")
 
 
 class Tool(BaseModel):
@@ -38,9 +38,7 @@ class Tool(BaseModel):
 
     model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
 
-    name: str = Field(
-        min_length=1, description="Tool name (e.g., pytest, mypy, ruff)"
-    )
+    name: str = Field(min_length=1, description="Tool name (e.g., pytest, mypy, ruff)")
     version: str = Field(min_length=1, description="Tool version string")
     commit_sha: str = Field(
         pattern=r"^[a-f0-9]{40}$",
@@ -53,9 +51,7 @@ class Artifact(BaseModel):
 
     model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
 
-    path: str = Field(
-        min_length=1, description="File path relative to repository root"
-    )
+    path: str = Field(min_length=1, description="File path relative to repository root")
     hashes: dict[str, str] | None = Field(
         default=None,
         description="Content hashes keyed by algorithm name (e.g., sha256)",
@@ -89,7 +85,7 @@ class EvidenceRecord(BaseModel):
     )
     harness_id: str = Field(
         pattern=r"^WF-HAR-[A-Z]+-\d{2}$",
-        description="Unique harness identifier following pattern WF-HAR-{CATEGORY}-{NN}",
+        description="Harness identifier: WF-HAR-{CATEGORY}-{NN}",
     )
     status: Literal["pass", "fail", "skip"] = Field(
         description="Overall harness execution status"
@@ -105,5 +101,5 @@ class EvidenceRecord(BaseModel):
     )
     property_bag: dict[str, JsonValue] | None = Field(
         default=None,
-        description="Extension point for harness-specific data. Keys should be namespaced by harness.",
+        description=("Extension point for harness-specific data."),
     )

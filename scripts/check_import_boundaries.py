@@ -5,6 +5,7 @@ from __future__ import annotations
 import ast
 import sys
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Final, override
 
@@ -76,20 +77,20 @@ def resolve_relative_import(
     """Resolve a relative import to an absolute module path."""
     if level == 0:
         return module
-    
+
     relative_path = file_path.relative_to(source_root)
     module_parts = list(relative_path.with_suffix("").parts)
-    
+
     if module_parts and module_parts[-1] == "__init__":
         _ = module_parts.pop()
-    
+
     if len(module_parts) < level:
         return None
     base_parts = module_parts[:-level] if level > 0 else module_parts
-    
+
     if module:
         base_parts.extend(module.split("."))
-    
+
     return ".".join(base_parts) if base_parts else None
 
 
@@ -105,33 +106,36 @@ def violation_rule(
     source_layer: str, target_layer: str, target_is_ports: bool
 ) -> str | None:
     """Return the ADR-006 rule violated by a layer-to-layer import."""
-    if source_layer not in ALLOW_MATRIX or target_layer not in ALLOW_MATRIX[source_layer]:
+    if (
+        source_layer not in ALLOW_MATRIX
+        or target_layer not in ALLOW_MATRIX[source_layer]
+    ):
         return "unknown-layer-pair"
-    
+
     allowed = ALLOW_MATRIX[source_layer][target_layer]
-    
+
     if target_layer == "application" and target_is_ports:
         if source_layer in {"platform", "adapters"}:
             allowed = True
-    
+
     if allowed:
         return None
-    
+
     if source_layer == "domain":
         return "domain-cannot-import-non-domain"
-    elif source_layer == "platform" and target_layer == "application":
+    if source_layer == "platform" and target_layer == "application":
         return "platform-may-import-only-application-ports"
-    elif source_layer == "application":
+    if source_layer == "application":
         return "application-cannot-import-implementation"
-    elif source_layer == "adapters" and target_layer == "domain":
+    if source_layer == "adapters" and target_layer == "domain":
         return "adapters-cannot-import-domain"
-    elif source_layer == "adapters" and target_layer == "application":
+    if source_layer == "adapters" and target_layer == "application":
         return "adapters-may-import-only-application-ports"
-    elif source_layer == "adapters" and target_layer == "interfaces":
+    if source_layer == "adapters" and target_layer == "interfaces":
         return "adapters-cannot-import-interfaces"
-    elif source_layer == "interfaces":
+    if source_layer == "interfaces":
         return "interfaces-must-call-application"
-    
+
     return "unknown-violation"
 
 
@@ -189,22 +193,68 @@ def parse_source_root(arguments: list[str]) -> Path | None:
     """Parse the source root supplied to the standalone checker."""
     if len(arguments) == 0:
         return Path("backend/src").resolve()
-    elif len(arguments) == 2 and arguments[0] == "--root":
+    if len(arguments) == 2 and arguments[0] == "--root":
         return Path(arguments[1]).resolve()
-    else:
-        return None
+    return None
 
 
 def main() -> int:
     """Print violations and return a nonzero status when an import boundary fails."""
+    from work_frontier.contracts.evidence_record import Artifact, Result
+    from work_frontier.contracts.evidence_writer import write_evidence
+
+    start_time = datetime.now(UTC)
+    repo_root = Path(__file__).parent.parent
+
     source_root = parse_source_root(sys.argv[1:])
     if source_root is None:
         print("usage: check_import_boundaries.py [--root PATH]", file=sys.stderr)
         return 2
+
     violations = validate(source_root)
     for violation in violations:
         print(f"{violation.path}:{violation.line}: {violation.rule}")
-    return 1 if violations else 0
+
+    exit_code = 1 if violations else 0
+    end_time = datetime.now(UTC)
+
+    artifacts = [
+        Artifact(path=str(path.relative_to(repo_root)))
+        for path in sorted(source_root.rglob("*.py"))
+        if layer_for_path(path, source_root) is not None
+    ]
+
+    results = [
+        Result(
+            kind=violation.rule,
+            passed=False,
+            detail=f"{violation.path.relative_to(repo_root)}:{violation.line}",
+        )
+        for violation in violations
+    ]
+
+    _ = write_evidence(
+        harness_id="WF-HAR-STATIC-01",
+        status="fail" if violations else "pass",
+        command=f"python {' '.join(sys.argv)}",
+        exit_code=exit_code,
+        working_directory=str(repo_root),
+        start_time=start_time,
+        end_time=end_time,
+        tool_name="check_import_boundaries",
+        artifacts=artifacts,
+        results=results,
+        property_bag={
+            "check_import_boundaries": {
+                "source_root": str(source_root.relative_to(repo_root)),
+                "violation_count": len(violations),
+            }
+        },
+        output_filename="import-boundaries.json",
+        repo_root=repo_root,
+    )
+
+    return exit_code
 
 
 if __name__ == "__main__":

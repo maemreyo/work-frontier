@@ -9,7 +9,7 @@ import subprocess
 from datetime import datetime
 from pathlib import Path
 
-from backend.contracts.evidence_record import (
+from work_frontier.contracts.evidence_record import (
     Artifact,
     EvidenceRecord,
     Invocation,

@@ -1,4 +1,4 @@
-.PHONY: bootstrap check-architecture check-contracts check-static generate-contracts infra-down infra-up migration-smoke storage-smoke test
+.PHONY: bootstrap check-architecture check-contracts check-preflight check-static generate-contracts infra-down infra-up migration-smoke storage-smoke test
 
 bootstrap:
 	uv sync --all-groups
@@ -8,7 +8,9 @@ check-architecture:
 	uv run python scripts/check_import_boundaries.py
 
 check-static:
+	$(MAKE) check-preflight
 	$(MAKE) check-architecture
+	$(MAKE) check-contracts
 	uv run ruff check backend/src backend/tests scripts
 	uv run ruff format --check backend/src backend/tests scripts
 	uv run basedpyright
@@ -19,6 +21,9 @@ generate-contracts:
 
 check-contracts:
 	uv run python scripts/generate_contracts.py --check
+
+check-preflight:
+	node .omo/preflight/adr-006/validate.mjs
 
 infra-up:
 	docker compose up -d --wait

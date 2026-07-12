@@ -239,6 +239,57 @@ production table, and the application role must not have `BYPASSRLS`.
 Application query predicates are required defense in depth, not an alternative
 to RLS. Adapters that cannot propagate workspace scope fail closed.
 
+### 4.4 Cross-Language Contract Generation
+
+Work Frontier generates deterministic JSON Schema and TypeScript Zod schemas
+from canonical Pydantic models. This ensures backend validation, API
+documentation, and frontend validation remain synchronized without manual
+duplication.
+
+**Generation flow:**
+
+```
+Pydantic models (Python)
+    ↓ Pydantic.model_json_schema()
+JSON Schema (contracts/generated/*.schema.json)
+    ↓ x-to-zod (scripts/generate_zod_from_schema.mjs)
+Zod schemas (frontend/src/contracts/*.generated.ts)
+```
+
+**Source of truth:** Pydantic models in `backend/src/work_frontier/contracts/`.
+All downstream artifacts are generated, never hand-edited.
+
+**Generation script:** `scripts/generate_contracts.py` orchestrates both JSON
+Schema generation (via Pydantic's built-in serializer) and Zod generation (via
+the x-to-zod library). The script writes deterministic artifacts with sorted
+keys, normalized formatting, and stable constraint representations.
+
+**Validation:** `make check-contracts` runs `generate_contracts.py --check` to
+verify checked-in artifacts match the current Pydantic models. This gate runs
+in CI and pre-commit hooks. Drift between Pydantic and generated artifacts is a
+build failure.
+
+**Why x-to-zod:** The initial hand-coded Zod schemas drifted from Pydantic
+models (P0-3 false positive). Automated generation eliminates drift and ensures
+JSON Schema constraints (minLength, minProperties, pattern, etc.) map correctly
+to Zod refinements. The x-to-zod transformation is deterministic and preserves
+all JSON Schema validation semantics.
+
+**Constraint propagation examples:**
+
+- Pydantic `Field(min_length=1)` → JSON Schema `"minLength": 1` → Zod `.min(1)`
+- Pydantic `Field(min_length=64, max_length=64)` → JSON Schema `"minLength": 64, "maxLength": 64` → Zod `.min(64).max(64)`
+- Pydantic model with `Dict[str, str]` and `Field(..., min_length=1)` on dict → JSON Schema `"type": "object", "minProperties": 1` → Zod `.record(z.string(), z.string()).refine(...)`
+
+**Regeneration:**
+
+```sh
+make generate-contracts
+```
+
+This writes updated JSON Schema and Zod files. Commit them when Pydantic models
+change. The generated files are checked in and versioned alongside source code.
+
 ---
 
 ## 5. Process Topology

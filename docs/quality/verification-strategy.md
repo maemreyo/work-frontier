@@ -73,6 +73,23 @@ each negative fixture fails with its exact ADR-006 contract identifier, and the
 evidence bundle is retained at `.omo/evidence/preflight-adr-006/`. Failure blocks
 all bootstrap and runtime implementation work.
 
+### Implementation Status (2026-07-12)
+
+The P0 gate is **operational and integrated into CI** as of commit [current]. All seven
+foundation contracts (WF-P0-01 through WF-P0-07) validate correctly:
+
+- **Validator location**: `.omo/preflight/adr-006/validate.mjs`
+- **CI integration**: `make check-static` runs `check-preflight` target as first gate
+- **Evidence collection**: Validation results written to `.omo/evidence/preflight-adr-006/validation.json`
+- **Current status**: All 7 contracts PASS, 16 negative fixtures correctly rejected, 0 failures
+
+**Repairs completed** (2026-07-12):
+- P0-1 preflight validator: Implemented real mutation execution (eliminated hardcoded results)
+- P0-2 import boundaries: Enforced 5×5 ALLOW_MATRIX with relative import normalization
+- P0-3 contract generation: Automated Zod generation via x-to-zod (eliminated drift)
+
+See `docs/architecture/ARCHITECTURE.md` section 4.4 for contract generation details.
+
 ---
 
 ## Layer Architecture
