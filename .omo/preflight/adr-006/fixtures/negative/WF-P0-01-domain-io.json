@@ -1,1 +1,15 @@
-{"contract_id":"WF-P0-01","kind":"negative","scenario":"domain-io","assertion":"A Domain dependency on I/O is rejected.","mutation":{"type":"add_invalid_field","target":"$","payload":{"field":"io_dependency","value":"file_system"},"comment":"Adds io_dependency field violating WF-P0-01 taxonomy enforcement — domain layer must not depend on I/O"}}
+{
+  "contract_id": "WF-P0-01",
+  "kind": "negative",
+  "scenario": "domain-io",
+  "assertion": "A Domain dependency on I/O is rejected.",
+  "expected_failure_id": "domain_io_dependency",
+  "mutation": {
+    "type": "violate_constraint",
+    "target": "$.modules.0.io_dependencies",
+    "payload": {
+      "invalid_value": ["file_system"]
+    },
+    "comment": "Domain graph module gains an I/O dependency — Domain must remain pure"
+  }
+}

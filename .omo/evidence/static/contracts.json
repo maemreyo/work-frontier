@@ -1,21 +1,21 @@
 {
   "schema_version": "1.0.0",
   "harness_id": "WF-HAR-STATIC-02",
-  "status": "pass",
-  "run_id": "run-1783840456618",
-  "subject_sha": "9b8da6834d96ae0f4d9f7480ce643023bfda6f16",
+  "status": "fail",
+  "run_id": "run-1783841587135",
+  "subject_sha": "9640724f4d0e91f6e192914846a7af13b96cf56f",
   "invocation": {
     "command": "python generate_contracts.py --check",
-    "exit_code": 0,
+    "exit_code": 1,
     "working_directory": ".",
-    "start_time": "2026-07-12T07:14:15.844720Z",
-    "end_time": "2026-07-12T07:14:16.371961Z",
-    "duration_seconds": 0.527241
+    "start_time": "2026-07-12T07:33:06.302253Z",
+    "end_time": "2026-07-12T07:33:06.870412Z",
+    "duration_seconds": 0.568159
   },
   "tool": {
     "name": "generate_contracts",
     "version": "1.0.0",
-    "commit_sha": "9b8da6834d96ae0f4d9f7480ce643023bfda6f16"
+    "commit_sha": "9640724f4d0e91f6e192914846a7af13b96cf56f"
   },
   "environment": {
     "python": "3.13.5",
@@ -35,13 +35,13 @@
   "results": [
     {
       "kind": "artifact_check",
-      "passed": true,
-      "detail": "contracts/generated/decision-record.schema.json: current"
+      "passed": false,
+      "detail": "contracts/generated/decision-record.schema.json: drift detected"
     },
     {
       "kind": "artifact_check",
-      "passed": true,
-      "detail": "frontend/src/contracts/decision-record.generated.ts: current"
+      "passed": false,
+      "detail": "frontend/src/contracts/decision-record.generated.ts: drift detected"
     }
   ],
   "stdout_artifact": null,
@@ -49,7 +49,7 @@
   "property_bag": {
     "generate_contracts": {
       "mode": "check",
-      "artifacts_current": true
+      "artifacts_current": false
     }
   }
 }

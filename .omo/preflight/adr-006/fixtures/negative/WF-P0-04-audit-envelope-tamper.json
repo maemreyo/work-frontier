@@ -1,1 +1,15 @@
-{"contract_id":"WF-P0-04","kind":"negative","scenario":"audit-envelope-tamper","assertion":"Payload, actor, timestamp, ordering, envelope, and segment rewriting are rejected.","mutation":{"type":"malform_structure","target":"$.audit_anchor","payload":{"malformed":"tampered_envelope"},"comment":"Replaces audit_anchor object with tampered string violating object type — envelope rewriting detected"}}
+{
+  "contract_id": "WF-P0-04",
+  "kind": "negative",
+  "scenario": "audit-envelope-tamper",
+  "assertion": "Payload, actor, timestamp, ordering, envelope, and segment rewriting are rejected.",
+  "expected_failure_id": "audit_envelope_tamper",
+  "mutation": {
+    "type": "malform_structure",
+    "target": "$.audit_anchor",
+    "payload": {
+      "malformed": "tampered_envelope"
+    },
+    "comment": "Replaces audit_anchor object with a tampered string — envelope rewriting detected"
+  }
+}

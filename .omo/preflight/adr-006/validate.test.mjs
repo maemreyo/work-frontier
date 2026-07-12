@@ -1,161 +1,265 @@
-import { describe, test, expect } from "vitest";
-import { readFile } from "node:fs/promises";
+/**
+ * Behavioral tests for ADR-006 contract-specific preflight validators.
+ * Run: node --test .omo/preflight/adr-006/validate.test.mjs
+ */
+import assert from "node:assert/strict";
+import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { describe, test } from "node:test";
+
+import {
+  applyMutation,
+  baselineDecisionRecord,
+  executeContractFixture,
+  executeNegativeFixtures,
+  getBaselineDocument,
+  runGate,
+  validateContract,
+  validateDecisionRecord,
+  validateTaxonomy,
+} from "./validate.mjs";
 
 const root = join(import.meta.dirname, "../../..");
-const validateMjs = join(root, ".omo/preflight/adr-006/validate.mjs");
+const preflight = join(root, ".omo/preflight/adr-006");
 
-/**
- * PROVES: validate.mjs line 92 hardcodes `result: "rejected_by_contract"`
- * for ALL 16 negative fixtures WITHOUT actually:
- *   1. Reading mutation descriptors from fixture files
- *   2. Applying mutations to baseline documents
- *   3. Running any contract validator (Zod schema or equivalent)
- *   4. Observing actual validation failure
- *
- * The validate() function (lines 41-78) only checks structural things:
- * contract IDs match manifest, required markers exist in docs, fixture counts
- * are correct, scenarios match manifest. It NEVER executes mutations.
- *
- * Line 92 then unconditionally assigns every negative fixture:
- *   { contract_id, scenario, result: "rejected_by_contract" }
- *
- * This test FAILS (RED state) because validate.mjs lacks mutation execution
- * infrastructure. After Task 10 implements real mutation injection + contract
- * validation, this test will PASS.
- */
-describe("Preflight Validator — negative fixture false positives", () => {
-  test("validate.mjs has no mutation execution — all negative results are hardcoded", async () => {
-    const source = await readFile(validateMjs, "utf8");
+async function loadNegativeFixtures() {
+  const dir = join(preflight, "fixtures/negative");
+  const files = (await readdir(dir)).filter((f) => f.endsWith(".json"));
+  return Promise.all(
+    files.map(async (file) => JSON.parse(await readFile(join(dir, file), "utf8"))),
+  );
+}
 
-    // ── PROOF 1: No mutation application function exists ──
-    //
-    // A correct implementation needs a function that takes a baseline document
-    // and a mutation descriptor (per mutation-schema.json) and produces a
-    // mutated copy. None of these patterns exist in the source:
-    const hasMutationApplication =
-      source.includes("applyMutation") ||
-      source.includes("executeMutation") ||
-      source.includes("mutateDocument") ||
-      source.includes("apply_mutation") ||
-      source.includes("applyMutation");
-
-    // RED FAIL: validate.mjs has zero mutation application code.
-    // All 16 negative fixtures get "rejected_by_contract" without any
-    // mutation ever being applied to a baseline document.
-    expect(hasMutationApplication).toBe(true);
+describe("contract-specific baselines", () => {
+  test("each WF-P0-* has a distinct baseline document shape", () => {
+    const ids = Array.from({ length: 7 }, (_, i) => `WF-P0-0${i + 1}`);
+    const shapes = ids.map((id) => Object.keys(getBaselineDocument(id)).sort().join(","));
+    const unique = new Set(shapes);
+    // DecisionRecord is unique; others must not all collapse to DecisionRecord
+    assert.equal(unique.size, 7, `expected 7 distinct baselines, got ${unique.size}: ${shapes.join(" | ")}`);
   });
 
-  test("validate.mjs has no contract validation against mutated documents", async () => {
-    const source = await readFile(validateMjs, "utf8");
-
-    // ── PROOF 2: No contract validator is invoked for negative fixtures ──
-    //
-    // After applying a mutation, the validator must run the contract's schema
-    // (Zod, JSON Schema, etc.) to determine if the mutation actually violates
-    // the contract. None of these validation patterns exist:
-    const hasContractValidation =
-      source.includes("schema.parse") ||
-      source.includes("safeParse") ||
-      source.includes("validateContract") ||
-      source.includes("runContractValidator") ||
-      source.includes("checkContract") ||
-      source.includes("zod");
-
-    // RED FAIL: No contract validation runs. The result is predetermined,
-    // not derived from actual validation of mutated documents.
-    expect(hasContractValidation).toBe(true);
+  test("every positive baseline passes its own validator", () => {
+    for (let i = 1; i <= 7; i++) {
+      const id = `WF-P0-0${i}`;
+      const result = validateContract(id, getBaselineDocument(id));
+      assert.equal(result.success, true, `${id} baseline should pass: ${result.failureId}`);
+    }
   });
+});
 
-  test("Fixture typedef excludes mutation field — validator was never designed to process mutations", async () => {
-    const source = await readFile(validateMjs, "utf8");
+describe("negative fixture execution", () => {
+  test("all on-disk negative fixtures reject with expected_failure_id", async () => {
+    const fixtures = await loadNegativeFixtures();
+    assert.equal(fixtures.length, 16);
 
-    // ── PROOF 3: The Fixture type has no mutation field ──
-    //
-    // Line 19 defines:
-    //   {{ contract_id: string, kind: "positive" | "negative", scenario: string, assertion: string }}
-    //
-    // This typedef omits `mutation` entirely, even though mutation-schema.json
-    // defines the mutation descriptor format. The validator was never designed
-    // to read or execute mutations — the mutation schema is orphaned.
-    //
-    // A correct Fixture type would be:
-    //   {{ contract_id: string, kind: "positive" | "negative", scenario: string,
-    //      assertion: string, mutation?: MutationDescriptor }}
-    //
-    // RED FAIL: The typedef contains no reference to mutation, proving the
-    // validator ignores mutation descriptors entirely.
-    expect(source).toMatch(/mutation\s*[?:]/);
-  });
+    for (const fixture of fixtures) {
+      assert.ok(fixture.mutation, `${fixture.scenario}: mutation required`);
+      assert.ok(fixture.expected_failure_id, `${fixture.scenario}: expected_failure_id required`);
 
-  test("negative fixtures on disk have no mutation field — schema is orphaned", async () => {
-    const negativeDir = join(root, ".omo/preflight/adr-006/fixtures/negative");
-    const { readdirSync } = await import("node:fs");
-    const files = readdirSync(negativeDir).filter((f) => f.endsWith(".json"));
-
-    // Load every negative fixture from disk
-    const fixtures = await Promise.all(
-      files.map(async (file) => {
-        const content = await readFile(join(negativeDir, file), "utf8");
-        return { file, parsed: JSON.parse(content) };
-      }),
-    );
-
-    // None of the 16 negative fixtures contain a mutation descriptor,
-    // even though mutation-schema.json exists and documents the format.
-    // The schema is defined but never used.
-    for (const { file, parsed } of fixtures) {
-      // RED FAIL: No fixture has a mutation field.
-      // This proves that even the test data was never wired up for
-      // real mutation execution — the entire negative fixture system
-      // is structural bookkeeping, not functional validation.
-      expect(parsed).toHaveProperty("mutation");
+      const observed = executeContractFixture(fixture);
+      assert.equal(
+        observed.success,
+        false,
+        `${fixture.contract_id}/${fixture.scenario} must not be a false positive`,
+      );
+      assert.equal(
+        observed.failureId,
+        fixture.expected_failure_id,
+        `${fixture.contract_id}/${fixture.scenario}: expected ${fixture.expected_failure_id}, got ${observed.failureId}`,
+      );
+      assert.equal(observed.result, "rejected_by_contract");
     }
   });
 
-  test("line 92 hardcodes rejected_by_contract — no fixture-specific determination", async () => {
-    const source = await readFile(validateMjs, "utf8");
-
-    // ── PROOF 4: The result construction is a simple map with a string literal ──
-    //
-    // Line 92:
-    //   negative_fixture_results: negative.map((fixture) => ({
-    //     contract_id: fixture.contract_id,
-    //     scenario: fixture.scenario,
-    //     result: "rejected_by_contract"
-    //   }))
-    //
-    // This is an unconditional string assignment. There is no if/else,
-    // no try/catch around mutation execution, no schema validation —
-    // every fixture gets the same result regardless of its scenario,
-    // mutation descriptor (if it had one), or any contract definition.
-    //
-    // A correct implementation would be something like:
-    //   negative_fixture_results: negative.map((fixture) => ({
-    //     contract_id: fixture.contract_id,
-    //     scenario: fixture.scenario,
-    //     result: executeAndValidate(fixture, baselineRecord)
-    //       ? "rejected_by_contract"
-    //       : "false_positive"
-    //   }))
-    //
-    // RED FAIL: The source contains the hardcoded string literal with no
-    // conditional logic around it.
-    expect(source).toMatch(/result:\s*"rejected_by_contract"/);
-
-    // Prove there is no conditional logic between the map and the result string.
-    // A correct implementation would have a function call or ternary that
-    // determines the result based on actual validation.
-    const line92Region = source.substring(
-      source.indexOf("negative_fixture_results"),
-      source.indexOf("negative_fixture_results") + 300,
+  test("unexecuted fixture (missing mutation) fails the gate with unexecuted_fixture", () => {
+    const failures = [];
+    const results = executeNegativeFixtures(
+      [
+        {
+          contract_id: "WF-P0-02",
+          kind: "negative",
+          scenario: "missing-mutation",
+          assertion: "must fail",
+          // no mutation
+        },
+      ],
+      failures,
     );
 
-    // The result is always "rejected_by_contract" — no ternary, no function call,
-    // no conditional that could return "false_positive" for a fixture that
-    // passes validation after mutation.
-    //
-    // RED FAIL: Confirms the hardcoded string with no result determination logic.
-    expect(line92Region).not.toMatch(/false_positive/);
+    assert.equal(results[0].result, "unexecuted_fixture");
+    assert.ok(
+      failures.some((f) => f.includes("unexecuted fixture")),
+      `failures should include unexecuted: ${failures.join("; ")}`,
+    );
+  });
+
+  test("false positive mutation fails the gate", () => {
+    // No-op mutation: remove a non-existent path field effectively by
+    // re-setting a valid value — use empty mutation that leaves baseline valid
+    // by applying violate_constraint that sets ready=true (already true).
+    const fixture = {
+      contract_id: "WF-P0-02",
+      kind: "negative",
+      scenario: "noop-mutation",
+      assertion: "should not pass silently",
+      expected_failure_id: "missing_field_workspace_id",
+      mutation: {
+        type: "violate_constraint",
+        target: "$.ready",
+        payload: { invalid_value: true },
+      },
+    };
+
+    const observed = executeContractFixture(fixture);
+    assert.equal(observed.success, true, "noop mutation must leave document valid");
+    assert.equal(observed.result, "false_positive");
+
+    const failures = [];
+    executeNegativeFixtures([fixture], failures);
+    assert.ok(
+      failures.some((f) => f.includes("false positive")),
+      `failures should include false positive: ${failures.join("; ")}`,
+    );
+  });
+
+  test("wrong expected_failure_id fails the gate", () => {
+    const fixture = {
+      contract_id: "WF-P0-02",
+      kind: "negative",
+      scenario: "wrong-id",
+      assertion: "must match typed failure",
+      expected_failure_id: "totally_wrong_id",
+      mutation: {
+        type: "remove_field",
+        target: "$.source_revision_set",
+      },
+    };
+
+    const observed = executeContractFixture(fixture);
+    assert.equal(observed.success, false);
+    assert.equal(observed.failureId, "missing_field_source_revision_set");
+
+    const failures = [];
+    executeNegativeFixtures([fixture], failures);
+    assert.ok(
+      failures.some((f) => f.includes("expected totally_wrong_id")),
+      `failures should include ID mismatch: ${failures.join("; ")}`,
+    );
+  });
+});
+
+describe("contract-specific semantics", () => {
+  test("WF-P0-01 rejects domain I/O, not as DecisionRecord extra field", () => {
+    const baseline = getBaselineDocument("WF-P0-01");
+    const mutated = applyMutation(baseline, {
+      type: "violate_constraint",
+      target: "$.modules.0.io_dependencies",
+      payload: { invalid_value: ["db"] },
+    });
+    const result = validateTaxonomy(mutated);
+    assert.equal(result.success, false);
+    assert.equal(result.failureId, "domain_io_dependency");
+  });
+
+  test("WF-P0-03 rejects cross-scope access on tenancy model", () => {
+    const baseline = getBaselineDocument("WF-P0-03");
+    const mutated = applyMutation(baseline, {
+      type: "violate_constraint",
+      target: "$.cross_workspace_access",
+      payload: { invalid_value: true },
+    });
+    const result = validateContract("WF-P0-03", mutated);
+    assert.equal(result.success, false);
+    assert.equal(result.failureId, "cross_scope_access");
+  });
+
+  test("WF-P0-04 rejects unsigned audit anchor", () => {
+    const baseline = getBaselineDocument("WF-P0-04");
+    const mutated = applyMutation(baseline, {
+      type: "violate_constraint",
+      target: "$.audit_anchor.signature",
+      payload: { invalid_value: "unsigned" },
+    });
+    const result = validateContract("WF-P0-04", mutated);
+    assert.equal(result.success, false);
+    assert.equal(result.failureId, "missing_anchor_proof");
+  });
+
+  test("WF-P0-05 rejects partial internal commit", () => {
+    const baseline = getBaselineDocument("WF-P0-05");
+    const mutated = applyMutation(baseline, {
+      type: "violate_constraint",
+      target: "$.atomic_commit",
+      payload: { invalid_value: false },
+    });
+    const result = validateContract("WF-P0-05", mutated);
+    assert.equal(result.success, false);
+    assert.equal(result.failureId, "partial_internal_commit");
+  });
+
+  test("WF-P0-06 rejects poison replay without dead-letter", () => {
+    const baseline = getBaselineDocument("WF-P0-06");
+    const mutated = applyMutation(baseline, {
+      type: "violate_constraint",
+      target: "$.poison_replay",
+      payload: { invalid_value: true },
+    });
+    const result = validateContract("WF-P0-06", mutated);
+    assert.equal(result.success, false);
+    assert.equal(result.failureId, "poison_replay");
+  });
+
+  test("WF-P0-07 rejects outlier removal before percentiles", () => {
+    const baseline = getBaselineDocument("WF-P0-07");
+    const mutated = applyMutation(baseline, {
+      type: "violate_constraint",
+      target: "$.outlier_removal_before_percentile",
+      payload: { invalid_value: true },
+    });
+    const result = validateContract("WF-P0-07", mutated);
+    assert.equal(result.success, false);
+    assert.equal(result.failureId, "outlier_removal");
+  });
+
+  test("DecisionRecord validator still rejects missing workspace_id", () => {
+    const doc = baselineDecisionRecord();
+    delete doc.workspace_id;
+    const result = validateDecisionRecord(doc);
+    assert.equal(result.success, false);
+    assert.equal(result.failureId, "missing_field_workspace_id");
+  });
+});
+
+describe("full gate integration", () => {
+  test("on-disk fixtures pass the full gate", async () => {
+    const manifest = JSON.parse(
+      await readFile(join(preflight, "manifest.json"), "utf8"),
+    );
+    const positiveDir = join(preflight, "fixtures/positive");
+    const positiveFiles = (await readdir(positiveDir)).filter((f) => f.endsWith(".json"));
+    const positive = await Promise.all(
+      positiveFiles.map(async (f) =>
+        JSON.parse(await readFile(join(positiveDir, f), "utf8")),
+      ),
+    );
+    const negative = await loadNegativeFixtures();
+
+    // Minimal document text that includes all required markers from manifest
+    const documents = manifest.contracts
+      .flatMap((c) => c.required_markers)
+      .join("\n");
+
+    const result = runGate(manifest, positive, negative, documents);
+    assert.equal(
+      result.status,
+      "passed",
+      `gate failures: ${result.failures.join("; ")}`,
+    );
+    assert.equal(result.failures.length, 0);
+    assert.equal(result.negative_fixture_results.length, 16);
+    for (const r of result.negative_fixture_results) {
+      assert.equal(r.result, "rejected_by_contract");
+    }
   });
 });

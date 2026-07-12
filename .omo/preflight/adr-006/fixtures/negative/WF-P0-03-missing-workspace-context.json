@@ -1,1 +1,12 @@
-{"contract_id":"WF-P0-03","kind":"negative","scenario":"missing-workspace-context","assertion":"A scoped operation without transaction-local workspace context is rejected.","mutation":{"type":"remove_field","target":"$.workspace_id","comment":"Removes workspace_id to test WF-P0-03 workspace context — scoped operation without workspace context is rejected"}}
+{
+  "contract_id": "WF-P0-03",
+  "kind": "negative",
+  "scenario": "missing-workspace-context",
+  "assertion": "A scoped operation without transaction-local workspace context is rejected.",
+  "expected_failure_id": "missing_workspace_context",
+  "mutation": {
+    "type": "remove_field",
+    "target": "$.workspace_id",
+    "comment": "Removes workspace_id — scoped operation lacks transaction-local workspace context"
+  }
+}

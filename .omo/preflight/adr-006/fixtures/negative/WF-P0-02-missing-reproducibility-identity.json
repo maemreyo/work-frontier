@@ -1,1 +1,12 @@
-{"contract_id":"WF-P0-02","kind":"negative","scenario":"missing-reproducibility-identity","assertion":"A DecisionRecord missing a required input identity is rejected.","mutation":{"type":"remove_field","target":"$.source_revision_set","comment":"Removes source_revision_set to test WF-P0-02 reproducibility identity — missing identity means replay cannot be verified"}}
+{
+  "contract_id": "WF-P0-02",
+  "kind": "negative",
+  "scenario": "missing-reproducibility-identity",
+  "assertion": "A DecisionRecord missing a required input identity is rejected.",
+  "expected_failure_id": "missing_field_source_revision_set",
+  "mutation": {
+    "type": "remove_field",
+    "target": "$.source_revision_set",
+    "comment": "Removes source_revision_set — replay identity cannot be verified"
+  }
+}

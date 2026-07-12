@@ -17,99 +17,115 @@
       "contract_id": "WF-P0-01",
       "scenario": "domain-io",
       "result": "rejected_by_contract",
-      "failure_id": "extra_field_io_dependency"
+      "failure_id": "domain_io_dependency",
+      "expected_failure_id": "domain_io_dependency"
     },
     {
       "contract_id": "WF-P0-01",
       "scenario": "taxonomy-drift",
       "result": "rejected_by_contract",
-      "failure_id": "extra_field_non_canonical_module"
+      "failure_id": "taxonomy_drift",
+      "expected_failure_id": "taxonomy_drift"
     },
     {
       "contract_id": "WF-P0-01",
       "scenario": "wrong-port-owner",
       "result": "rejected_by_contract",
-      "failure_id": "extra_field_port_owner"
+      "failure_id": "wrong_port_owner",
+      "expected_failure_id": "wrong_port_owner"
     },
     {
       "contract_id": "WF-P0-02",
       "scenario": "altered-reproducibility-identity",
       "result": "rejected_by_contract",
-      "failure_id": "malformed_source_revision_set"
+      "failure_id": "malformed_source_revision_set",
+      "expected_failure_id": "malformed_source_revision_set"
     },
     {
       "contract_id": "WF-P0-02",
       "scenario": "missing-reproducibility-identity",
       "result": "rejected_by_contract",
-      "failure_id": "missing_field_source_revision_set"
+      "failure_id": "missing_field_source_revision_set",
+      "expected_failure_id": "missing_field_source_revision_set"
     },
     {
       "contract_id": "WF-P0-03",
       "scenario": "cross-scope-access",
       "result": "rejected_by_contract",
-      "failure_id": "extra_field_cross_workspace_access"
+      "failure_id": "cross_scope_access",
+      "expected_failure_id": "cross_scope_access"
     },
     {
       "contract_id": "WF-P0-03",
       "scenario": "missing-workspace-context",
       "result": "rejected_by_contract",
-      "failure_id": "missing_field_workspace_id"
+      "failure_id": "missing_workspace_context",
+      "expected_failure_id": "missing_workspace_context"
     },
     {
       "contract_id": "WF-P0-04",
       "scenario": "audit-envelope-tamper",
       "result": "rejected_by_contract",
-      "failure_id": "extra_field_audit_anchor"
+      "failure_id": "audit_envelope_tamper",
+      "expected_failure_id": "audit_envelope_tamper"
     },
     {
       "contract_id": "WF-P0-04",
       "scenario": "missing-anchor-proof",
       "result": "rejected_by_contract",
-      "failure_id": "extra_field_audit_anchor"
+      "failure_id": "missing_anchor_proof",
+      "expected_failure_id": "missing_anchor_proof"
     },
     {
       "contract_id": "WF-P0-05",
       "scenario": "partial-internal-commit",
       "result": "rejected_by_contract",
-      "failure_id": "extra_field_alternatives"
+      "failure_id": "partial_internal_commit",
+      "expected_failure_id": "partial_internal_commit"
     },
     {
       "contract_id": "WF-P0-05",
       "scenario": "stale-outbox-fingerprint",
       "result": "rejected_by_contract",
-      "failure_id": "extra_field_stale_outbox_fingerprint"
+      "failure_id": "stale_outbox_fingerprint",
+      "expected_failure_id": "stale_outbox_fingerprint"
     },
     {
       "contract_id": "WF-P0-06",
       "scenario": "duplicate-claim",
       "result": "rejected_by_contract",
-      "failure_id": "extra_field_duplicate_claim_id"
+      "failure_id": "duplicate_claim",
+      "expected_failure_id": "duplicate_claim"
     },
     {
       "contract_id": "WF-P0-06",
       "scenario": "lease-loss-completion",
       "result": "rejected_by_contract",
-      "failure_id": "extra_field_lease_state"
+      "failure_id": "lease_loss_completion",
+      "expected_failure_id": "lease_loss_completion"
     },
     {
       "contract_id": "WF-P0-06",
       "scenario": "poison-replay",
       "result": "rejected_by_contract",
-      "failure_id": "extra_field_poison_replay"
+      "failure_id": "poison_replay",
+      "expected_failure_id": "poison_replay"
     },
     {
       "contract_id": "WF-P0-07",
       "scenario": "missing-failure-reporting",
       "result": "rejected_by_contract",
-      "failure_id": "missing_field_correlation_id"
+      "failure_id": "missing_failure_reporting",
+      "expected_failure_id": "missing_failure_reporting"
     },
     {
       "contract_id": "WF-P0-07",
       "scenario": "outlier-removal",
       "result": "rejected_by_contract",
-      "failure_id": "invalid_ranking_position"
+      "failure_id": "outlier_removal",
+      "expected_failure_id": "outlier_removal"
     }
   ],
   "failures": [],
-  "scope": "pre-bootstrap documentation-contract validation; not runtime integration evidence"
+  "scope": "pre-bootstrap documentation-contract validation with contract-specific executable mutations"
 }

@@ -102,9 +102,13 @@
     },
     "source_revision_set": {
       "additionalProperties": {
+        "minLength": 1,
         "type": "string"
       },
       "minProperties": 1,
+      "propertyNames": {
+        "minLength": 1
+      },
       "title": "Source Revision Set",
       "type": "object"
     },

@@ -66,6 +66,38 @@ def test_decision_record_rejects_missing_workspace_when_validated() -> None:
         _ = DecisionRecordContract.model_validate_json(payload)
 
 
+def test_decision_record_source_revision_set_is_immutable() -> None:
+    # Given a validated DecisionRecord
+    record = DecisionRecordContract(
+        decision_id="decision-01",
+        workspace_id="workspace-01",
+        program_id=None,
+        item_id="item-01",
+        computed_at=datetime(2026, 7, 12, tzinfo=UTC),
+        causation_id="event-01",
+        correlation_id="trace-01",
+        normalized_snapshot_id="snapshot-01",
+        normalized_snapshot_hash=HASH,
+        source_revision_set={"github:issue:1": "revision-01", "backend": "abc123"},
+        graph_revision="graph-01",
+        policy_bundle_id="policy-01",
+        policy_bundle_hash=HASH,
+        ranking_pipeline_hash=HASH,
+        engine_version="engine-01",
+        normalization_profile_version="profile-01",
+        ready=True,
+        ranking_position=1,
+    )
+
+    # Then nested source revisions cannot be mutated after construction
+    with pytest.raises(TypeError):
+        record.source_revision_set["backend"] = "changed"  # type: ignore[index]
+
+    # And field reassignment is blocked by the frozen model
+    with pytest.raises(ValidationError):
+        record.source_revision_set = {"backend": "changed"}  # type: ignore[misc]
+
+
 def test_decision_record_canonical_json_is_deterministic() -> None:
     # Given two identical DecisionRecord instances created independently
     record1 = DecisionRecordContract(

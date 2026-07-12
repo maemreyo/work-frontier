@@ -1,1 +1,15 @@
-{"contract_id":"WF-P0-06","kind":"negative","scenario":"poison-replay","assertion":"Poison work bypassing dead-letter controls is rejected.","mutation":{"type":"add_invalid_field","target":"$","payload":{"field":"poison_replay","value":true},"comment":"Adds poison_replay flag — poison work bypassing dead-letter controls violates WF-P0-06 safety contract"}}
+{
+  "contract_id": "WF-P0-06",
+  "kind": "negative",
+  "scenario": "poison-replay",
+  "assertion": "Poison work bypassing dead-letter controls is rejected.",
+  "expected_failure_id": "poison_replay",
+  "mutation": {
+    "type": "violate_constraint",
+    "target": "$.poison_replay",
+    "payload": {
+      "invalid_value": true
+    },
+    "comment": "Poison work replays without dead-letter quarantine"
+  }
+}
