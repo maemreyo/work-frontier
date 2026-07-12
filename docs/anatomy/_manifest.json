@@ -3,7 +3,6 @@
   "project": "Work Frontier",
   "mode": "full trace",
   "generated_at": "2026-07-12T17:00:00+07:00",
-  "source_commit": "a6fd68757c694d0ae521cfb96649b2b03078001f",
   "output_root": "docs/anatomy",
   "trace_depth": "deep",
   "module_count": 8,
@@ -87,5 +86,5 @@
     "Delete this manifest to force a full retrace."
   ],
   "content_digest": "92311b464de506d8b1fdfdc4ef6ffc4eeadf4ac00a7927091f3166965917c206",
-  "source_input_digest": "224f82a82d046f29a65eb2f168ea6cf41f636a9e2b0e3e5eb7425142ac9b4049"
+  "source_input_digest": "73785e0d1e208e79ec7051912f5becfabbe89700202495d7b90908abf9ce905c"
 }

@@ -18,6 +18,8 @@
     "version": "1.10.0",
     "commit_sha": "f1e2d3c4b5a6978012345678901234567890fedc"
   },
+  "applicability": "standard",
+  "applicability_reason": null,
   "environment": {
     "python": "3.13.5",
     "os": "darwin-arm64",

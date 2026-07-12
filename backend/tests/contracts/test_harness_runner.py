@@ -37,6 +37,7 @@ from work_frontier.contracts.evidence_record import (
     Tool,
 )
 from work_frontier.contracts.evidence_writer import hash_bytes
+from work_frontier.contracts.harness_registry import HarnessRegistryError
 from work_frontier.contracts.harness_runner import (
     CertificationError,
     recertify_foundation,
@@ -75,6 +76,7 @@ def _make_minimal_registry(path: Path) -> None:
                 "name": "test",
                 "command": "true",
                 "artifact": "s3://example-bucket/does-not-matter",
+                "artifact_mode": "declared_file",
                 "blocks_release": True,
                 "what_it_runs": "noop",
                 "pass_criteria": "exit 0",
@@ -99,6 +101,105 @@ def _import_harness_runner(clone: Path) -> ModuleType:
     from work_frontier.contracts import harness_runner as hr
 
     return hr
+
+
+# ---------------------------------------------------------------------------
+# Bogus artifact_mode rejection (integration)
+# ---------------------------------------------------------------------------
+
+
+def test_recertify_rejects_bogus_artifact_mode() -> None:
+    """A harness with artifact_mode='bogus' is rejected at runtime validation.
+
+    Preseed a stale artifact and set command='true' to confirm the
+    bogus mode does NOT allow a stale file to fabricate a pass.
+    """
+    clone = _make_clean_clone()
+    registry_path = Path(tempfile.mkstemp(suffix=".json")[1])
+    try:
+        # Register a harness with invalid artifact_mode="bogus"
+        registry = {
+            "schema_version": "1.0.0",
+            "harness_count": 1,
+            "catalog_harness_count": 1,
+            "standard_blocker_count": 1,
+            "standard_blockers": ["WF-HAR-BOGUS-01"],
+            "harnesses": [
+                {
+                    "id": "WF-HAR-BOGUS-01",
+                    "name": "bogus-mode",
+                    "command": "true",
+                    "artifact": ".omo/evidence/static/preseeded.json",
+                    "artifact_mode": "bogus",
+                    "blocks_release": True,
+                    "what_it_runs": "noop with bogus mode",
+                    "pass_criteria": "exit 0",
+                    "applicability": "standard",
+                    "status": "implemented",
+                }
+            ],
+            "foundation_closure": ["WF-HAR-BOGUS-01"],
+        }
+        _ = registry_path.write_text(json.dumps(registry))
+
+        # Preseed a stale artifact that should never be accepted
+        preseeded = clone / ".omo" / "evidence" / "static" / "preseeded.json"
+        preseeded.parent.mkdir(parents=True, exist_ok=True)
+        _ = preseeded.write_text('{"stale": true}')
+
+        # Runtime should reject the bogus artifact_mode at registry load
+        with pytest.raises(HarnessRegistryError, match="invalid artifact_mode"):
+            _ = recertify_foundation(
+                repo_root=clone,
+                registry_path=registry_path,
+            )
+
+        # The preseeded file must NOT have been certified
+        assert preseeded.is_file(), (
+            "preseeded artifact should still exist (no run attempted)"
+        )
+    finally:
+        shutil.rmtree(clone, ignore_errors=True)
+        registry_path.unlink(missing_ok=True)
+
+
+def test_recertify_rejects_missing_artifact_mode() -> None:
+    """A harness with no artifact_mode field is rejected at runtime validation."""
+    clone = _make_clean_clone()
+    registry_path = Path(tempfile.mkstemp(suffix=".json")[1])
+    try:
+        registry = {
+            "schema_version": "1.0.0",
+            "harness_count": 1,
+            "catalog_harness_count": 1,
+            "standard_blocker_count": 1,
+            "standard_blockers": ["WF-HAR-NOAM-01"],
+            "harnesses": [
+                {
+                    "id": "WF-HAR-NOAM-01",
+                    "name": "no-artifact-mode",
+                    "command": "true",
+                    "artifact": "s3://bucket/test",
+                    # artifact_mode deliberately omitted
+                    "blocks_release": True,
+                    "what_it_runs": "noop without artifact_mode",
+                    "pass_criteria": "exit 0",
+                    "applicability": "standard",
+                    "status": "implemented",
+                }
+            ],
+            "foundation_closure": ["WF-HAR-NOAM-01"],
+        }
+        _ = registry_path.write_text(json.dumps(registry))
+
+        with pytest.raises(HarnessRegistryError, match="missing required field"):
+            _ = recertify_foundation(
+                repo_root=clone,
+                registry_path=registry_path,
+            )
+    finally:
+        shutil.rmtree(clone, ignore_errors=True)
+        registry_path.unlink(missing_ok=True)
 
 
 # ---------------------------------------------------------------------------
@@ -229,6 +330,7 @@ def _make_registry_with_local_artifact(path: Path) -> None:
                     "echo hello > .omo/evidence/static/test-output.txt"
                 ),
                 "artifact": ".omo/evidence/static/test-output.txt",
+                "artifact_mode": "declared_file",
                 "blocks_release": True,
                 "what_it_runs": "creates output file",
                 "pass_criteria": "file exists",
@@ -296,6 +398,7 @@ def _make_two_harness_registry(path: Path) -> None:
                     "echo 'first content' > .omo/evidence/static/shared-output.txt"
                 ),
                 "artifact": ".omo/evidence/static/shared-output.txt",
+                "artifact_mode": "declared_file",
                 "blocks_release": True,
                 "what_it_runs": "creates shared output",
                 "pass_criteria": "file exists",
@@ -310,6 +413,7 @@ def _make_two_harness_registry(path: Path) -> None:
                     "echo 'tampered content' > .omo/evidence/static/shared-output.txt"
                 ),
                 "artifact": ".omo/evidence/static/shared-output.txt",
+                "artifact_mode": "declared_file",
                 "blocks_release": True,
                 "what_it_runs": "overwrites shared output",
                 "pass_criteria": "file exists",
@@ -339,6 +443,160 @@ def test_recertify_rejects_cross_harness_tamper() -> None:
                 repo_root=clone,
                 registry_path=registry_path,
             )
+    finally:
+        shutil.rmtree(clone, ignore_errors=True)
+        registry_path.unlink(missing_ok=True)
+
+
+def _make_two_harness_evidence_tamper_registry(path: Path) -> None:
+    """Write a registry where the second harness deletes the first's evidence JSON.
+
+    This tests the disk-reload guard: the post-closure loop must detect
+    that a harness's evidence record file has been deleted from the shared
+    evidence root by another harness.
+    """
+    # Use 'find' to locate the evidence file at a known relative path under
+    # .omo/evidence/runs/<sha>/<run_id>/. Both harnesses share the same
+    # evidence_root within a single recertify_foundation call.
+    delete_command = (
+        "EVIDENCE_FILE=$(find .omo/evidence/runs -name "
+        "'WF-HAR-TAMPER-EV-01.json' -type f 2>/dev/null | head -1) && "
+        '[ -n "$EVIDENCE_FILE" ] && rm -f "$EVIDENCE_FILE" || true'
+    )
+    registry = {
+        "schema_version": "1.0.0",
+        "harness_count": 2,
+        "catalog_harness_count": 2,
+        "standard_blocker_count": 2,
+        "standard_blockers": ["WF-HAR-TAMPER-EV-01", "WF-HAR-TAMPER-EV-02"],
+        "harnesses": [
+            {
+                "id": "WF-HAR-TAMPER-EV-01",
+                "name": "producer",
+                "command": "echo producer > /dev/null",
+                "artifact": "s3://bucket/producer",
+                "artifact_mode": "declared_file",
+                "blocks_release": True,
+                "what_it_runs": "creates evidence",
+                "pass_criteria": "exit 0",
+                "applicability": "standard",
+                "status": "implemented",
+            },
+            {
+                "id": "WF-HAR-TAMPER-EV-02",
+                "name": "evidence-tamperer",
+                "command": delete_command,
+                "artifact": "s3://bucket/tamperer",
+                "artifact_mode": "declared_file",
+                "blocks_release": True,
+                "what_it_runs": "deletes first harness's evidence file",
+                "pass_criteria": "exit 0",
+                "applicability": "standard",
+                "status": "implemented",
+            },
+        ],
+        "foundation_closure": ["WF-HAR-TAMPER-EV-01", "WF-HAR-TAMPER-EV-02"],
+    }
+    _ = path.write_text(json.dumps(registry))
+
+
+def test_recertify_rejects_deleted_evidence_record() -> None:
+    """Post-closure disk reload catches a deleted evidence record file.
+
+    Harness B deletes harness A's evidence JSON from the shared evidence
+    root.  The disk-reload loop must detect the missing file and fail.
+    """
+    clone = _make_clean_clone()
+    registry_path = Path(tempfile.mkstemp(suffix=".json")[1])
+    try:
+        _make_two_harness_evidence_tamper_registry(registry_path)
+
+        with pytest.raises(CertificationError, match="evidence record file missing"):
+            _ = recertify_foundation(
+                repo_root=clone,
+                registry_path=registry_path,
+            )
+    finally:
+        shutil.rmtree(clone, ignore_errors=True)
+        registry_path.unlink(missing_ok=True)
+
+
+def _make_two_harness_evidence_status_tamper_registry(path: Path) -> None:
+    """Write a registry where second harness modifies first's evidence status.
+
+    Harness B overwrites A's evidence JSON, changing the status from
+    'pass' to 'fail'.  The disk-reload must detect the modified record
+    (status changed) and revalidation must catch the tamper.
+    """
+    sed_command = (
+        "EVIDENCE_FILE=$(find .omo/evidence/runs -name "
+        "'WF-HAR-TAMPER-ST-01.json' -type f 2>/dev/null | head -1) && "
+        '[ -n "$EVIDENCE_FILE" ] && '
+        r"sed -i '' 's/\"status\": \"pass\"/\"status\": \"fail\"/' "
+        '"$EVIDENCE_FILE" || true'
+    )
+    # macOS sed needs -i '' for in-place without backup
+    registry = {
+        "schema_version": "1.0.0",
+        "harness_count": 2,
+        "catalog_harness_count": 2,
+        "standard_blocker_count": 2,
+        "standard_blockers": ["WF-HAR-TAMPER-ST-01", "WF-HAR-TAMPER-ST-02"],
+        "harnesses": [
+            {
+                "id": "WF-HAR-TAMPER-ST-01",
+                "name": "producer",
+                "command": "echo producer > /dev/null",
+                "artifact": "s3://bucket/producer",
+                "artifact_mode": "declared_file",
+                "blocks_release": True,
+                "what_it_runs": "creates evidence",
+                "pass_criteria": "exit 0",
+                "applicability": "standard",
+                "status": "implemented",
+            },
+            {
+                "id": "WF-HAR-TAMPER-ST-02",
+                "name": "status-tamperer",
+                "command": sed_command,
+                "artifact": "s3://bucket/tamperer",
+                "artifact_mode": "declared_file",
+                "blocks_release": True,
+                "what_it_runs": "changes first harness's evidence status",
+                "pass_criteria": "exit 0",
+                "applicability": "standard",
+                "status": "implemented",
+            },
+        ],
+        "foundation_closure": ["WF-HAR-TAMPER-ST-01", "WF-HAR-TAMPER-ST-02"],
+    }
+    _ = path.write_text(json.dumps(registry))
+
+
+def test_recertify_rejects_tampered_evidence_status() -> None:
+    """Post-closure disk reload catches a tampered evidence record (status change).
+
+    Harness B modifies harness A's evidence JSON to change 'status'
+    from 'pass' to 'fail'.  The disk-reload loop must detect the
+    modified status (which contradicts the exit_code) and fail.
+    """
+    clone = _make_clean_clone()
+    registry_path = Path(tempfile.mkstemp(suffix=".json")[1])
+    try:
+        _make_two_harness_evidence_status_tamper_registry(registry_path)
+
+        with pytest.raises(CertificationError) as exc_info:
+            _ = recertify_foundation(
+                repo_root=clone,
+                registry_path=registry_path,
+            )
+        # The revalidation should catch the tampered status (pass with
+        # tampered exit_code mismatch, or the disk-reloaded record
+        # validation)
+        error_text = str(exc_info.value)
+        assert any(
+            kw in error_text for kw in ["status", "tamper", "fail", "hash mismatch"]
+        )
     finally:
         shutil.rmtree(clone, ignore_errors=True)
         registry_path.unlink(missing_ok=True)
@@ -406,6 +664,7 @@ def validator_env(tmp_path: Path) -> tuple[Path, EvidenceRecord]:
             version="8.2.0",
             commit_sha="a" * 40,
         ),
+        applicability="standard",
         environment={"os": "test"},
         stdout_artifact=Artifact(
             path="stdout.txt",
@@ -606,3 +865,18 @@ def test_validate_rejects_fabricated_tool_version(
         repo_root=root,
     )
     assert any("fabricated" in f for f in failures)
+
+
+def test_validate_rejects_applicability_mismatch(
+    validator_env: tuple[Path, EvidenceRecord],
+) -> None:
+    """Record.applicability differs from registry.applicability -> failure."""
+    root, base = validator_env
+    record = base.model_copy(update={"applicability": "tenant"})
+    failures = validate_evidence_record(
+        record,
+        registry=_REGISTRY,
+        expected_subject_sha="a" * 40,
+        repo_root=root,
+    )
+    assert any("applicability" in f for f in failures)

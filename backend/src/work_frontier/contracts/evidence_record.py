@@ -108,8 +108,14 @@ class EvidenceRecord(BaseModel):
     invocation: Invocation
     tool: Tool
     applicability: Literal["standard", "large", "tenant"] = Field(
-        default="standard",
-        description="Harness applicability scope",
+        description="Harness applicability scope; required, no default",
+    )
+    applicability_reason: str | None = Field(
+        default=None,
+        description=(
+            "Reason for the applicability value. Required when status is "
+            "'not_applicable'; optional otherwise."
+        ),
     )
     environment: dict[str, str] = Field(
         description="Environment fingerprint (OS, runtime versions, etc.)",

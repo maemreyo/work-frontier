@@ -46,6 +46,33 @@ def test_registry_loads_and_matches_catalog_counts() -> None:
     assert "validate.mjs" not in static05["command"]
 
 
+def test_registry_rejects_invalid_artifact_mode() -> None:
+    """Runtime validate_registry rejects harnesses with invalid artifact_mode."""
+    registry = load_registry(REGISTRY_PATH)
+    # Inject a harness with bogus artifact_mode
+    bogus = dict(registry["harnesses"][0])
+    bogus["id"] = "WF-HAR-TEST-BOGUS"
+    bogus["artifact_mode"] = "bogus"
+    registry["harnesses"] = [*registry["harnesses"], bogus]
+    registry["harness_count"] = len(registry["harnesses"])
+    with pytest.raises(HarnessRegistryError, match="invalid artifact_mode"):
+        validate_registry(registry)
+
+
+def test_registry_rejects_missing_artifact_mode() -> None:
+    """Runtime validate_registry rejects harnesses missing artifact_mode."""
+    registry = load_registry(REGISTRY_PATH)
+    entry = dict(registry["harnesses"][0])
+    entry["id"] = "WF-HAR-TEST-NOAM"
+    entry.pop("artifact_mode", None)
+    entry["artifact"] = "s3://bucket/test"
+    registry["harnesses"] = [*registry["harnesses"], entry]
+    registry["harness_count"] = len(registry["harnesses"])
+    err_match = "missing required field artifact_mode"
+    with pytest.raises(HarnessRegistryError, match=err_match):
+        validate_registry(registry)
+
+
 def test_registry_rejects_duplicate_ids() -> None:
     registry = load_registry(REGISTRY_PATH)
     registry["harnesses"] = [
@@ -83,6 +110,7 @@ def test_validate_evidence_rejects_fabricated_version_and_stale_subject() -> Non
             duration_seconds=1.0,
         ),
         tool=Tool(name="python", version="1.0.0", commit_sha="a" * 40),
+        applicability="standard",
         environment={"os": "test"},
         artifacts=[Artifact(path="x", hashes={"sha256": "b" * 64})],
         results=[Result(kind="test", passed=True)],
@@ -113,13 +141,29 @@ def test_registry_file_is_valid_json_with_foundation_closure() -> None:
     assert all(harness["artifact"].strip() for harness in data["harnesses"])
 
 
+def _minimal_harness(**overrides: object) -> dict[str, object]:
+    """Build a minimal valid harness dict with overrides."""
+    base: dict[str, object] = {
+        "id": "WF-HAR-TEST-01",
+        "name": "test",
+        "command": "true",
+        "artifact": "s3://bucket/test",
+        "blocks_release": False,
+        "what_it_runs": "test",
+        "pass_criteria": "exit 0",
+        "applicability": "standard",
+        "artifact_mode": "declared_file",
+        "status": "implemented",
+    }
+    base.update(overrides)
+    return base
+
+
 def test_build_rejects_invalid_artifact_mode_value() -> None:
     """Invalid artifact_mode values are rejected at build time."""
     with pytest.raises(ValueError, match="invalid artifact_mode"):
         _validate_artifact_modes(
-            [
-                {"id": "WF-HAR-TEST", "artifact_mode": "bogus_mode"},
-            ]
+            [_minimal_harness(id="WF-HAR-TEST", artifact_mode="bogus_mode")]
         )
 
 
@@ -128,7 +172,11 @@ def test_build_rejects_runner_evidence_on_unapproved_harness() -> None:
     with pytest.raises(ValueError, match="runner_evidence mode not allowed"):
         _validate_artifact_modes(
             [
-                {"id": "WF-HAR-STATIC-02", "artifact_mode": "runner_evidence"},
+                _minimal_harness(
+                    id="WF-HAR-STATIC-02",
+                    artifact_mode="runner_evidence",
+                    artifact=".omo/evidence/static/WF-HAR-STATIC-02.json",
+                ),
             ]
         )
 
@@ -138,11 +186,11 @@ def test_build_rejects_wrong_runner_evidence_artifact_path() -> None:
     with pytest.raises(ValueError, match="does not match expected"):
         _validate_artifact_modes(
             [
-                {
-                    "id": "WF-HAR-STATIC-01",
-                    "artifact_mode": "runner_evidence",
-                    "artifact": ".omo/evidence/static/wrong-path.json",
-                },
+                _minimal_harness(
+                    id="WF-HAR-STATIC-01",
+                    artifact_mode="runner_evidence",
+                    artifact=".omo/evidence/static/wrong-path.json",
+                ),
             ]
         )
 
@@ -152,10 +200,10 @@ def test_build_rejects_runner_evidence_artifact_mismatch() -> None:
     with pytest.raises(ValueError, match="does not match expected"):
         _validate_artifact_modes(
             [
-                {
-                    "id": "WF-HAR-STATIC-01",
-                    "artifact_mode": "runner_evidence",
-                    "artifact": ".omo/evidence/static/WF-HAR-STATIC-02.json",
-                },
+                _minimal_harness(
+                    id="WF-HAR-STATIC-01",
+                    artifact_mode="runner_evidence",
+                    artifact=".omo/evidence/static/WF-HAR-STATIC-02.json",
+                ),
             ]
         )

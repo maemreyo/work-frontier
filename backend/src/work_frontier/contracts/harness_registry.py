@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+from enum import StrEnum
 from pathlib import Path
 from typing import Any, Final, cast
 
@@ -15,12 +16,39 @@ REQUIRED_FIELDS: Final = (
     "name",
     "command",
     "artifact",
+    "artifact_mode",
     "blocks_release",
     "what_it_runs",
     "pass_criteria",
     "applicability",
     "status",
 )
+
+# Valid artifact_mode values.
+VALID_ARTIFACT_MODES: Final = frozenset({"declared_file", "runner_evidence"})
+
+# Harnesses whose declared artifact is the evidence record itself.
+RUNNER_EVIDENCE_HARNESSES: Final = frozenset({"WF-HAR-STATIC-01", "WF-HAR-STATIC-04"})
+
+# Expected output path pattern for runner_evidence harnesses.
+RUNNER_EVIDENCE_EXPECTED_PATTERN: Final = re.compile(
+    r"^\.omo/evidence/static/WF-HAR-[A-Z0-9]+(?:-[A-Z0-9]+)*\.json$"
+)
+
+
+class ArtifactMode(StrEnum):
+    """Valid artifact_mode values for registry harness entries."""
+
+    DECLARED_FILE = "declared_file"
+    RUNNER_EVIDENCE = "runner_evidence"
+
+
+class Applicability(StrEnum):
+    """Harness applicability scope for certification gating."""
+
+    STANDARD = "standard"
+    LARGE = "large"
+    TENANT = "tenant"
 
 
 class HarnessRegistryError(ValueError):
@@ -63,6 +91,33 @@ def _validate_harness_entry(harness_entry: dict[str, Any], seen: set[str]) -> st
     if applicability not in APPLICABILITY:
         msg = f"{harness_id}: invalid applicability {applicability!r}"
         raise HarnessRegistryError(msg)
+
+    artifact_mode = str(harness_entry.get("artifact_mode", ""))
+    if artifact_mode not in VALID_ARTIFACT_MODES:
+        msg = (
+            f"{harness_id}: invalid artifact_mode {artifact_mode!r}; "
+            f"valid values: {sorted(VALID_ARTIFACT_MODES)}"
+        )
+        raise HarnessRegistryError(msg)
+    if artifact_mode == "runner_evidence":
+        if harness_id not in RUNNER_EVIDENCE_HARNESSES:
+            msg = f"{harness_id}: runner_evidence mode not allowed for this harness"
+            raise HarnessRegistryError(msg)
+        declared = str(harness_entry.get("artifact", ""))
+        if not RUNNER_EVIDENCE_EXPECTED_PATTERN.match(declared):
+            msg = (
+                f"{harness_id}: runner_evidence artifact {declared!r} does not "
+                f"match expected pattern .omo/evidence/static/<HARNESS_ID>.json"
+            )
+            raise HarnessRegistryError(msg)
+        expected_path = f".omo/evidence/static/{harness_id}.json"
+        if declared != expected_path:
+            msg = (
+                f"{harness_id}: runner_evidence artifact {declared!r} "
+                f"does not match expected path {expected_path!r}"
+            )
+            raise HarnessRegistryError(msg)
+
     status = str(harness_entry.get("status", ""))
     if status not in STATUS:
         msg = f"{harness_id}: invalid status {status!r}"

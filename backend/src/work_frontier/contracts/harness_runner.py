@@ -7,7 +7,7 @@ import shlex
 import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 from work_frontier.contracts.evidence_record import (
     Artifact,
@@ -121,8 +121,15 @@ def run_harness(  # noqa: PLR0915 - harness lifecycle spans pre/post validation
     evidence_root.mkdir(parents=True, exist_ok=True)
 
     artifacts: list[Artifact] = []
+    evidence_filename = f"{harness_id}.json"
     if artifact_mode == "runner_evidence":
         property_bag["artifact.kind"] = "runner_evidence"
+        # The evidence file itself IS the artifact. Store the actual
+        # run-scoped path rather than the static registry path so
+        # downstream consumers can locate it.
+        ev_rel = str((evidence_root / evidence_filename).relative_to(root))
+        property_bag["registry.artifact"] = ev_rel
+        property_bag["artifact.runner_evidence_path"] = ev_rel
     elif _is_remote_artifact(declared_artifact):
         artifacts.append(
             Artifact(
@@ -195,6 +202,10 @@ def run_harness(  # noqa: PLR0915 - harness lifecycle spans pre/post validation
         stdout=stdout,
         stderr=stderr,
         evidence_root=evidence_root,
+        applicability=cast(
+            "Literal['standard', 'large', 'tenant']",
+            str(harness.get("applicability", "standard")),
+        ),
     )
 
     evidence_path = evidence_root / evidence_filename
@@ -322,6 +333,16 @@ def validate_evidence_record(
     if record.status == "skip" and harness.get("blocks_release"):
         failures.append(f"{record.harness_id}: blocking harness cannot be skip")
 
+    # Applicability must match the registry declaration exactly.
+    # A record that claims "standard" for a registry-declared "tenant"
+    # harness is a contradiction that could bypass scope gating.
+    registry_applicability = str(harness.get("applicability", "standard"))
+    if record.applicability != registry_applicability:
+        failures.append(
+            f"{record.harness_id}: record.applicability={record.applicability!r} "
+            f"does not match registry.applicability={registry_applicability!r}"
+        )
+
     return failures
 
 
@@ -414,12 +435,33 @@ def recertify_foundation(  # noqa: PLR0915 - certification lifecycle spans 8 har
                 f"({subject_tree_sha} -> {post_tree_sha})"
             )
 
-    # Post-closure full revalidation: reload every record from disk and
+    # Post-closure full revalidation: reload EVERY record from disk and
     # verify that declared artifacts still exist with matching hashes.
-    # This catches cross-harness tampering where harness B overwrites
-    # harness A's artifacts after A was validated.
+    # This catches cross-harness tampering where harness B overwrites or
+    # deletes harness A's evidence record file after A was validated.
+    #
+    # Previously this loop validated the in-memory EvidenceRecord objects
+    # rather than reloaded-from-disk records, meaning a tampered or deleted
+    # evidence file would go undetected.
+    disk_records: list[EvidenceRecord] = []
     if not failures:
-        for record in records:
+        for expected_id in closure:
+            record_path = evidence_root / f"{expected_id}.json"
+            if not record_path.is_file():
+                failures.append(
+                    f"{expected_id}: evidence record file missing from disk"
+                )
+                continue
+            try:
+                record = EvidenceRecord.model_validate_json(
+                    record_path.read_text(encoding="utf-8")
+                )
+            except Exception as exc:  # noqa: BLE001 - surface as certification failure
+                failures.append(
+                    f"{expected_id}: evidence record file is invalid JSON: {exc}"
+                )
+                continue
+            disk_records.append(record)
             failures.extend(
                 validate_evidence_record(
                     record,
@@ -433,12 +475,27 @@ def recertify_foundation(  # noqa: PLR0915 - certification lifecycle spans 8 har
 
     # Build evidence manifest with SHA-256 of every evidence record file.
     # This proves which exact record content was certified and enables
-    # downstream tamper detection.
+    # downstream tamper detection.  The manifest must cover exactly the
+    # expected closure — fewer records mean an integrity gap.
     evidence_manifest: dict[str, str] = {}
-    for record in records:
-        record_path = evidence_root / f"{record.harness_id}.json"
+    for expected_id in closure:
+        record_path = evidence_root / f"{expected_id}.json"
         if record_path.is_file():
-            evidence_manifest[record.harness_id] = hash_file(record_path)
+            evidence_manifest[expected_id] = hash_file(record_path)
+
+    # Verify manifest completeness: every closure ID must be in the
+    # manifest and every disk record must have a matching manifest entry.
+    if not failures and set(evidence_manifest) != set(closure):
+        missing_manifest = set(closure) - set(evidence_manifest)
+        extra_manifest = set(evidence_manifest) - set(closure)
+        if missing_manifest:
+            failures.append(
+                f"evidence manifest missing records for: {sorted(missing_manifest)}"
+            )
+        if extra_manifest:
+            failures.append(
+                f"evidence manifest has extra records: {sorted(extra_manifest)}"
+            )
 
     # For runner_evidence mode harnesses, include the evidence file path
     # to prove the record was actually written.
@@ -448,7 +505,11 @@ def recertify_foundation(  # noqa: PLR0915 - certification lifecycle spans 8 har
         else str(evidence_root),
     }
 
-    certified = len(failures) == 0 and len(records) == len(closure)
+    certified = (
+        len(failures) == 0
+        and len(disk_records) == len(closure)
+        and len(evidence_manifest) == len(closure)
+    )
     report = {
         "schema_version": "1.0.0",
         "kind": "foundation_recertification",

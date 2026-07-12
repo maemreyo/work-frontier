@@ -148,8 +148,7 @@
   "description": "Canonical evidence record for verification harness execution.\n\nInspired by SARIF v2.1.0 patterns (invocation envelope, tool.driver,\nartifact.hashes, propertyBag). The property_bag field is an extension\npoint for harness-specific data without requiring schema migration.",
   "properties": {
     "applicability": {
-      "default": "standard",
-      "description": "Harness applicability scope",
+      "description": "Harness applicability scope; required, no default",
       "enum": [
         "standard",
         "large",
@@ -157,6 +156,19 @@
       ],
       "title": "Applicability",
       "type": "string"
+    },
+    "applicability_reason": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Reason for the applicability value. Required when status is 'not_applicable'; optional otherwise.",
+      "title": "Applicability Reason"
     },
     "artifacts": {
       "description": "Files or resources examined or produced during execution",
@@ -287,6 +299,7 @@
     "subject_tree_sha",
     "invocation",
     "tool",
+    "applicability",
     "environment",
     "stdout_artifact",
     "stderr_artifact"

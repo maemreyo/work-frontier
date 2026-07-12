@@ -130,6 +130,7 @@ def _base_valid_data() -> dict[str, object]:
             "version": "8.2.0",
             "commit_sha": "a1b2c3d4e5f6789012345678901234567890abcd",
         },
+        "applicability": "standard",
         "environment": {
             "os": "linux-x86_64",
             "python": "3.13.5",

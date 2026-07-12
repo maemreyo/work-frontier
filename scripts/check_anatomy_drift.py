@@ -21,22 +21,21 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
+import subprocess
 import sys
 from pathlib import Path
 
-# Source and config file patterns that affect anatomy output.  When any
-# of these change the anatomy *should* be regenerated.
-_SOURCE_INPUT_PATTERNS: tuple[str, ...] = (
-    "backend/src/work_frontier/contracts/**/*.py",
-    "backend/src/work_frontier/domain/**/*.py",
-    "backend/src/work_frontier/application/**/*.py",
-    "backend/src/work_frontier/adapters/**/*.py",
-    "backend/src/work_frontier/interfaces/**/*.py",
-    "scripts/**/*.py",
-    "pyproject.toml",
-    "AGENTS.md",
-    "CLAUDE.md",
+# Use git ls-files to get all tracked source files for the source-input
+# digest, excluding anatomy docs and generated/derived artifacts.
+# This replaces the previously manually-maintained glob list which missed
+# modules like platform/, frontend/, workflows/, migrations, etc.
+_SOURCE_EXCLUDE_PREFIXES: tuple[str, ...] = (
+    "docs/anatomy/",
+    ".omo/evidence/",
 )
+
+_HEX64: re.Pattern[str] = re.compile(r"^[a-f0-9]{64}$")
 
 
 def _hash_file_blake2b(path: Path) -> str:
@@ -67,22 +66,45 @@ def _compute_content_digest(anatomy_root: Path) -> str | None:
     return h.hexdigest()
 
 
+def _git_ls_files(repo_root: Path) -> list[str]:
+    """Return all tracked file paths (repo-root-relative) via git ls-files."""
+    result = subprocess.run(
+        ["git", "ls-files"],
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return [line.strip() for line in result.stdout.splitlines() if line.strip()]
+
+
 def _compute_source_input_digest(repo_root: Path) -> str | None:
+    """Hash all tracked source files via git ls-files, excluding docs/evidence.
+
+    Using git ls-files avoids the manually-maintained glob list that
+    previously missed platform/, frontend/, workflows/, migrations, etc.
+    """
     h = hashlib.blake2b(digest_size=32)
     found_any = False
-    for pattern in _SOURCE_INPUT_PATTERNS:
-        for path in sorted(repo_root.glob(pattern)):
-            if not path.is_file():
-                continue
-            found_any = True
-            rel = path.relative_to(repo_root)
-            h.update(str(rel).encode("utf-8"))
-            h.update(b"\x00")
-            h.update(_hash_file_blake2b(path).encode("utf-8"))
-            h.update(b"\x00")
+    for rel_path in sorted(_git_ls_files(repo_root)):
+        if any(rel_path.startswith(prefix) for prefix in _SOURCE_EXCLUDE_PREFIXES):
+            continue
+        full_path = repo_root / rel_path
+        if not full_path.is_file():
+            continue
+        found_any = True
+        h.update(rel_path.encode("utf-8"))
+        h.update(b"\x00")
+        h.update(_hash_file_blake2b(full_path).encode("utf-8"))
+        h.update(b"\x00")
     if not found_any:
         return None
     return h.hexdigest()
+
+
+def _is_valid_64hex(value: object) -> bool:
+    """Return True if value is a 64-char lowercase hex string."""
+    return isinstance(value, str) and bool(_HEX64.match(value))
 
 
 def _cmd_check(args: argparse.Namespace) -> int:
@@ -102,50 +124,58 @@ def _cmd_check(args: argparse.Namespace) -> int:
     stored_content = manifest.get("content_digest")
     stored_source = manifest.get("source_input_digest")
 
-    if stored_content is None and stored_source is None:
-        print(
-            "ERROR: _manifest.json has no content_digest or "
-            "source_input_digest. Run with --mode update first.",
-            file=sys.stderr,
-        )
+    # Require BOTH digests to exist and be valid 64-char hex.
+    # A missing or malformed digest is a hard failure; neither the
+    # content check nor the source check can be silently skipped.
+    content_valid = _is_valid_64hex(stored_content)
+    source_valid = _is_valid_64hex(stored_source)
+
+    if not content_valid or not source_valid:
+        if not content_valid:
+            print(
+                f"ERROR: content_digest is missing or malformed "
+                f"(got {stored_content!r}); run with --mode update.",
+                file=sys.stderr,
+            )
+        if not source_valid:
+            print(
+                f"ERROR: source_input_digest is missing or malformed "
+                f"(got {stored_source!r}); run with --mode update.",
+                file=sys.stderr,
+            )
         return 1
 
     failures: list[str] = []
 
-    if stored_content is not None:
-        current_content = _compute_content_digest(root)
-        if current_content is None:
-            failures.append("anatomy content directory is empty")
-        elif current_content != stored_content:
-            failures.append(
-                f"anatomy content digest mismatch\n"
-                f"  stored:   {stored_content}\n"
-                f"  current:  {current_content}\n"
-                f"  Regenerate anatomy docs."
-            )
+    current_content = _compute_content_digest(root)
+    if current_content is None:
+        failures.append("anatomy content directory is empty")
+    elif current_content != stored_content:
+        failures.append(
+            f"anatomy content digest mismatch\n"
+            f"  stored:   {stored_content}\n"
+            f"  current:  {current_content}\n"
+            f"  Regenerate anatomy docs."
+        )
 
-    if stored_source is not None:
-        current_source = _compute_source_input_digest(repo_root)
-        if current_source is None:
-            failures.append("could not compute source input digest")
-        elif current_source != stored_source:
-            failures.append(
-                f"anatomy source-input digest mismatch — source code has "
-                f"changed since anatomy was last regenerated.\n"
-                f"  stored:   {stored_source}\n"
-                f"  current:  {current_source}\n"
-                f"  Regenerate anatomy docs with the `anatomy` skill."
-            )
+    current_source = _compute_source_input_digest(repo_root)
+    if current_source is None:
+        failures.append("could not compute source input digest")
+    elif current_source != stored_source:
+        failures.append(
+            f"anatomy source-input digest mismatch — source code has "
+            f"changed since anatomy was last regenerated.\n"
+            f"  stored:   {stored_source}\n"
+            f"  current:  {current_source}\n"
+            f"  Regenerate anatomy docs with the `anatomy` skill."
+        )
 
     if failures:
         for msg in failures:
             print(f"ERROR: {msg}", file=sys.stderr)
         return 1
 
-    print(
-        f"anatomy checks OK (content={'computed' if stored_content else 'N/A'}, "
-        f"source={'computed' if stored_source else 'N/A'})"
-    )
+    print("anatomy checks OK (content=computed, source=computed)")
     return 0
 
 
@@ -173,10 +203,16 @@ def _cmd_update(args: argparse.Namespace) -> int:
     if current_source is not None:
         manifest["source_input_digest"] = current_source
 
+    # Remove the stale source_commit field — it was previously
+    # hard-coded and never updated automatically, creating provenance
+    # contradictions.  The content_digest and source_input_digest
+    # already pin the exact state without a separate commit field.
+    _ = manifest.pop("source_commit", None)
+
     _ = manifest_path.write_text(f"{json.dumps(manifest, indent=2)}\n")
     print(
         f"updated _manifest.json: content_digest={current_content}, "
-        f"source_input_digest={current_source}"
+        f"source_input_digest={current_source}, source_commit removed"
     )
     return 0
 

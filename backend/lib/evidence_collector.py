@@ -8,6 +8,7 @@ import hashlib
 import subprocess
 from datetime import datetime
 from pathlib import Path
+from typing import Literal
 
 from work_frontier.contracts.evidence_record import (
     Artifact,
@@ -103,6 +104,9 @@ class EvidenceCollector:
         stdout: str = "",
         stderr: str = "",
         property_bag: dict[str, str | int | float | bool | None] | None = None,
+        repo_root: Path | None = None,
+        evidence_root: Path | None = None,
+        applicability: Literal["standard", "large", "tenant"] = "standard",
     ) -> EvidenceRecord:
         """Build the final EvidenceRecord.
 
@@ -117,6 +121,12 @@ class EvidenceCollector:
             end_time: Execution end timestamp (must be timezone-aware)
             working_directory: Optional working directory where command was executed
             run_id: Optional run identifier (auto-generated if not provided)
+            stdout: Captured stdout content
+            stderr: Captured stderr content
+            property_bag: Optional extension data
+            repo_root: Repository root for writing log files (default: CWD)
+            evidence_root: Directory for evidence log files (default: .omo/evidence/)
+            applicability: Harness applicability scope (default: "standard")
 
         Returns:
             Complete EvidenceRecord ready for serialization
@@ -125,6 +135,32 @@ class EvidenceCollector:
             status = "pass"
         else:
             status = "fail"
+
+        if repo_root is None:
+            repo_root = Path.cwd()
+        if evidence_root is None:
+            evidence_root = repo_root / ".omo" / "evidence"
+
+        # Write stdout/stderr to disk so the artifact references point to
+        # real files that pass validate_evidence_record's existence check.
+        evidence_root.mkdir(parents=True, exist_ok=True)
+        stdout_path = evidence_root / f"{self.harness_id}.stdout.txt"
+        stderr_path = evidence_root / f"{self.harness_id}.stderr.txt"
+        _ = stdout_path.write_text(stdout or "", encoding="utf-8")
+        _ = stderr_path.write_text(stderr or "", encoding="utf-8")
+
+        def _hash_bytes(content: str) -> str:
+            return hashlib.sha256(content.encode("utf-8")).hexdigest()
+
+        # Compute repo-root-relative paths for the artifact records
+        try:
+            stdout_rel = str(stdout_path.relative_to(repo_root))
+        except ValueError:
+            stdout_rel = str(stdout_path)
+        try:
+            stderr_rel = str(stderr_path.relative_to(repo_root))
+        except ValueError:
+            stderr_rel = str(stderr_path)
 
         return EvidenceRecord(
             schema_version="1.0.0",
@@ -146,16 +182,17 @@ class EvidenceCollector:
                 version=self.tool_version,
                 commit_sha=self.commit_sha,
             ),
+            applicability=applicability,
             environment=get_environment_fingerprint(),
             artifacts=self.artifacts,
             results=self.results,
             stdout_artifact=Artifact(
-                path=f".omo/evidence/{self.harness_id}.stdout.txt",
-                hashes={"sha256": hash_bytes((stdout or "").encode("utf-8"))},
+                path=stdout_rel,
+                hashes={"sha256": _hash_bytes(stdout or "")},
             ),
             stderr_artifact=Artifact(
-                path=f".omo/evidence/{self.harness_id}.stderr.txt",
-                hashes={"sha256": hash_bytes((stderr or "").encode("utf-8"))},
+                path=stderr_rel,
+                hashes={"sha256": _hash_bytes(stderr or "")},
             ),
             property_bag=property_bag,
         )

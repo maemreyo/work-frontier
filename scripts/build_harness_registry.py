@@ -16,6 +16,18 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+_BACKEND_SRC = ROOT / "backend" / "src"
+if str(_BACKEND_SRC) not in sys.path:
+    sys.path.insert(0, str(_BACKEND_SRC))
+
+# Import runtime constants and validation from the shared module so we
+# don't maintain a separate copy of artifact-mode rules.
+from work_frontier.contracts.harness_registry import (  # noqa: E402
+    RUNNER_EVIDENCE_EXPECTED_PATTERN,
+    RUNNER_EVIDENCE_HARNESSES,
+    VALID_ARTIFACT_MODES,
+)
+
 CATALOG = ROOT / "docs" / "quality" / "harness-catalog.md"
 REGISTRY = ROOT / "contracts" / "harness-registry.json"
 
@@ -32,21 +44,6 @@ FOUNDATION_CLOSURE: tuple[str, ...] = (
 )
 
 FIELD_RE = re.compile(r"\|\s*\*\*([^*]+)\*\*\s*\|\s*(.*?)\s*\|")
-
-# Valid artifact_mode values and the harnesses allowed to use each mode.
-# runner_evidence means the harness's evidence record IS the declared
-# artifact — no separate file is produced.
-_VALID_ARTIFACT_MODES: frozenset[str] = frozenset({"declared_file", "runner_evidence"})
-
-# Harnesses whose declared artifact is the evidence record itself.
-_RUNNER_EVIDENCE_HARNESSES: frozenset[str] = frozenset(
-    {"WF-HAR-STATIC-01", "WF-HAR-STATIC-04"}
-)
-
-# Expected output path pattern for runner_evidence harnesses.
-_RUNNER_EVIDENCE_EXPECTED_PATTERN = re.compile(
-    r"^\.omo/evidence/static/WF-HAR-[A-Z0-9]+(?:-[A-Z0-9]+)*\.json$"
-)
 
 
 def _clean_cell(value: str) -> str:
@@ -95,22 +92,25 @@ def parse_catalog(text: str) -> list[dict[str, object]]:
 
 
 def _validate_artifact_modes(harnesses: list[dict[str, object]]) -> None:
-    """Validate artifact_mode values and runner_evidence path contracts."""
+    """Validate artifact_mode values and runner_evidence path contracts.
+
+    Uses shared constants from harness_registry.py to avoid duplication.
+    """
     for h in harnesses:
         h_id = str(h["id"])
         mode = h.get("artifact_mode", "declared_file")
-        if mode not in _VALID_ARTIFACT_MODES:
+        if mode not in VALID_ARTIFACT_MODES:
             msg = (
                 f"invalid artifact_mode {mode!r} for {h_id}; "
-                f"valid values: {sorted(_VALID_ARTIFACT_MODES)}"
+                f"valid values: {sorted(VALID_ARTIFACT_MODES)}"
             )
             raise ValueError(msg)
         if mode == "runner_evidence":
-            if h_id not in _RUNNER_EVIDENCE_HARNESSES:
+            if h_id not in RUNNER_EVIDENCE_HARNESSES:
                 msg = f"{h_id}: runner_evidence mode not allowed for this harness"
                 raise ValueError(msg)
             declared = str(h.get("artifact", ""))
-            if not _RUNNER_EVIDENCE_EXPECTED_PATTERN.match(declared):
+            if not RUNNER_EVIDENCE_EXPECTED_PATTERN.match(declared):
                 msg = (
                     f"{h_id}: runner_evidence artifact {declared!r} does not "
                     f"match expected pattern .omo/evidence/static/<HARNESS_ID>.json"
@@ -163,7 +163,7 @@ def main() -> int:
     harnesses = parse_catalog(CATALOG.read_text(encoding="utf-8"))
     for h in harnesses:
         h_id = str(h["id"])
-        if h_id in _RUNNER_EVIDENCE_HARNESSES:
+        if h_id in RUNNER_EVIDENCE_HARNESSES:
             h["artifact_mode"] = "runner_evidence"
         else:
             h["artifact_mode"] = "declared_file"
