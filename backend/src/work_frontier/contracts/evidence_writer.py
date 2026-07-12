@@ -64,7 +64,9 @@ def get_tool_version(tool_name: str) -> str:
         if pnpm is not None:
             package = "typescript" if name == "tsc" else name
             try:
-                return _run_version(["pnpm", "--dir", "frontend", "exec", package, "--version"])
+                return _run_version(
+                    ["pnpm", "--dir", "frontend", "exec", package, "--version"]
+                )
             except (subprocess.CalledProcessError, FileNotFoundError):
                 pass
         binary = "tsc" if name == "typescript" else name
@@ -160,7 +162,7 @@ def write_text_artifact(
     path = repo_root / relative_path
     path.parent.mkdir(parents=True, exist_ok=True)
     encoded = content.encode("utf-8")
-    path.write_bytes(encoded)
+    _ = path.write_bytes(encoded)
     return Artifact(path=relative_path, hashes={"sha256": hash_bytes(encoded)})
 
 
@@ -214,7 +216,9 @@ def write_evidence(
 
     duration_seconds = (end_time - start_time).total_seconds()
     commit_sha = get_git_commit_sha(repo_root)
-    resolved_version = tool_version if tool_version is not None else get_tool_version(tool_name)
+    resolved_version = (
+        tool_version if tool_version is not None else get_tool_version(tool_name)
+    )
     if not resolved_version:
         msg = f"empty tool version for {tool_name}"
         raise ValueError(msg)

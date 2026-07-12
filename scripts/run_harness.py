@@ -24,18 +24,18 @@ from work_frontier.contracts.harness_runner import (  # noqa: E402
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--id", help="Harness ID to run (e.g. WF-HAR-STATIC-02)")
-    parser.add_argument(
+    _ = parser.add_argument("--id", help="Harness ID to run (e.g. WF-HAR-STATIC-02)")
+    _ = parser.add_argument(
         "--recertify-foundation",
         action="store_true",
         help="Run the foundation closure and write supersession evidence",
     )
-    parser.add_argument(
+    _ = parser.add_argument(
         "--validate-registry",
         action="store_true",
         help="Validate contracts/harness-registry.json only",
     )
-    parser.add_argument(
+    _ = parser.add_argument(
         "--repo-root",
         type=Path,
         default=ROOT,

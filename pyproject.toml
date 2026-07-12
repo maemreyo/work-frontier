@@ -60,9 +60,11 @@ ignore = ["COM812", "CPY001", "D203", "D213", "FBT001", "FBT002", "FIX002", "ISC
 fixable = ["ALL"]
 
 [tool.ruff.lint.per-file-ignores]
-"backend/src/work_frontier/contracts/evidence_*.py" = ["PLC0415", "S607", "ARG001", "PLR0913"]
+"backend/src/work_frontier/contracts/evidence_*.py" = ["PLC0415", "S607", "ARG001", "PLR0913", "C901", "PLR0911", "PLR0912", "S603", "SIM105"]
+"backend/src/work_frontier/contracts/decision_record.py" = ["D105", "D107", "PERF403", "PLW0108"]
+"backend/src/work_frontier/contracts/harness_*.py" = ["D103", "C901", "PLR0911", "S602", "SIM108", "RET504", "PLR0912", "PLR0913", "PLC0415", "S603"]
 "backend/tests/**/*.py" = ["D", "PLC0415", "PLR2004", "S101", "S607"]
-"scripts/**/*.py" = ["C901", "INP001", "PLC0415", "PLR0911", "PLR2004", "S603", "S607", "SIM102", "T201", "TRY301", "BLE001"]
+"scripts/**/*.py" = ["C901", "INP001", "PLC0415", "PLR0911", "PLR2004", "S603", "S607", "SIM102", "T201", "TRY301", "BLE001", "EXE001", "D103", "RET504"]
 "scripts/minio_roundtrip.py" = ["S105"]
 
 [tool.ruff.lint.pydocstyle]

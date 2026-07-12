@@ -119,6 +119,8 @@ def test_missing_required_field_raises_validation_error() -> None:
         "schema_version": "1.0.0",
         "harness_id": "WF-HAR-PREFLIGHT-01",
         # Missing 'status'
+        "run_id": "run-test-001",
+        "subject_sha": "a1b2c3d4e5f6789012345678901234567890abcd",
         "invocation": {
             "command": "pytest tests/unit",
             "exit_code": 0,
@@ -143,11 +145,13 @@ def test_missing_required_field_raises_validation_error() -> None:
 
 def test_invalid_harness_id_pattern_raises_validation_error() -> None:
     """Test that invalid harness_id pattern raises ValidationError."""
-    # Given: data with invalid harness_id pattern (missing digits)
+    # Given: data with invalid harness_id pattern (wrong prefix)
     data = {
         "schema_version": "1.0.0",
-        "harness_id": "WF-HAR-PREFLIGHT",  # Invalid: missing -NN suffix
+        "harness_id": "INVALID-HARNESS-01",  # Invalid: wrong prefix
         "status": "pass",
+        "run_id": "run-test-001",
+        "subject_sha": "a1b2c3d4e5f6789012345678901234567890abcd",
         "invocation": {
             "command": "pytest tests/unit",
             "exit_code": 0,
@@ -177,6 +181,8 @@ def test_invalid_commit_sha_pattern_raises_validation_error() -> None:
         "schema_version": "1.0.0",
         "harness_id": "WF-HAR-PREFLIGHT-01",
         "status": "pass",
+        "run_id": "run-test-001",
+        "subject_sha": "a1b2c3d4e5f6789012345678901234567890abcd",
         "invocation": {
             "command": "pytest tests/unit",
             "exit_code": 0,
@@ -223,6 +229,8 @@ def test_negative_duration_raises_validation_error() -> None:
         "schema_version": "1.0.0",
         "harness_id": "WF-HAR-PREFLIGHT-01",
         "status": "pass",
+        "run_id": "run-test-001",
+        "subject_sha": "a1b2c3d4e5f6789012345678901234567890abcd",
         "invocation": {
             "command": "pytest tests/unit",
             "exit_code": 0,

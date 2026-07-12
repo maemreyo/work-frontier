@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CATALOG = ROOT / "docs" / "quality" / "harness-catalog.md"
 REGISTRY = ROOT / "contracts" / "harness-registry.json"
 
-HEADER_RE = re.compile(r"^### (WF-HAR-\S+):\s*(.+)$", re.M)
+HEADER_RE = re.compile(r"^### (WF-HAR-\S+):\s*(.+)$", re.MULTILINE)
 FIELD_RE = re.compile(r"\|\s*\*\*([^*]+)\*\*\s*\|\s*(.*?)\s*\|")
 
 
@@ -27,7 +27,7 @@ def _clean_cell(value: str) -> str:
 
 
 def parse_catalog(text: str) -> list[dict[str, object]]:
-    parts = re.split(r"^### (WF-HAR-[^\n]+)\n", text, flags=re.M)
+    parts = re.split(r"^### (WF-HAR-[^\n]+)\n", text, flags=re.MULTILINE)
     harnesses: list[dict[str, object]] = []
     for index in range(1, len(parts), 2):
         title = parts[index].strip()
@@ -38,8 +38,7 @@ def parse_catalog(text: str) -> list[dict[str, object]]:
             raise ValueError(msg)
         harness_id, name = match.group(1), match.group(2).strip()
         fields = {
-            key.strip(): _clean_cell(value)
-            for key, value in FIELD_RE.findall(body)
+            key.strip(): _clean_cell(value) for key, value in FIELD_RE.findall(body)
         }
         blocks = fields.get("Blocks release", "").lower().startswith("yes")
         applicability = "standard"
@@ -81,7 +80,10 @@ def build_registry(harnesses: list[dict[str, object]]) -> dict[str, object]:
             "artifact": ".omo/evidence/preflight-adr-006/validation.json",
             "blocks_release": True,
             "what_it_runs": "Contract-specific P0 mutation validators for WF-P0-01..07",
-            "pass_criteria": "All negative fixtures reject with expected failure IDs; no false positives",
+            "pass_criteria": (
+                "All negative fixtures reject with expected failure IDs; "
+                "no false positives"
+            ),
             "applicability": "standard",
             "status": "implemented",
         }
@@ -125,7 +127,7 @@ def build_registry(harnesses: list[dict[str, object]]) -> dict[str, object]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
+    _ = parser.add_argument(
         "--check",
         action="store_true",
         help="Fail if committed registry differs from catalog-derived output",
@@ -142,16 +144,20 @@ def main() -> int:
             return 1
         existing = REGISTRY.read_text(encoding="utf-8")
         if existing != rendered:
-            print("harness registry is out of date; run scripts/build_harness_registry.py", file=sys.stderr)
+            stale_msg = (
+                "harness registry is out of date; run scripts/build_harness_registry.py"
+            )
+            print(stale_msg, file=sys.stderr)
             return 1
-        print(
+        ok_msg = (
             f"registry ok: {registry['harness_count']} harnesses, "
             f"{registry['standard_blocker_count']} standard blockers"
         )
+        print(ok_msg)
         return 0
 
     REGISTRY.parent.mkdir(parents=True, exist_ok=True)
-    REGISTRY.write_text(rendered, encoding="utf-8")
+    _ = REGISTRY.write_text(rendered, encoding="utf-8")
     print(f"wrote {REGISTRY} ({registry['harness_count']} harnesses)")
     return 0
 

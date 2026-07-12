@@ -9,7 +9,12 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal
 
-from work_frontier.contracts.evidence_record import Artifact, EvidenceRecord, Result
+from work_frontier.contracts.evidence_record import (
+    Artifact,
+    EvidenceRecord,
+    JsonValue,
+    Result,
+)
 from work_frontier.contracts.evidence_writer import (
     get_git_commit_sha,
     get_tool_version,
@@ -51,7 +56,9 @@ def run_harness(
 ) -> EvidenceRecord:
     """Run one harness by registry ID and write evidence under .omo/evidence."""
     root = repo_root or Path.cwd()
-    registry = load_registry(registry_path or (root / "contracts" / "harness-registry.json"))
+    registry = load_registry(
+        registry_path or (root / "contracts" / "harness-registry.json")
+    )
     harness = get_harness(registry, harness_id)
     command = str(harness["command"])
     tool_name = tool_name_for_harness(harness_id)
@@ -76,7 +83,9 @@ def run_harness(
 
     stdout = completed.stdout or ""
     stderr = completed.stderr or ""
-    artifact_path = str(harness.get("artifact") or f".omo/evidence/static/{harness_id}.json")
+    artifact_path = str(
+        harness.get("artifact") or f".omo/evidence/static/{harness_id}.json"
+    )
     results = [
         Result(
             kind="harness_exit",
@@ -85,7 +94,7 @@ def run_harness(
         )
     ]
 
-    property_bag: dict[str, object] = {
+    property_bag: dict[str, JsonValue] = {
         "registry.harness_id": harness_id,
         "registry.blocks_release": bool(harness.get("blocks_release")),
         "registry.applicability": str(harness.get("applicability", "standard")),
@@ -116,7 +125,9 @@ def run_harness(
         stderr=stderr,
     )
 
-    record = EvidenceRecord.model_validate_json(evidence_path.read_text(encoding="utf-8"))
+    record = EvidenceRecord.model_validate_json(
+        evidence_path.read_text(encoding="utf-8")
+    )
     return record
 
 
@@ -136,34 +147,49 @@ def validate_evidence_record(
         return failures
 
     if expected_subject_sha and record.subject_sha != expected_subject_sha:
-        failures.append(
-            f"{record.harness_id}: subject_sha {record.subject_sha} != {expected_subject_sha}"
+        msg = (
+            f"{record.harness_id}: subject_sha {record.subject_sha} "
+            f"!= {expected_subject_sha}"
         )
+        failures.append(msg)
 
     if record.tool.version in {"", "1.0.0", "unknown", "fabricated"}:
         failures.append(f"{record.harness_id}: fabricated or missing tool version")
 
-    if record.invocation.working_directory and record.invocation.working_directory.startswith(
-        "/"
+    if (
+        record.invocation.working_directory
+        and record.invocation.working_directory.startswith("/")
     ):
         failures.append(f"{record.harness_id}: working_directory must be repo-relative")
 
-    for artifact in record.artifacts:
-        if artifact.hashes is None or not artifact.hashes.get("sha256"):
-            failures.append(f"{record.harness_id}: artifact {artifact.path} missing sha256")
+    failures.extend(
+        f"{record.harness_id}: artifact {artifact.path} missing sha256"
+        for artifact in record.artifacts
+        if artifact.hashes is None or not artifact.hashes.get("sha256")
+    )
 
-    if record.stdout_artifact is None or record.stderr_artifact is None:
-        # Runner-produced records must include logs; legacy records may omit them.
-        if record.property_bag and record.property_bag.get("registry.harness_id"):
-            failures.append(f"{record.harness_id}: missing stdout/stderr artifacts")
+    has_registry_id = bool(
+        record.property_bag and record.property_bag.get("registry.harness_id")
+    )
+    if (
+        record.stdout_artifact is None or record.stderr_artifact is None
+    ) and has_registry_id:
+        # Runner-produced records must include logs; legacy may omit them.
+        failures.append(f"{record.harness_id}: missing stdout/stderr artifacts")
 
-    if require_blocking_pass and harness.get("blocks_release") and record.status != "pass":
+    if (
+        require_blocking_pass
+        and harness.get("blocks_release")
+        and record.status != "pass"
+    ):
         failures.append(
             f"{record.harness_id}: blocking harness status is {record.status}, not pass"
         )
 
     if record.status == "not_applicable" and harness.get("blocks_release"):
-        failures.append(f"{record.harness_id}: blocking harness cannot be not_applicable")
+        failures.append(
+            f"{record.harness_id}: blocking harness cannot be not_applicable"
+        )
 
     if record.status == "skip" and harness.get("blocks_release"):
         failures.append(f"{record.harness_id}: blocking harness cannot be skip")
@@ -176,9 +202,11 @@ def recertify_foundation(
     repo_root: Path | None = None,
     registry_path: Path | None = None,
 ) -> dict[str, Any]:
-    """Run foundation closure harnesses and write a supersession certification record."""
+    """Run foundation closure harnesses; write supersession certification."""
     root = repo_root or Path.cwd()
-    registry = load_registry(registry_path or (root / "contracts" / "harness-registry.json"))
+    registry = load_registry(
+        registry_path or (root / "contracts" / "harness-registry.json")
+    )
     subject_sha = get_git_commit_sha(root)
     closure = foundation_closure(registry)
 
@@ -218,13 +246,15 @@ def recertify_foundation(
             }
             for record in records
         ],
-        "supersedes": "prior local foundation claims for Todos 1-4 and P0 inventory-only reports",
+        "supersedes": (
+            "prior local foundation claims for Todos 1-4 and P0 inventory-only reports"
+        ),
     }
 
     out_dir = root / ".omo" / "evidence" / "task-5-full-product-implementation"
     out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / "foundation-recertification.json"
-    out_path.write_text(f"{json.dumps(report, indent=2)}\n", encoding="utf-8")
+    _ = out_path.write_text(f"{json.dumps(report, indent=2)}\n", encoding="utf-8")
 
     if not certified:
         raise CertificationError(

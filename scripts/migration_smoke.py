@@ -173,7 +173,9 @@ def main() -> int:
     end_time = datetime.now(UTC)
 
     artifacts = [
-        Artifact(path="alembic.ini", hashes={"sha256": hash_file(repo_root / "alembic.ini")}),
+        Artifact(
+            path="alembic.ini", hashes={"sha256": hash_file(repo_root / "alembic.ini")}
+        ),
         Artifact(path="backend/migrations"),
     ]
 

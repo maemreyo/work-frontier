@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
-
-from datetime import UTC, datetime
 
 from work_frontier.contracts.evidence_record import (
     Artifact,
@@ -54,7 +53,7 @@ def test_get_tool_version_does_not_fabricate() -> None:
     assert version
     assert version != "1.0.0"
     with pytest.raises(LookupError):
-        get_tool_version("definitely-not-a-real-tool-xyz")
+        _ = get_tool_version("definitely-not-a-real-tool-xyz")
 
 
 def test_validate_evidence_rejects_fabricated_version_and_stale_subject() -> None:

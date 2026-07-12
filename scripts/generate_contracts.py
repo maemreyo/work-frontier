@@ -133,7 +133,10 @@ def main(arguments: list[str]) -> int:
         _ = write_evidence(
             harness_id="WF-HAR-CONTRACT-05",
             status=status,
-            command=f"uv run python scripts/generate_contracts.py{' ' + ' '.join(arguments) if arguments else ''}",
+            command=(
+                "uv run python scripts/generate_contracts.py"
+                + (f" {' '.join(arguments)}" if arguments else "")
+            ),
             exit_code=exit_code,
             working_directory=str(repo_root),
             start_time=start_time,

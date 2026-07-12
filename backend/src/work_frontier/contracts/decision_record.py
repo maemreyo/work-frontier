@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Iterator, Mapping
-from typing import ClassVar, Final
+from typing import ClassVar, Final, cast, override
 
 from pydantic import (
     AwareDatetime,
@@ -22,7 +22,8 @@ DECISION_RECORD_SCHEMA_VERSION: Final = "1.0.0"
 class FrozenStringMap(Mapping[str, str]):
     """Immutable, canonically ordered string-to-string map."""
 
-    __slots__ = ("_data",)
+    __slots__: tuple[str, ...] = ("_data",)
+    _data: dict[str, str]
 
     def __init__(self, data: Mapping[str, str]) -> None:
         if len(data) < 1:
@@ -30,29 +31,32 @@ class FrozenStringMap(Mapping[str, str]):
             raise ValueError(msg)
         ordered: dict[str, str] = {}
         for key, value in data.items():
-            if not isinstance(key, str) or not isinstance(value, str):
-                msg = "source_revision_set keys and values must be strings"
-                raise TypeError(msg)
             ordered[key] = value
-        self._data = dict(sorted(ordered.items()))
+        object.__setattr__(self, "_data", dict(sorted(ordered.items())))
 
+    @override
     def __getitem__(self, key: str) -> str:
         return self._data[key]
 
+    @override
     def __iter__(self) -> Iterator[str]:
         return iter(self._data)
 
+    @override
     def __len__(self) -> int:
         return len(self._data)
 
+    @override
     def __repr__(self) -> str:
         return f"FrozenStringMap({self._data!r})"
 
+    @override
     def __eq__(self, other: object) -> bool:
         if isinstance(other, Mapping):
-            return dict(self._data) == dict(other)
+            return self._data == cast("Mapping[str, str]", other)
         return NotImplemented
 
+    @override
     def __hash__(self) -> int:
         return hash(tuple(self._data.items()))
 

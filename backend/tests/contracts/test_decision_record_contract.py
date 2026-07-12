@@ -28,7 +28,7 @@ def test_decision_record_round_trip_when_complete_envelope_is_supplied() -> None
         correlation_id="trace-01",
         normalized_snapshot_id="snapshot-01",
         normalized_snapshot_hash=HASH,
-        source_revision_set={"github:issue:1": "revision-01"},
+        source_revision_set={"github:issue:1": "revision-01"},  # pyright: ignore[reportArgumentType]
         graph_revision="graph-01",
         policy_bundle_id="policy-01",
         policy_bundle_hash=HASH,
@@ -78,7 +78,7 @@ def test_decision_record_source_revision_set_is_immutable() -> None:
         correlation_id="trace-01",
         normalized_snapshot_id="snapshot-01",
         normalized_snapshot_hash=HASH,
-        source_revision_set={"github:issue:1": "revision-01", "backend": "abc123"},
+        source_revision_set={"github:issue:1": "revision-01", "backend": "abc123"},  # pyright: ignore[reportArgumentType]
         graph_revision="graph-01",
         policy_bundle_id="policy-01",
         policy_bundle_hash=HASH,
@@ -91,11 +91,11 @@ def test_decision_record_source_revision_set_is_immutable() -> None:
 
     # Then nested source revisions cannot be mutated after construction
     with pytest.raises(TypeError):
-        record.source_revision_set["backend"] = "changed"  # type: ignore[index]
+        record.source_revision_set["backend"] = "changed"  # pyright: ignore[reportIndexIssue]
 
     # And field reassignment is blocked by the frozen model
     with pytest.raises(ValidationError):
-        record.source_revision_set = {"backend": "changed"}  # type: ignore[misc]
+        record.source_revision_set = {"backend": "changed"}  # pyright: ignore[reportAttributeAccessIssue]
 
 
 def test_decision_record_canonical_json_is_deterministic() -> None:
@@ -110,7 +110,7 @@ def test_decision_record_canonical_json_is_deterministic() -> None:
         correlation_id="trace-01",
         normalized_snapshot_id="snapshot-01",
         normalized_snapshot_hash=HASH,
-        source_revision_set={"github:issue:1": "revision-01", "backend": "abc123"},
+        source_revision_set={"github:issue:1": "revision-01", "backend": "abc123"},  # pyright: ignore[reportArgumentType]
         graph_revision="graph-01",
         policy_bundle_id="policy-01",
         policy_bundle_hash=HASH,
@@ -131,7 +131,7 @@ def test_decision_record_canonical_json_is_deterministic() -> None:
         correlation_id="trace-01",
         normalized_snapshot_id="snapshot-01",
         normalized_snapshot_hash=HASH,
-        source_revision_set={"backend": "abc123", "github:issue:1": "revision-01"},
+        source_revision_set={"backend": "abc123", "github:issue:1": "revision-01"},  # pyright: ignore[reportArgumentType]
         graph_revision="graph-01",
         policy_bundle_id="policy-01",
         policy_bundle_hash=HASH,
