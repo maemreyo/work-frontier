@@ -2,20 +2,20 @@
   "schema_version": "1.0.0",
   "harness_id": "WF-HAR-STATIC-02",
   "status": "pass",
-  "run_id": "run-1783848446447",
-  "subject_sha": "35e29a933534452757fe0515e29af7e6c6189b52",
+  "run_id": "run-1783854633871",
+  "subject_sha": "e8c3cf80bb3c8bf7d8fc1f6bf57bbd5120f6fd0e",
   "invocation": {
     "command": "uv run python scripts/check_import_boundaries.py",
     "exit_code": 0,
     "working_directory": ".",
-    "start_time": "2026-07-12T09:27:26.415674Z",
-    "end_time": "2026-07-12T09:27:26.425918Z",
-    "duration_seconds": 0.010244
+    "start_time": "2026-07-12T11:10:33.833438Z",
+    "end_time": "2026-07-12T11:10:33.848429Z",
+    "duration_seconds": 0.014991
   },
   "tool": {
     "name": "check_import_boundaries",
     "version": "3.13.5",
-    "commit_sha": "35e29a933534452757fe0515e29af7e6c6189b52"
+    "commit_sha": "e8c3cf80bb3c8bf7d8fc1f6bf57bbd5120f6fd0e"
   },
   "environment": {
     "python": "3.13.5",
@@ -64,19 +64,19 @@
     {
       "path": "backend/src/work_frontier/contracts/evidence_writer.py",
       "hashes": {
-        "sha256": "d441adcca3bbaf951e36596c9b7dfc2d9e56f24ceacaf24ce7eba0ac554ccc01"
+        "sha256": "04651e2bc93b5fe1d898b2495e3699c19072544610848bc0f785cb42ce98386b"
       }
     },
     {
       "path": "backend/src/work_frontier/contracts/harness_registry.py",
       "hashes": {
-        "sha256": "1eef5b12010d6e66f97a7b2e0184c35b919c1d75a0d7f09734a6ef16317d9a7c"
+        "sha256": "05a31660954a3fd7d2aae8e3d3f17e96ecd7de54f7c836e158886483be63ea29"
       }
     },
     {
       "path": "backend/src/work_frontier/contracts/harness_runner.py",
       "hashes": {
-        "sha256": "4117c6c703ec48ddb852283f678eaf49f8a0db368fc043d728fde15882e06684"
+        "sha256": "78240188e1f01503bbc75d68416317640f4fcb07c4ec2710682856eafe169da9"
       }
     },
     {

@@ -1,0 +1,77 @@
+{
+  "schema_version": "1.0.0",
+  "harness_id": "WF-HAR-INTEG-02",
+  "status": "pass",
+  "run_id": "run-1783854645062",
+  "subject_sha": "e8c3cf80bb3c8bf7d8fc1f6bf57bbd5120f6fd0e",
+  "invocation": {
+    "command": "python minio_roundtrip.py",
+    "exit_code": 0,
+    "working_directory": ".",
+    "start_time": "2026-07-12T11:10:44.774490Z",
+    "end_time": "2026-07-12T11:10:45.032558Z",
+    "duration_seconds": 0.258068
+  },
+  "tool": {
+    "name": "minio",
+    "version": "1.43.46",
+    "commit_sha": "e8c3cf80bb3c8bf7d8fc1f6bf57bbd5120f6fd0e"
+  },
+  "environment": {
+    "python": "3.13.5",
+    "os": "darwin-arm64",
+    "platform": "macOS-26.4.1-arm64-arm-64bit-Mach-O",
+    "node": "22.23.1",
+    "pnpm": "10.20.0"
+  },
+  "artifacts": [
+    {
+      "path": "s3://work-frontier-smoke/[cleaned]",
+      "hashes": {
+        "sha256": "f65d5dc8b65c8d4c18234fd374b8c74f2c57e8a7efbe9e4bfb7f1174fa0291a4"
+      }
+    }
+  ],
+  "results": [
+    {
+      "kind": "create_bucket",
+      "passed": true,
+      "detail": "Created bucket: work-frontier-smoke-1953d21f3834490b913734d7ea21625f"
+    },
+    {
+      "kind": "put_object",
+      "passed": true,
+      "detail": "Uploaded object: smoke/hello.txt"
+    },
+    {
+      "kind": "get_object",
+      "passed": true,
+      "detail": "Retrieved object: smoke/hello.txt"
+    },
+    {
+      "kind": "verify_payload",
+      "passed": true,
+      "detail": "Payload matches expected"
+    },
+    {
+      "kind": "delete_object",
+      "passed": true,
+      "detail": "Deleted object: smoke/hello.txt"
+    },
+    {
+      "kind": "delete_bucket",
+      "passed": true,
+      "detail": "Deleted bucket: work-frontier-smoke-1953d21f3834490b913734d7ea21625f"
+    }
+  ],
+  "stdout_artifact": null,
+  "stderr_artifact": null,
+  "property_bag": {
+    "minio_roundtrip": {
+      "endpoint_configured": true,
+      "bucket_name": null,
+      "object_key": "smoke/hello.txt",
+      "error": null
+    }
+  }
+}

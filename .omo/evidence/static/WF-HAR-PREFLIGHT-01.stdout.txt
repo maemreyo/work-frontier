@@ -1,0 +1,253 @@
+{
+  "gate": "ADR-006 foundation contracts",
+  "status": "passed",
+  "contracts": [
+    "WF-P0-01",
+    "WF-P0-02",
+    "WF-P0-03",
+    "WF-P0-04",
+    "WF-P0-05",
+    "WF-P0-06",
+    "WF-P0-07"
+  ],
+  "positive_fixture_count": 7,
+  "negative_fixture_count": 16,
+  "negative_fixture_results": [
+    {
+      "contract_id": "WF-P0-01",
+      "scenario": "domain-io",
+      "result": "rejected_by_contract",
+      "failure_id": "domain_io_dependency",
+      "expected_failure_id": "domain_io_dependency"
+    },
+    {
+      "contract_id": "WF-P0-01",
+      "scenario": "taxonomy-drift",
+      "result": "rejected_by_contract",
+      "failure_id": "taxonomy_drift",
+      "expected_failure_id": "taxonomy_drift"
+    },
+    {
+      "contract_id": "WF-P0-01",
+      "scenario": "wrong-port-owner",
+      "result": "rejected_by_contract",
+      "failure_id": "wrong_port_owner",
+      "expected_failure_id": "wrong_port_owner"
+    },
+    {
+      "contract_id": "WF-P0-02",
+      "scenario": "altered-reproducibility-identity",
+      "result": "rejected_by_contract",
+      "failure_id": "malformed_source_revision_set",
+      "expected_failure_id": "malformed_source_revision_set"
+    },
+    {
+      "contract_id": "WF-P0-02",
+      "scenario": "missing-reproducibility-identity",
+      "result": "rejected_by_contract",
+      "failure_id": "missing_field_source_revision_set",
+      "expected_failure_id": "missing_field_source_revision_set"
+    },
+    {
+      "contract_id": "WF-P0-03",
+      "scenario": "cross-scope-access",
+      "result": "rejected_by_contract",
+      "failure_id": "cross_scope_access",
+      "expected_failure_id": "cross_scope_access"
+    },
+    {
+      "contract_id": "WF-P0-03",
+      "scenario": "missing-workspace-context",
+      "result": "rejected_by_contract",
+      "failure_id": "missing_workspace_context",
+      "expected_failure_id": "missing_workspace_context"
+    },
+    {
+      "contract_id": "WF-P0-04",
+      "scenario": "audit-envelope-tamper",
+      "result": "rejected_by_contract",
+      "failure_id": "audit_envelope_tamper",
+      "expected_failure_id": "audit_envelope_tamper"
+    },
+    {
+      "contract_id": "WF-P0-04",
+      "scenario": "missing-anchor-proof",
+      "result": "rejected_by_contract",
+      "failure_id": "missing_anchor_proof",
+      "expected_failure_id": "missing_anchor_proof"
+    },
+    {
+      "contract_id": "WF-P0-05",
+      "scenario": "partial-internal-commit",
+      "result": "rejected_by_contract",
+      "failure_id": "partial_internal_commit",
+      "expected_failure_id": "partial_internal_commit"
+    },
+    {
+      "contract_id": "WF-P0-05",
+      "scenario": "stale-outbox-fingerprint",
+      "result": "rejected_by_contract",
+      "failure_id": "stale_outbox_fingerprint",
+      "expected_failure_id": "stale_outbox_fingerprint"
+    },
+    {
+      "contract_id": "WF-P0-06",
+      "scenario": "duplicate-claim",
+      "result": "rejected_by_contract",
+      "failure_id": "duplicate_claim",
+      "expected_failure_id": "duplicate_claim"
+    },
+    {
+      "contract_id": "WF-P0-06",
+      "scenario": "lease-loss-completion",
+      "result": "rejected_by_contract",
+      "failure_id": "lease_loss_completion",
+      "expected_failure_id": "lease_loss_completion"
+    },
+    {
+      "contract_id": "WF-P0-06",
+      "scenario": "poison-replay",
+      "result": "rejected_by_contract",
+      "failure_id": "poison_replay",
+      "expected_failure_id": "poison_replay"
+    },
+    {
+      "contract_id": "WF-P0-07",
+      "scenario": "missing-failure-reporting",
+      "result": "rejected_by_contract",
+      "failure_id": "missing_failure_reporting",
+      "expected_failure_id": "missing_failure_reporting"
+    },
+    {
+      "contract_id": "WF-P0-07",
+      "scenario": "outlier-removal",
+      "result": "rejected_by_contract",
+      "failure_id": "outlier_removal",
+      "expected_failure_id": "outlier_removal"
+    }
+  ],
+  "failures": [],
+  "scope": "pre-bootstrap documentation-contract validation with contract-specific executable mutations"
+}
+TAP version 13
+# Subtest: contract-specific baselines
+    # Subtest: each WF-P0-* has a distinct baseline document shape
+    ok 1 - each WF-P0-* has a distinct baseline document shape
+      ---
+      duration_ms: 0.481917
+      type: 'test'
+      ...
+    # Subtest: every positive baseline passes its own validator
+    ok 2 - every positive baseline passes its own validator
+      ---
+      duration_ms: 1.351541
+      type: 'test'
+      ...
+    1..2
+ok 1 - contract-specific baselines
+  ---
+  duration_ms: 2.306959
+  type: 'suite'
+  ...
+# Subtest: negative fixture execution
+    # Subtest: all on-disk negative fixtures reject with expected_failure_id
+    ok 1 - all on-disk negative fixtures reject with expected_failure_id
+      ---
+      duration_ms: 7.54125
+      type: 'test'
+      ...
+    # Subtest: unexecuted fixture (missing mutation) fails the gate with unexecuted_fixture
+    ok 2 - unexecuted fixture (missing mutation) fails the gate with unexecuted_fixture
+      ---
+      duration_ms: 0.165667
+      type: 'test'
+      ...
+    # Subtest: false positive mutation fails the gate
+    ok 3 - false positive mutation fails the gate
+      ---
+      duration_ms: 0.113334
+      type: 'test'
+      ...
+    # Subtest: wrong expected_failure_id fails the gate
+    ok 4 - wrong expected_failure_id fails the gate
+      ---
+      duration_ms: 0.09025
+      type: 'test'
+      ...
+    1..4
+ok 2 - negative fixture execution
+  ---
+  duration_ms: 8.098917
+  type: 'suite'
+  ...
+# Subtest: contract-specific semantics
+    # Subtest: WF-P0-01 rejects domain I/O, not as DecisionRecord extra field
+    ok 1 - WF-P0-01 rejects domain I/O, not as DecisionRecord extra field
+      ---
+      duration_ms: 0.228792
+      type: 'test'
+      ...
+    # Subtest: WF-P0-03 rejects cross-scope access on tenancy model
+    ok 2 - WF-P0-03 rejects cross-scope access on tenancy model
+      ---
+      duration_ms: 0.170625
+      type: 'test'
+      ...
+    # Subtest: WF-P0-04 rejects unsigned audit anchor
+    ok 3 - WF-P0-04 rejects unsigned audit anchor
+      ---
+      duration_ms: 0.163958
+      type: 'test'
+      ...
+    # Subtest: WF-P0-05 rejects partial internal commit
+    ok 4 - WF-P0-05 rejects partial internal commit
+      ---
+      duration_ms: 0.180958
+      type: 'test'
+      ...
+    # Subtest: WF-P0-06 rejects poison replay without dead-letter
+    ok 5 - WF-P0-06 rejects poison replay without dead-letter
+      ---
+      duration_ms: 0.060166
+      type: 'test'
+      ...
+    # Subtest: WF-P0-07 rejects outlier removal before percentiles
+    ok 6 - WF-P0-07 rejects outlier removal before percentiles
+      ---
+      duration_ms: 0.049
+      type: 'test'
+      ...
+    # Subtest: DecisionRecord validator still rejects missing workspace_id
+    ok 7 - DecisionRecord validator still rejects missing workspace_id
+      ---
+      duration_ms: 0.044708
+      type: 'test'
+      ...
+    1..7
+ok 3 - contract-specific semantics
+  ---
+  duration_ms: 1.579
+  type: 'suite'
+  ...
+# Subtest: full gate integration
+    # Subtest: on-disk fixtures pass the full gate
+    ok 1 - on-disk fixtures pass the full gate
+      ---
+      duration_ms: 9.747917
+      type: 'test'
+      ...
+    1..1
+ok 4 - full gate integration
+  ---
+  duration_ms: 10.012875
+  type: 'suite'
+  ...
+1..4
+# tests 14
+# suites 4
+# pass 14
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 86.041084

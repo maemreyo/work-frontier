@@ -1,0 +1,40 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.1.1, pluggy-1.6.0 -- /Users/trung.ngo/Documents/zaob-dev/work-frontier/.venv/bin/python
+cachedir: .pytest_cache
+hypothesis profile 'default'
+rootdir: /Users/trung.ngo/Documents/zaob-dev/work-frontier
+configfile: pyproject.toml
+plugins: hypothesis-6.156.6
+collecting ... collected 19 items
+
+backend/tests/contracts/test_decision_record_contract.py::test_decision_record_round_trip_when_complete_envelope_is_supplied PASSED [  5%]
+backend/tests/contracts/test_decision_record_contract.py::test_decision_record_rejects_missing_workspace_when_validated PASSED [ 10%]
+backend/tests/contracts/test_decision_record_contract.py::test_decision_record_source_revision_set_is_immutable PASSED [ 15%]
+backend/tests/contracts/test_decision_record_contract.py::test_decision_record_canonical_json_is_deterministic PASSED [ 21%]
+backend/tests/contracts/test_decision_record_contract.py::test_decision_record_fixtures_cross_language_consistency[invalid-coerce-bool.json] PASSED [ 26%]
+backend/tests/contracts/test_decision_record_contract.py::test_decision_record_fixtures_cross_language_consistency[invalid-coerce-int.json] PASSED [ 31%]
+backend/tests/contracts/test_decision_record_contract.py::test_decision_record_fixtures_cross_language_consistency[invalid-empty-decision-id.json] PASSED [ 36%]
+backend/tests/contracts/test_decision_record_contract.py::test_decision_record_fixtures_cross_language_consistency[invalid-empty-source-revision-set.json] PASSED [ 42%]
+backend/tests/contracts/test_decision_record_contract.py::test_decision_record_fixtures_cross_language_consistency[invalid-missing-workspace-id.json] PASSED [ 47%]
+backend/tests/contracts/test_decision_record_contract.py::test_decision_record_fixtures_cross_language_consistency[invalid-naive-datetime.json] PASSED [ 52%]
+backend/tests/contracts/test_decision_record_contract.py::test_decision_record_fixtures_cross_language_consistency[invalid-non-hex-hash.json] PASSED [ 57%]
+backend/tests/contracts/test_decision_record_contract.py::test_decision_record_fixtures_cross_language_consistency[invalid-unknown-field.json] PASSED [ 63%]
+backend/tests/contracts/test_decision_record_contract.py::test_decision_record_fixtures_cross_language_consistency[invalid-uppercase-hash.json] PASSED [ 68%]
+backend/tests/contracts/test_decision_record_contract.py::test_decision_record_fixtures_cross_language_consistency[valid-maximal.json] PASSED [ 73%]
+backend/tests/contracts/test_decision_record_contract.py::test_decision_record_fixtures_cross_language_consistency[valid-minimal.json] PASSED [ 78%]
+backend/tests/contracts/test_decision_record_contract.py::test_decision_record_fixture_inventory_is_complete PASSED [ 84%]
+backend/tests/contracts/test_decision_record_contract.py::test_decision_record_valid_fixtures_have_golden_hashes PASSED [ 89%]
+backend/tests/contracts/test_decision_record_contract.py::test_decision_record_invalid_fixtures_cover_required_mutations PASSED [ 94%]
+backend/tests/contracts/test_decision_record_contract.py::test_decision_record_breaking_mutation_is_detected PASSED [100%]
+
+============================== 19 passed in 0.26s ==============================
+
+ RUN  v3.2.4 /Users/trung.ngo/Documents/zaob-dev/work-frontier/frontend
+
+ ✓ tests/contracts/decision-record.generated.test.ts (16 tests) 15ms
+
+ Test Files  1 passed (1)
+      Tests  16 passed (16)
+   Start at  18:10:41
+   Duration  525ms (transform 108ms, setup 0ms, collect 156ms, tests 15ms, environment 0ms, prepare 97ms)
+

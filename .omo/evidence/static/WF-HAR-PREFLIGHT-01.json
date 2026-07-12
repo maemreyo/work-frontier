@@ -1,0 +1,63 @@
+{
+  "schema_version": "1.0.0",
+  "harness_id": "WF-HAR-PREFLIGHT-01",
+  "status": "pass",
+  "run_id": "run-1783854626587",
+  "subject_sha": "e8c3cf80bb3c8bf7d8fc1f6bf57bbd5120f6fd0e",
+  "invocation": {
+    "command": "node .omo/preflight/adr-006/validate.mjs && node --test .omo/preflight/adr-006/validate.test.mjs",
+    "exit_code": 0,
+    "working_directory": ".",
+    "start_time": "2026-07-12T11:10:26.366473Z",
+    "end_time": "2026-07-12T11:10:26.559463Z",
+    "duration_seconds": 0.19299
+  },
+  "tool": {
+    "name": "preflight",
+    "version": "22.23.1",
+    "commit_sha": "e8c3cf80bb3c8bf7d8fc1f6bf57bbd5120f6fd0e"
+  },
+  "environment": {
+    "python": "3.13.5",
+    "os": "darwin-arm64",
+    "platform": "macOS-26.4.1-arm64-arm-64bit-Mach-O",
+    "node": "22.23.1",
+    "pnpm": "10.20.0"
+  },
+  "artifacts": [
+    {
+      "path": ".omo/evidence/preflight-adr-006/validation.json",
+      "hashes": {
+        "sha256": "8879212f000705b22641b14bd8d48ef7956e8a3e12be00ad785d2606b4de050e"
+      }
+    }
+  ],
+  "results": [
+    {
+      "kind": "harness_exit",
+      "passed": true,
+      "detail": "exit_code=0"
+    }
+  ],
+  "stdout_artifact": {
+    "path": ".omo/evidence/static/WF-HAR-PREFLIGHT-01.stdout.txt",
+    "hashes": {
+      "sha256": "5152693f35ccd77f87bf36d4287e85fd61d0461ac483b6f0f605d1790ae7924d"
+    }
+  },
+  "stderr_artifact": {
+    "path": ".omo/evidence/static/WF-HAR-PREFLIGHT-01.stderr.txt",
+    "hashes": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "property_bag": {
+    "registry.harness_id": "WF-HAR-PREFLIGHT-01",
+    "registry.blocks_release": true,
+    "registry.applicability": "standard",
+    "registry.status": "implemented",
+    "registry.command": "node .omo/preflight/adr-006/validate.mjs && node --test .omo/preflight/adr-006/validate.test.mjs",
+    "registry.artifact": ".omo/evidence/preflight-adr-006/validation.json",
+    "artifact.kind": "local-file"
+  }
+}

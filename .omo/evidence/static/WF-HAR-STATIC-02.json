@@ -1,0 +1,63 @@
+{
+  "schema_version": "1.0.0",
+  "harness_id": "WF-HAR-STATIC-02",
+  "status": "pass",
+  "run_id": "run-1783854634160",
+  "subject_sha": "e8c3cf80bb3c8bf7d8fc1f6bf57bbd5120f6fd0e",
+  "invocation": {
+    "command": "uv run python scripts/check_import_boundaries.py",
+    "exit_code": 0,
+    "working_directory": ".",
+    "start_time": "2026-07-12T11:10:33.690626Z",
+    "end_time": "2026-07-12T11:10:34.134420Z",
+    "duration_seconds": 0.443794
+  },
+  "tool": {
+    "name": "check_import_boundaries",
+    "version": "3.13.5",
+    "commit_sha": "e8c3cf80bb3c8bf7d8fc1f6bf57bbd5120f6fd0e"
+  },
+  "environment": {
+    "python": "3.13.5",
+    "os": "darwin-arm64",
+    "platform": "macOS-26.4.1-arm64-arm-64bit-Mach-O",
+    "node": "22.23.1",
+    "pnpm": "10.20.0"
+  },
+  "artifacts": [
+    {
+      "path": ".omo/evidence/static/import-boundaries.json",
+      "hashes": {
+        "sha256": "ccbc7998149f76498c913f8e5e46c1aad374a35a7d0c7342a33f6ae632662d7d"
+      }
+    }
+  ],
+  "results": [
+    {
+      "kind": "harness_exit",
+      "passed": true,
+      "detail": "exit_code=0"
+    }
+  ],
+  "stdout_artifact": {
+    "path": ".omo/evidence/static/WF-HAR-STATIC-02.stdout.txt",
+    "hashes": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "stderr_artifact": {
+    "path": ".omo/evidence/static/WF-HAR-STATIC-02.stderr.txt",
+    "hashes": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "property_bag": {
+    "registry.harness_id": "WF-HAR-STATIC-02",
+    "registry.blocks_release": true,
+    "registry.applicability": "standard",
+    "registry.status": "implemented",
+    "registry.command": "uv run python scripts/check_import_boundaries.py",
+    "registry.artifact": ".omo/evidence/static/import-boundaries.json",
+    "artifact.kind": "local-file"
+  }
+}

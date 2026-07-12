@@ -1,0 +1,101 @@
+{
+  "schema_version": "1.0.0",
+  "harness_id": "WF-HAR-INTEG-01",
+  "status": "pass",
+  "run_id": "run-1783854643778",
+  "subject_sha": "e8c3cf80bb3c8bf7d8fc1f6bf57bbd5120f6fd0e",
+  "invocation": {
+    "command": "python migration_smoke.py",
+    "exit_code": 0,
+    "working_directory": ".",
+    "start_time": "2026-07-12T11:10:43.165438Z",
+    "end_time": "2026-07-12T11:10:43.735471Z",
+    "duration_seconds": 0.570033
+  },
+  "tool": {
+    "name": "migration-smoke",
+    "version": "1.18.5",
+    "commit_sha": "e8c3cf80bb3c8bf7d8fc1f6bf57bbd5120f6fd0e"
+  },
+  "environment": {
+    "python": "3.13.5",
+    "os": "darwin-arm64",
+    "platform": "macOS-26.4.1-arm64-arm-64bit-Mach-O",
+    "node": "22.23.1",
+    "pnpm": "10.20.0"
+  },
+  "artifacts": [
+    {
+      "path": "alembic.ini",
+      "hashes": {
+        "sha256": "bc5139eff10b7fd462a9c28c29d6d1caefcab2db84530c64581e9c4b0b1cbc32"
+      }
+    },
+    {
+      "path": "infra/alembic/versions/0001_bootstrap_marker.py",
+      "hashes": {
+        "sha256": "fd5bc902437bd27c2d81e8961331da2a2397dcecd930e80b9a11f6e28773da61"
+      }
+    }
+  ],
+  "results": [
+    {
+      "kind": "alembic_upgrade_head",
+      "passed": true,
+      "detail": "Upgraded to head"
+    },
+    {
+      "kind": "marker_table_check",
+      "passed": true,
+      "detail": "Marker table exists after upgrade"
+    },
+    {
+      "kind": "seed_marker",
+      "passed": true,
+      "detail": "Seeded marker data"
+    },
+    {
+      "kind": "seed_verified",
+      "passed": true,
+      "detail": "Seed row confirmed present"
+    },
+    {
+      "kind": "failed_revision_rollback",
+      "passed": true,
+      "detail": "Failed Alembic revision rolled back schema and version"
+    },
+    {
+      "kind": "seed_preserved_after_failure",
+      "passed": true,
+      "detail": "Seed row survives failed revision"
+    },
+    {
+      "kind": "alembic_downgrade_base",
+      "passed": true,
+      "detail": "Downgraded to base"
+    },
+    {
+      "kind": "marker_table_removed",
+      "passed": true,
+      "detail": "Marker table removed after downgrade"
+    },
+    {
+      "kind": "alembic_reupgrade_head",
+      "passed": true,
+      "detail": "Re-upgraded to head"
+    },
+    {
+      "kind": "marker_table_restored",
+      "passed": true,
+      "detail": "Marker table restored after re-upgrade"
+    }
+  ],
+  "stdout_artifact": null,
+  "stderr_artifact": null,
+  "property_bag": {
+    "migration_smoke": {
+      "database_url_configured": true,
+      "error": null
+    }
+  }
+}

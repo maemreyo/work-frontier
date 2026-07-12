@@ -1,0 +1,1 @@
+DATABASE_URL=postgresql+psycopg://work_frontier:work_frontier@localhost:54329/work_frontier uv run python scripts/migration_smoke.py

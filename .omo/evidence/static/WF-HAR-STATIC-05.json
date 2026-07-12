@@ -1,0 +1,63 @@
+{
+  "schema_version": "1.0.0",
+  "harness_id": "WF-HAR-STATIC-05",
+  "status": "pass",
+  "run_id": "run-1783854639000",
+  "subject_sha": "e8c3cf80bb3c8bf7d8fc1f6bf57bbd5120f6fd0e",
+  "invocation": {
+    "command": "gitleaks detect --source . --report-format json --report-path .omo/evidence/static/secrets.json",
+    "exit_code": 0,
+    "working_directory": ".",
+    "start_time": "2026-07-12T11:10:38.163277Z",
+    "end_time": "2026-07-12T11:10:38.969874Z",
+    "duration_seconds": 0.806597
+  },
+  "tool": {
+    "name": "gitleaks",
+    "version": "8.30.1",
+    "commit_sha": "e8c3cf80bb3c8bf7d8fc1f6bf57bbd5120f6fd0e"
+  },
+  "environment": {
+    "python": "3.13.5",
+    "os": "darwin-arm64",
+    "platform": "macOS-26.4.1-arm64-arm-64bit-Mach-O",
+    "node": "22.23.1",
+    "pnpm": "10.20.0"
+  },
+  "artifacts": [
+    {
+      "path": ".omo/evidence/static/secrets.json",
+      "hashes": {
+        "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+      }
+    }
+  ],
+  "results": [
+    {
+      "kind": "harness_exit",
+      "passed": true,
+      "detail": "exit_code=0"
+    }
+  ],
+  "stdout_artifact": {
+    "path": ".omo/evidence/static/WF-HAR-STATIC-05.stdout.txt",
+    "hashes": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "stderr_artifact": {
+    "path": ".omo/evidence/static/WF-HAR-STATIC-05.stderr.txt",
+    "hashes": {
+      "sha256": "043adb9dbd05c8e0225edbce4e9b12ae8de62d7d257762ef2911c2a01d7b7e41"
+    }
+  },
+  "property_bag": {
+    "registry.harness_id": "WF-HAR-STATIC-05",
+    "registry.blocks_release": true,
+    "registry.applicability": "standard",
+    "registry.status": "implemented",
+    "registry.command": "gitleaks detect --source . --report-format json --report-path .omo/evidence/static/secrets.json",
+    "registry.artifact": ".omo/evidence/static/secrets.json",
+    "artifact.kind": "local-file"
+  }
+}
