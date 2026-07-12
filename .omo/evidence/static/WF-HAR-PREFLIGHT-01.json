@@ -2,20 +2,21 @@
   "schema_version": "1.0.0",
   "harness_id": "WF-HAR-PREFLIGHT-01",
   "status": "pass",
-  "run_id": "run-1783854626587",
-  "subject_sha": "e8c3cf80bb3c8bf7d8fc1f6bf57bbd5120f6fd0e",
+  "run_id": "run-1783860263511",
+  "subject_sha": "6b83fdc6e0c9516184a1ff61b81906226a23c7ec",
+  "subject_tree_sha": "e78d6e5756b40bc8bd67d35c8943986c05b5029a",
   "invocation": {
     "command": "node .omo/preflight/adr-006/validate.mjs && node --test .omo/preflight/adr-006/validate.test.mjs",
     "exit_code": 0,
     "working_directory": ".",
-    "start_time": "2026-07-12T11:10:26.366473Z",
-    "end_time": "2026-07-12T11:10:26.559463Z",
-    "duration_seconds": 0.19299
+    "start_time": "2026-07-12T12:44:23.282211Z",
+    "end_time": "2026-07-12T12:44:23.472466Z",
+    "duration_seconds": 0.190255
   },
   "tool": {
     "name": "preflight",
     "version": "22.23.1",
-    "commit_sha": "e8c3cf80bb3c8bf7d8fc1f6bf57bbd5120f6fd0e"
+    "commit_sha": "6b83fdc6e0c9516184a1ff61b81906226a23c7ec"
   },
   "environment": {
     "python": "3.13.5",
@@ -42,7 +43,7 @@
   "stdout_artifact": {
     "path": ".omo/evidence/static/WF-HAR-PREFLIGHT-01.stdout.txt",
     "hashes": {
-      "sha256": "5152693f35ccd77f87bf36d4287e85fd61d0461ac483b6f0f605d1790ae7924d"
+      "sha256": "10b66e679615410322d7b52b1d79e88f1371cc0340e8a1c2f36594eefc7631ef"
     }
   },
   "stderr_artifact": {

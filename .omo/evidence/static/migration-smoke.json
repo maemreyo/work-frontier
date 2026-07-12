@@ -2,20 +2,21 @@
   "schema_version": "1.0.0",
   "harness_id": "WF-HAR-INTEG-01",
   "status": "pass",
-  "run_id": "run-1783854643778",
-  "subject_sha": "e8c3cf80bb3c8bf7d8fc1f6bf57bbd5120f6fd0e",
+  "run_id": "run-1783860275235",
+  "subject_sha": "6b83fdc6e0c9516184a1ff61b81906226a23c7ec",
+  "subject_tree_sha": "e78d6e5756b40bc8bd67d35c8943986c05b5029a",
   "invocation": {
     "command": "python migration_smoke.py",
     "exit_code": 0,
     "working_directory": ".",
-    "start_time": "2026-07-12T11:10:43.165438Z",
-    "end_time": "2026-07-12T11:10:43.735471Z",
-    "duration_seconds": 0.570033
+    "start_time": "2026-07-12T12:44:34.823187Z",
+    "end_time": "2026-07-12T12:44:35.183416Z",
+    "duration_seconds": 0.360229
   },
   "tool": {
     "name": "migration-smoke",
     "version": "1.18.5",
-    "commit_sha": "e8c3cf80bb3c8bf7d8fc1f6bf57bbd5120f6fd0e"
+    "commit_sha": "6b83fdc6e0c9516184a1ff61b81906226a23c7ec"
   },
   "environment": {
     "python": "3.13.5",

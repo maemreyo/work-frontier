@@ -2,20 +2,21 @@
   "schema_version": "1.0.0",
   "harness_id": "WF-HAR-CONTRACT-05",
   "status": "pass",
-  "run_id": "run-1783854642548",
-  "subject_sha": "e8c3cf80bb3c8bf7d8fc1f6bf57bbd5120f6fd0e",
+  "run_id": "run-1783860274330",
+  "subject_sha": "6b83fdc6e0c9516184a1ff61b81906226a23c7ec",
+  "subject_tree_sha": "e78d6e5756b40bc8bd67d35c8943986c05b5029a",
   "invocation": {
     "command": "uv run python scripts/generate_contracts.py --check && uv run pytest backend/tests/contracts/test_decision_record_contract.py -v && pnpm --dir frontend exec vitest run tests/contracts/decision-record.generated.test.ts",
     "exit_code": 0,
     "working_directory": ".",
-    "start_time": "2026-07-12T11:10:39.235520Z",
-    "end_time": "2026-07-12T11:10:42.525078Z",
-    "duration_seconds": 3.289558
+    "start_time": "2026-07-12T12:44:31.881111Z",
+    "end_time": "2026-07-12T12:44:34.288305Z",
+    "duration_seconds": 2.407194
   },
   "tool": {
     "name": "generate_contracts",
     "version": "3.13.5",
-    "commit_sha": "e8c3cf80bb3c8bf7d8fc1f6bf57bbd5120f6fd0e"
+    "commit_sha": "6b83fdc6e0c9516184a1ff61b81906226a23c7ec"
   },
   "environment": {
     "python": "3.13.5",
@@ -28,7 +29,7 @@
     {
       "path": ".omo/evidence/static/contracts.json",
       "hashes": {
-        "sha256": "42a8a3fa282c606e48083b24063373117ed188865e6e5df68cc8991cd495ca54"
+        "sha256": "225416ee87bad2b8f624c15e6dad3d9e478f2238396d15e2409c2b4de0b47095"
       }
     }
   ],
@@ -42,7 +43,7 @@
   "stdout_artifact": {
     "path": ".omo/evidence/static/WF-HAR-CONTRACT-05.stdout.txt",
     "hashes": {
-      "sha256": "473be238d3b07545bb426771fa3b9eac1c5dc645e446e11f244dd73e956a3eb1"
+      "sha256": "c2d708229b2f26428698f07bd9fb4c644a7c732a5f4fcf6393f6ceb76b77c57f"
     }
   },
   "stderr_artifact": {

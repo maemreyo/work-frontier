@@ -1,6 +1,5 @@
 INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
 INFO  [alembic.runtime.migration] Will assume transactional DDL.
-INFO  [alembic.runtime.migration] Running upgrade  -> 0001_bootstrap_marker, Create the bootstrap migration marker.
 INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
 INFO  [alembic.runtime.migration] Will assume transactional DDL.
 INFO  [alembic.runtime.migration] Running upgrade 0001_bootstrap_marker -> 0002_failing_revision_probe, Temporary failing revision for smoke probe.

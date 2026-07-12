@@ -27,14 +27,14 @@ backend/tests/contracts/test_decision_record_contract.py::test_decision_record_v
 backend/tests/contracts/test_decision_record_contract.py::test_decision_record_invalid_fixtures_cover_required_mutations PASSED [ 94%]
 backend/tests/contracts/test_decision_record_contract.py::test_decision_record_breaking_mutation_is_detected PASSED [100%]
 
-============================== 19 passed in 0.26s ==============================
+============================== 19 passed in 0.19s ==============================
 
  RUN  v3.2.4 /Users/trung.ngo/Documents/zaob-dev/work-frontier/frontend
 
- ✓ tests/contracts/decision-record.generated.test.ts (16 tests) 15ms
+ ✓ tests/contracts/decision-record.generated.test.ts (16 tests) 7ms
 
  Test Files  1 passed (1)
       Tests  16 passed (16)
-   Start at  18:10:41
-   Duration  525ms (transform 108ms, setup 0ms, collect 156ms, tests 15ms, environment 0ms, prepare 97ms)
+   Start at  19:44:33
+   Duration  384ms (transform 98ms, setup 0ms, collect 130ms, tests 7ms, environment 0ms, prepare 60ms)
 

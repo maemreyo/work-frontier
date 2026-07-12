@@ -2,20 +2,21 @@
   "schema_version": "1.0.0",
   "harness_id": "WF-HAR-INTEG-02",
   "status": "pass",
-  "run_id": "run-1783854645062",
-  "subject_sha": "e8c3cf80bb3c8bf7d8fc1f6bf57bbd5120f6fd0e",
+  "run_id": "run-1783860276252",
+  "subject_sha": "6b83fdc6e0c9516184a1ff61b81906226a23c7ec",
+  "subject_tree_sha": "e78d6e5756b40bc8bd67d35c8943986c05b5029a",
   "invocation": {
     "command": "python minio_roundtrip.py",
     "exit_code": 0,
     "working_directory": ".",
-    "start_time": "2026-07-12T11:10:44.774490Z",
-    "end_time": "2026-07-12T11:10:45.032558Z",
-    "duration_seconds": 0.258068
+    "start_time": "2026-07-12T12:44:35.993742Z",
+    "end_time": "2026-07-12T12:44:36.212242Z",
+    "duration_seconds": 0.2185
   },
   "tool": {
     "name": "minio",
     "version": "1.43.46",
-    "commit_sha": "e8c3cf80bb3c8bf7d8fc1f6bf57bbd5120f6fd0e"
+    "commit_sha": "6b83fdc6e0c9516184a1ff61b81906226a23c7ec"
   },
   "environment": {
     "python": "3.13.5",
@@ -36,7 +37,7 @@
     {
       "kind": "create_bucket",
       "passed": true,
-      "detail": "Created bucket: work-frontier-smoke-1953d21f3834490b913734d7ea21625f"
+      "detail": "Created bucket: work-frontier-smoke-9ac246bb18ff4c31b10242ecdd0041c5"
     },
     {
       "kind": "put_object",
@@ -61,7 +62,7 @@
     {
       "kind": "delete_bucket",
       "passed": true,
-      "detail": "Deleted bucket: work-frontier-smoke-1953d21f3834490b913734d7ea21625f"
+      "detail": "Deleted bucket: work-frontier-smoke-9ac246bb18ff4c31b10242ecdd0041c5"
     }
   ],
   "stdout_artifact": null,

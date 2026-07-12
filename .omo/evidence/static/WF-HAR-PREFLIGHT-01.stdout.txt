@@ -134,112 +134,112 @@ TAP version 13
     # Subtest: each WF-P0-* has a distinct baseline document shape
     ok 1 - each WF-P0-* has a distinct baseline document shape
       ---
-      duration_ms: 0.481917
+      duration_ms: 0.45475
       type: 'test'
       ...
     # Subtest: every positive baseline passes its own validator
     ok 2 - every positive baseline passes its own validator
       ---
-      duration_ms: 1.351541
+      duration_ms: 0.463875
       type: 'test'
       ...
     1..2
 ok 1 - contract-specific baselines
   ---
-  duration_ms: 2.306959
+  duration_ms: 1.364625
   type: 'suite'
   ...
 # Subtest: negative fixture execution
     # Subtest: all on-disk negative fixtures reject with expected_failure_id
     ok 1 - all on-disk negative fixtures reject with expected_failure_id
       ---
-      duration_ms: 7.54125
+      duration_ms: 9.081291
       type: 'test'
       ...
     # Subtest: unexecuted fixture (missing mutation) fails the gate with unexecuted_fixture
     ok 2 - unexecuted fixture (missing mutation) fails the gate with unexecuted_fixture
       ---
-      duration_ms: 0.165667
+      duration_ms: 0.182667
       type: 'test'
       ...
     # Subtest: false positive mutation fails the gate
     ok 3 - false positive mutation fails the gate
       ---
-      duration_ms: 0.113334
+      duration_ms: 0.129083
       type: 'test'
       ...
     # Subtest: wrong expected_failure_id fails the gate
     ok 4 - wrong expected_failure_id fails the gate
       ---
-      duration_ms: 0.09025
+      duration_ms: 0.14475
       type: 'test'
       ...
     1..4
 ok 2 - negative fixture execution
   ---
-  duration_ms: 8.098917
+  duration_ms: 9.743375
   type: 'suite'
   ...
 # Subtest: contract-specific semantics
     # Subtest: WF-P0-01 rejects domain I/O, not as DecisionRecord extra field
     ok 1 - WF-P0-01 rejects domain I/O, not as DecisionRecord extra field
       ---
-      duration_ms: 0.228792
+      duration_ms: 0.668584
       type: 'test'
       ...
     # Subtest: WF-P0-03 rejects cross-scope access on tenancy model
     ok 2 - WF-P0-03 rejects cross-scope access on tenancy model
       ---
-      duration_ms: 0.170625
+      duration_ms: 0.207375
       type: 'test'
       ...
     # Subtest: WF-P0-04 rejects unsigned audit anchor
     ok 3 - WF-P0-04 rejects unsigned audit anchor
       ---
-      duration_ms: 0.163958
+      duration_ms: 0.258166
       type: 'test'
       ...
     # Subtest: WF-P0-05 rejects partial internal commit
     ok 4 - WF-P0-05 rejects partial internal commit
       ---
-      duration_ms: 0.180958
+      duration_ms: 0.348958
       type: 'test'
       ...
     # Subtest: WF-P0-06 rejects poison replay without dead-letter
     ok 5 - WF-P0-06 rejects poison replay without dead-letter
       ---
-      duration_ms: 0.060166
+      duration_ms: 0.07775
       type: 'test'
       ...
     # Subtest: WF-P0-07 rejects outlier removal before percentiles
     ok 6 - WF-P0-07 rejects outlier removal before percentiles
       ---
-      duration_ms: 0.049
+      duration_ms: 0.052958
       type: 'test'
       ...
     # Subtest: DecisionRecord validator still rejects missing workspace_id
     ok 7 - DecisionRecord validator still rejects missing workspace_id
       ---
-      duration_ms: 0.044708
+      duration_ms: 0.043042
       type: 'test'
       ...
     1..7
 ok 3 - contract-specific semantics
   ---
-  duration_ms: 1.579
+  duration_ms: 3.524417
   type: 'suite'
   ...
 # Subtest: full gate integration
     # Subtest: on-disk fixtures pass the full gate
     ok 1 - on-disk fixtures pass the full gate
       ---
-      duration_ms: 9.747917
+      duration_ms: 10.554291
       type: 'test'
       ...
     1..1
 ok 4 - full gate integration
   ---
-  duration_ms: 10.012875
+  duration_ms: 10.644084
   type: 'suite'
   ...
 1..4
@@ -250,4 +250,4 @@ ok 4 - full gate integration
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 86.041084
+# duration_ms 77.846833

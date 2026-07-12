@@ -2,20 +2,21 @@
   "schema_version": "1.0.0",
   "harness_id": "WF-HAR-STATIC-04",
   "status": "pass",
-  "run_id": "run-1783854637667",
-  "subject_sha": "e8c3cf80bb3c8bf7d8fc1f6bf57bbd5120f6fd0e",
+  "run_id": "run-1783860270799",
+  "subject_sha": "6b83fdc6e0c9516184a1ff61b81906226a23c7ec",
+  "subject_tree_sha": "e78d6e5756b40bc8bd67d35c8943986c05b5029a",
   "invocation": {
     "command": "uv run ruff check backend/src backend/tests scripts && uv run ruff format --check backend/src backend/tests scripts && pnpm --dir frontend run check",
     "exit_code": 0,
     "working_directory": ".",
-    "start_time": "2026-07-12T11:10:34.375099Z",
-    "end_time": "2026-07-12T11:10:37.636287Z",
-    "duration_seconds": 3.261188
+    "start_time": "2026-07-12T12:44:28.624252Z",
+    "end_time": "2026-07-12T12:44:30.763200Z",
+    "duration_seconds": 2.138948
   },
   "tool": {
     "name": "python",
     "version": "3.13.5",
-    "commit_sha": "e8c3cf80bb3c8bf7d8fc1f6bf57bbd5120f6fd0e"
+    "commit_sha": "6b83fdc6e0c9516184a1ff61b81906226a23c7ec"
   },
   "environment": {
     "python": "3.13.5",
@@ -35,7 +36,7 @@
   "stdout_artifact": {
     "path": ".omo/evidence/static/WF-HAR-STATIC-04.stdout.txt",
     "hashes": {
-      "sha256": "d38b831ae606a2c08351e121a0ef57045b0ad5939406a47ccb65091185698c38"
+      "sha256": "2b15275b420afb42689d3fd3589bf3cb758d42e9e3ca39cc688533ce34a575b5"
     }
   },
   "stderr_artifact": {
