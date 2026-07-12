@@ -1,0 +1,10 @@
+{
+  "foundation-preflight": ".omo/preflight/adr-006",
+  "contracts": "backend/src/work_frontier/contracts",
+  "evidence-runtime": "backend/src/work_frontier/contracts",
+  "architecture-enforcement": "scripts/check_import_boundaries.py",
+  "contract-generation": "scripts/generate_contracts.py",
+  "infrastructure-smoke": "scripts",
+  "frontend-foundation": "frontend",
+  "delivery-ci": ".github/workflows/ci.yml"
+}

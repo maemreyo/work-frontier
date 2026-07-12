@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "generated_at": "2026-07-12T00:00:00+07:00",
+  "source_commit": "35e29a933534452757fe0515e29af7e6c6189b52",
+  "review_status": "reviewed",
+  "hits": [
+    {
+      "kind": "cli",
+      "path": ".omo/preflight/adr-006/validate.mjs",
+      "symbol": "main",
+      "disposition": "confirmed",
+      "review_note": "Node CLI validator."
+    },
+    {
+      "kind": "cli",
+      "path": "scripts/generate_contracts.py",
+      "symbol": "main",
+      "disposition": "confirmed",
+      "review_note": "Contract generation/check CLI."
+    },
+    {
+      "kind": "cli",
+      "path": "scripts/check_import_boundaries.py",
+      "symbol": "main",
+      "disposition": "confirmed",
+      "review_note": "Static architecture CLI."
+    },
+    {
+      "kind": "cli",
+      "path": "backend/src/work_frontier/contracts/harness_runner.py",
+      "symbol": "main",
+      "disposition": "confirmed",
+      "review_note": "Harness execution CLI."
+    },
+    {
+      "kind": "cli",
+      "path": "scripts/migration_smoke.py",
+      "symbol": "main",
+      "disposition": "confirmed",
+      "review_note": "PostgreSQL smoke CLI."
+    },
+    {
+      "kind": "cli",
+      "path": "scripts/minio_smoke.py",
+      "symbol": "main",
+      "disposition": "confirmed",
+      "review_note": "MinIO smoke CLI."
+    },
+    {
+      "kind": "http",
+      "path": "backend",
+      "symbol": null,
+      "disposition": "not_found",
+      "review_note": "No route registration or ASGI/WSGI app found."
+    },
+    {
+      "kind": "consumer",
+      "path": "backend",
+      "symbol": null,
+      "disposition": "not_found",
+      "review_note": "No queue/event consumer registration found."
+    },
+    {
+      "kind": "cron",
+      "path": ".",
+      "symbol": null,
+      "disposition": "not_found",
+      "review_note": "No cron/scheduler manifest found."
+    }
+  ]
+}

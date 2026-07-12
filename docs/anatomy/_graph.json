@@ -1,0 +1,379 @@
+{
+  "version": 1,
+  "generated_at": "2026-07-12T00:00:00+07:00",
+  "source_root": ".",
+  "modules": {
+    "foundation-preflight": {
+      "path": ".omo/preflight/adr-006",
+      "depends_on": [
+        {
+          "target": "contracts",
+          "kind": "internal",
+          "detail": "validates DecisionRecord-shaped baseline documents and hash fields",
+          "citation": ".omo/preflight/adr-006/validate.mjs:67"
+        },
+        {
+          "target": "node",
+          "kind": "external",
+          "detail": "executes the validator and its test suite",
+          "citation": ".omo/preflight/adr-006/validate.mjs:1"
+        }
+      ],
+      "used_by": [
+        {
+          "target": "delivery-ci",
+          "kind": "internal",
+          "detail": "runs the ADR-006 preflight gate before broader verification",
+          "citation": ".github/workflows/ci.yml:16"
+        }
+      ],
+      "trace_coverage": {
+        "status": "full",
+        "detail": "all selected files examined"
+      }
+    },
+    "contracts": {
+      "path": "backend/src/work_frontier/contracts",
+      "depends_on": [
+        {
+          "target": "pydantic",
+          "kind": "external",
+          "detail": "enforces strict immutable runtime validation and JSON schema generation",
+          "citation": "backend/src/work_frontier/contracts/decision_record.py:87"
+        }
+      ],
+      "used_by": [
+        {
+          "target": "contract-generation",
+          "kind": "internal",
+          "detail": "imports the Pydantic contract to emit JSON Schema and TypeScript/Zod",
+          "citation": "scripts/generate_contracts.py:15"
+        },
+        {
+          "target": "evidence-runtime",
+          "kind": "internal",
+          "detail": "constructs and validates EvidenceRecord artifacts",
+          "citation": "backend/src/work_frontier/contracts/evidence_writer.py:25"
+        },
+        {
+          "target": "foundation-preflight",
+          "kind": "internal",
+          "detail": "mirrors contract-specific executable validation rules",
+          "citation": ".omo/preflight/adr-006/validate.mjs:67"
+        }
+      ],
+      "trace_coverage": {
+        "status": "full",
+        "detail": "all selected files examined"
+      }
+    },
+    "evidence-runtime": {
+      "path": "backend/src/work_frontier/contracts",
+      "depends_on": [
+        {
+          "target": "contracts",
+          "kind": "internal",
+          "detail": "loads registry and evidence schemas and serializes validated records",
+          "citation": "backend/src/work_frontier/contracts/harness_runner.py:53"
+        },
+        {
+          "target": "git",
+          "kind": "external",
+          "detail": "captures and validates the subject commit SHA",
+          "citation": "backend/src/work_frontier/contracts/evidence_writer.py:25"
+        },
+        {
+          "target": "subprocess",
+          "kind": "external",
+          "detail": "executes harness commands and captures stdout/stderr",
+          "citation": "backend/src/work_frontier/contracts/harness_runner.py:53"
+        }
+      ],
+      "used_by": [
+        {
+          "target": "delivery-ci",
+          "kind": "internal",
+          "detail": "runs blocking harnesses and uploads evidence in CI",
+          "citation": ".github/workflows/ci.yml:52"
+        }
+      ],
+      "trace_coverage": {
+        "status": "full",
+        "detail": "all selected files examined"
+      }
+    },
+    "architecture-enforcement": {
+      "path": "scripts/check_import_boundaries.py",
+      "depends_on": [
+        {
+          "target": "contracts",
+          "kind": "internal",
+          "detail": "writes EvidenceRecord-compatible results for the boundary check",
+          "citation": "scripts/check_import_boundaries.py:297"
+        },
+        {
+          "target": "python-ast",
+          "kind": "external",
+          "detail": "parses imports without executing application code",
+          "citation": "scripts/check_import_boundaries.py:255"
+        }
+      ],
+      "used_by": [
+        {
+          "target": "delivery-ci",
+          "kind": "internal",
+          "detail": "executes import-boundary verification as a foundation harness",
+          "citation": ".github/workflows/ci.yml:52"
+        }
+      ],
+      "trace_coverage": {
+        "status": "full",
+        "detail": "all selected files examined"
+      }
+    },
+    "contract-generation": {
+      "path": "scripts/generate_contracts.py",
+      "depends_on": [
+        {
+          "target": "contracts",
+          "kind": "internal",
+          "detail": "imports the canonical DecisionRecord model as the source schema",
+          "citation": "scripts/generate_contracts.py:15"
+        },
+        {
+          "target": "node",
+          "kind": "external",
+          "detail": "runs the JSON Schema to Zod conversion helper",
+          "citation": "scripts/generate_contracts.py:42"
+        },
+        {
+          "target": "zod",
+          "kind": "external",
+          "detail": "emits the frontend runtime validator",
+          "citation": "scripts/generate_zod.mjs:24"
+        }
+      ],
+      "used_by": [
+        {
+          "target": "frontend-foundation",
+          "kind": "internal",
+          "detail": "provides generated TypeScript validation artifacts",
+          "citation": "frontend/src/contracts/decision-record.generated.ts:3"
+        },
+        {
+          "target": "delivery-ci",
+          "kind": "internal",
+          "detail": "runs the contract drift check",
+          "citation": ".github/workflows/ci.yml:34"
+        }
+      ],
+      "trace_coverage": {
+        "status": "full",
+        "detail": "all selected files examined"
+      }
+    },
+    "infrastructure-smoke": {
+      "path": "scripts",
+      "depends_on": [
+        {
+          "target": "contracts",
+          "kind": "internal",
+          "detail": "emits structured evidence for infrastructure checks",
+          "citation": "scripts/migration_smoke.py:159"
+        },
+        {
+          "target": "postgresql",
+          "kind": "external",
+          "detail": "runs Alembic upgrade, failure injection, rollback and re-upgrade checks",
+          "citation": "scripts/migration_smoke.py:159"
+        },
+        {
+          "target": "minio",
+          "kind": "external",
+          "detail": "creates a bucket and verifies put/get/delete object lifecycle",
+          "citation": "scripts/minio_smoke.py:39"
+        },
+        {
+          "target": "docker-compose",
+          "kind": "external",
+          "detail": "provides PostgreSQL and MinIO services",
+          "citation": "docker-compose.yml:3"
+        }
+      ],
+      "used_by": [
+        {
+          "target": "delivery-ci",
+          "kind": "internal",
+          "detail": "starts infrastructure and runs smoke harnesses",
+          "citation": ".github/workflows/ci.yml:52"
+        }
+      ],
+      "trace_coverage": {
+        "status": "full",
+        "detail": "all selected files examined"
+      }
+    },
+    "frontend-foundation": {
+      "path": "frontend",
+      "depends_on": [
+        {
+          "target": "contract-generation",
+          "kind": "internal",
+          "detail": "consumes the generated DecisionRecord Zod schema",
+          "citation": "frontend/src/contracts/decision-record.generated.ts:3"
+        },
+        {
+          "target": "typescript",
+          "kind": "external",
+          "detail": "type-checks frontend foundation code",
+          "citation": "frontend/package.json:12"
+        },
+        {
+          "target": "vitest",
+          "kind": "external",
+          "detail": "runs frontend unit tests",
+          "citation": "frontend/package.json:12"
+        },
+        {
+          "target": "zod",
+          "kind": "external",
+          "detail": "validates generated contract values at runtime",
+          "citation": "frontend/src/contracts/decision-record.generated.ts:3"
+        }
+      ],
+      "used_by": [
+        {
+          "target": "delivery-ci",
+          "kind": "internal",
+          "detail": "runs frontend lint, type-check and tests",
+          "citation": ".github/workflows/ci.yml:52"
+        }
+      ],
+      "trace_coverage": {
+        "status": "full",
+        "detail": "all selected files examined"
+      }
+    },
+    "delivery-ci": {
+      "path": ".github/workflows/ci.yml",
+      "depends_on": [
+        {
+          "target": "foundation-preflight",
+          "kind": "internal",
+          "detail": "runs the preflight gate before verification",
+          "citation": ".github/workflows/ci.yml:16"
+        },
+        {
+          "target": "contract-generation",
+          "kind": "internal",
+          "detail": "checks generated contract drift",
+          "citation": ".github/workflows/ci.yml:34"
+        },
+        {
+          "target": "architecture-enforcement",
+          "kind": "internal",
+          "detail": "runs import-boundary enforcement through the harness suite",
+          "citation": ".github/workflows/ci.yml:52"
+        },
+        {
+          "target": "evidence-runtime",
+          "kind": "internal",
+          "detail": "executes registered harnesses and records evidence",
+          "citation": ".github/workflows/ci.yml:52"
+        },
+        {
+          "target": "infrastructure-smoke",
+          "kind": "internal",
+          "detail": "starts services and executes database/object-store smokes",
+          "citation": ".github/workflows/ci.yml:52"
+        },
+        {
+          "target": "frontend-foundation",
+          "kind": "internal",
+          "detail": "runs frontend quality checks",
+          "citation": ".github/workflows/ci.yml:52"
+        },
+        {
+          "target": "github-actions",
+          "kind": "external",
+          "detail": "provides the execution environment and artifact upload",
+          "citation": ".github/workflows/ci.yml:1"
+        },
+        {
+          "target": "gitleaks",
+          "kind": "external",
+          "detail": "performs secret scanning",
+          "citation": ".github/workflows/ci.yml:70"
+        },
+        {
+          "target": "sbom-tooling",
+          "kind": "external",
+          "detail": "produces software bill-of-material evidence",
+          "citation": ".github/workflows/ci.yml:78"
+        }
+      ],
+      "used_by": [],
+      "trace_coverage": {
+        "status": "full",
+        "detail": "all selected files examined"
+      }
+    }
+  },
+  "entry_points": {
+    "http_routes": [],
+    "cli_commands": [
+      {
+        "module": ".omo/preflight/adr-006/validate.mjs",
+        "detail": "main",
+        "raw": "Node CLI validator."
+      },
+      {
+        "module": "scripts/generate_contracts.py",
+        "detail": "main",
+        "raw": "Contract generation/check CLI."
+      },
+      {
+        "module": "scripts/check_import_boundaries.py",
+        "detail": "main",
+        "raw": "Static architecture CLI."
+      },
+      {
+        "module": "backend/src/work_frontier/contracts/harness_runner.py",
+        "detail": "main",
+        "raw": "Harness execution CLI."
+      },
+      {
+        "module": "scripts/migration_smoke.py",
+        "detail": "main",
+        "raw": "PostgreSQL smoke CLI."
+      },
+      {
+        "module": "scripts/minio_smoke.py",
+        "detail": "main",
+        "raw": "MinIO smoke CLI."
+      }
+    ],
+    "queue_consumers": [],
+    "cron_jobs": []
+  },
+  "health_signals": {
+    "most_connected": [
+      "delivery-ci \u2014 6 connections",
+      "contracts \u2014 5 connections",
+      "contract-generation \u2014 3 connections",
+      "architecture-enforcement \u2014 2 connections",
+      "evidence-runtime \u2014 2 connections",
+      "foundation-preflight \u2014 2 connections",
+      "frontend-foundation \u2014 2 connections",
+      "infrastructure-smoke \u2014 2 connections"
+    ],
+    "orphan_candidates": [],
+    "cycles": [],
+    "trace_coverage_counts": {
+      "full": 8,
+      "sampled": 0,
+      "listed": 0,
+      "unstated": 0
+    }
+  }
+}

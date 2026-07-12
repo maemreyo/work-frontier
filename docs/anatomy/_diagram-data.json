@@ -1,0 +1,271 @@
+{
+  "project_name": "Work Frontier",
+  "generated_at": "2026-07-12",
+  "mode": "full trace",
+  "source_commit": "35e29a933534452757fe0515e29af7e6c6189b52",
+  "modules": [
+    {
+      "slug": "foundation-preflight",
+      "name": "Foundation Preflight",
+      "role": "Validates the seven foundation baselines and proves negative fixtures fail with typed failure IDs.",
+      "path": ".omo/preflight/adr-006",
+      "doc": "modules/foundation-preflight.md"
+    },
+    {
+      "slug": "contracts",
+      "name": "Canonical Contracts",
+      "role": "Defines canonical DecisionRecord and EvidenceRecord schemas plus harness registry contracts.",
+      "path": "backend/src/work_frontier/contracts",
+      "doc": "modules/contracts.md"
+    },
+    {
+      "slug": "evidence-runtime",
+      "name": "Evidence Runtime",
+      "role": "Executes registered harnesses and writes reproducible evidence bound to the tested Git revision.",
+      "path": "backend/src/work_frontier/contracts",
+      "doc": "modules/evidence-runtime.md"
+    },
+    {
+      "slug": "architecture-enforcement",
+      "name": "Architecture Enforcement",
+      "role": "Statically scans Python imports and enforces the allowed dependency matrix between architectural layers.",
+      "path": "scripts/check_import_boundaries.py",
+      "doc": "modules/architecture-enforcement.md"
+    },
+    {
+      "slug": "contract-generation",
+      "name": "Contract Generation",
+      "role": "Generates JSON Schema and frontend Zod artifacts from the canonical Pydantic contract and checks drift.",
+      "path": "scripts/generate_contracts.py",
+      "doc": "modules/contract-generation.md"
+    },
+    {
+      "slug": "infrastructure-smoke",
+      "name": "Infrastructure Smoke",
+      "role": "Proves PostgreSQL migration rollback behavior and MinIO object lifecycle behavior against local containers.",
+      "path": "scripts",
+      "doc": "modules/infrastructure-smoke.md"
+    },
+    {
+      "slug": "frontend-foundation",
+      "name": "Frontend Foundation",
+      "role": "Contains TypeScript contract artifacts, evidence helper code and test/tooling configuration, but no product UI shell yet.",
+      "path": "frontend",
+      "doc": "modules/frontend-foundation.md"
+    },
+    {
+      "slug": "delivery-ci",
+      "name": "Delivery and CI",
+      "role": "Orchestrates preflight, contract drift, static checks, tests, infrastructure smokes, security scans and evidence collection.",
+      "path": ".github/workflows/ci.yml",
+      "doc": "modules/delivery-ci.md"
+    }
+  ],
+  "edges": [
+    {
+      "from": "foundation-preflight",
+      "to": "contracts",
+      "label": "validates DecisionRecord-shaped baseline documents and hash fields",
+      "kind": "sync"
+    },
+    {
+      "from": "evidence-runtime",
+      "to": "contracts",
+      "label": "loads registry and evidence schemas and serializes validated records",
+      "kind": "sync"
+    },
+    {
+      "from": "architecture-enforcement",
+      "to": "contracts",
+      "label": "writes EvidenceRecord-compatible results for the boundary check",
+      "kind": "sync"
+    },
+    {
+      "from": "contract-generation",
+      "to": "contracts",
+      "label": "imports the canonical DecisionRecord model as the source schema",
+      "kind": "sync"
+    },
+    {
+      "from": "infrastructure-smoke",
+      "to": "contracts",
+      "label": "emits structured evidence for infrastructure checks",
+      "kind": "sync"
+    },
+    {
+      "from": "frontend-foundation",
+      "to": "contract-generation",
+      "label": "consumes the generated DecisionRecord Zod schema",
+      "kind": "sync"
+    },
+    {
+      "from": "delivery-ci",
+      "to": "foundation-preflight",
+      "label": "runs the preflight gate before verification",
+      "kind": "sync"
+    },
+    {
+      "from": "delivery-ci",
+      "to": "contract-generation",
+      "label": "checks generated contract drift",
+      "kind": "sync"
+    },
+    {
+      "from": "delivery-ci",
+      "to": "architecture-enforcement",
+      "label": "runs import-boundary enforcement through the harness suite",
+      "kind": "sync"
+    },
+    {
+      "from": "delivery-ci",
+      "to": "evidence-runtime",
+      "label": "executes registered harnesses and records evidence",
+      "kind": "sync"
+    },
+    {
+      "from": "delivery-ci",
+      "to": "infrastructure-smoke",
+      "label": "starts services and executes database/object-store smokes",
+      "kind": "sync"
+    },
+    {
+      "from": "delivery-ci",
+      "to": "frontend-foundation",
+      "label": "runs frontend quality checks",
+      "kind": "sync"
+    }
+  ],
+  "context": {
+    "actors": [
+      "Developer",
+      "GitHub Actions"
+    ],
+    "external_systems": [
+      "PostgreSQL",
+      "MinIO"
+    ],
+    "edges": [
+      {
+        "from": "Developer",
+        "to": "Work Frontier",
+        "label": "runs checks and harnesses"
+      },
+      {
+        "from": "GitHub Actions",
+        "to": "Work Frontier",
+        "label": "executes CI workflow"
+      },
+      {
+        "from": "Work Frontier",
+        "to": "PostgreSQL",
+        "label": "migration smoke"
+      },
+      {
+        "from": "Work Frontier",
+        "to": "MinIO",
+        "label": "object lifecycle smoke"
+      }
+    ]
+  },
+  "flows": [
+    {
+      "name": "Foundation preflight gate",
+      "steps": [
+        {
+          "from": "GitHub Actions",
+          "to": "foundation-preflight",
+          "label": "run validator and tests"
+        },
+        {
+          "from": "foundation-preflight",
+          "to": "contracts",
+          "label": "apply contract-specific rules"
+        },
+        {
+          "from": "foundation-preflight",
+          "to": "GitHub Actions",
+          "label": "pass/fail plus evidence"
+        }
+      ]
+    },
+    {
+      "name": "Contract generation and drift check",
+      "steps": [
+        {
+          "from": "delivery-ci",
+          "to": "contract-generation",
+          "label": "run --check"
+        },
+        {
+          "from": "contract-generation",
+          "to": "contracts",
+          "label": "read Pydantic schema"
+        },
+        {
+          "from": "contract-generation",
+          "to": "frontend-foundation",
+          "label": "compare generated Zod artifact"
+        }
+      ]
+    },
+    {
+      "name": "Harness evidence lifecycle",
+      "steps": [
+        {
+          "from": "delivery-ci",
+          "to": "evidence-runtime",
+          "label": "execute blocking harnesses"
+        },
+        {
+          "from": "evidence-runtime",
+          "to": "contracts",
+          "label": "validate registry and evidence"
+        },
+        {
+          "from": "evidence-runtime",
+          "to": "infrastructure-smoke",
+          "label": "run smoke commands"
+        },
+        {
+          "from": "evidence-runtime",
+          "to": "delivery-ci",
+          "label": "return evidence bound to subject SHA"
+        }
+      ]
+    }
+  ],
+  "data_model": {
+    "entities": [
+      {
+        "name": "BootstrapMarker",
+        "fields": [
+          "id",
+          "label"
+        ],
+        "module": "infrastructure-smoke"
+      }
+    ],
+    "relations": []
+  },
+  "deployment": {
+    "services": [
+      {
+        "name": "postgres",
+        "module": "infrastructure-smoke",
+        "ports": [
+          "5432:5432"
+        ],
+        "depends_on": []
+      },
+      {
+        "name": "minio",
+        "module": "infrastructure-smoke",
+        "ports": [
+          "9000:9000",
+          "9001:9001"
+        ],
+        "depends_on": []
+      }
+    ]
+  }
+}

@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "project": "Work Frontier",
+  "mode": "full trace",
+  "generated_at": "2026-07-12T00:00:00+07:00",
+  "source_commit": "35e29a933534452757fe0515e29af7e6c6189b52",
+  "output_root": "docs/anatomy",
+  "trace_depth": "deep",
+  "module_count": 8,
+  "files": [
+    {
+      "path": "docs/anatomy/_diagram-data.json",
+      "sha256": "f8969babac7dbd59a8b0dc17023f383d88cab973c0f6b6688cf900f0160f1b14"
+    },
+    {
+      "path": "docs/anatomy/_entrypoint-scan.json",
+      "sha256": "365b1800f1baec5f3c2ced93830a5c5b519d3edce962f4664c442d63536d4aa7"
+    },
+    {
+      "path": "docs/anatomy/_graph.json",
+      "sha256": "155d279e57e7a4be2d9a3ad7ee0d07aea51ae3407b23ce71c55562f5e11dc9e8"
+    },
+    {
+      "path": "docs/anatomy/_modules.json",
+      "sha256": "2db15815d8723b3b022c134cbf6cafe1ea66bb211594fd2da1c63641f3c6ce80"
+    },
+    {
+      "path": "docs/anatomy/data-model.md",
+      "sha256": "26a3f82561b76e0abb4f0dd7cdb126af44c442d9507a47517e062abcd56e8d94"
+    },
+    {
+      "path": "docs/anatomy/deployment.md",
+      "sha256": "df82897a5416d0be21ca201a034cdf99c84bc5402f9ba35624da5e7d581083f5"
+    },
+    {
+      "path": "docs/anatomy/entry-points.md",
+      "sha256": "6ceadd7a37149346f264b409fd10e6401065b7234558866585cac31d7bc86960"
+    },
+    {
+      "path": "docs/anatomy/index.md",
+      "sha256": "e2376f77c55a87b904a1b6d902e3c27f8cc0f001dfdfd1dc277caf174ecb6038"
+    },
+    {
+      "path": "docs/anatomy/modules/architecture-enforcement.md",
+      "sha256": "dabcb84a643a249d4eee5dd10d23b07d5b244f4258c9eca81ea9a311b8376e00"
+    },
+    {
+      "path": "docs/anatomy/modules/contract-generation.md",
+      "sha256": "f9a9e75f6f2fa9e4dd9f3595d4bcdcb2db8cf032038856fabfb1cafc0357b91f"
+    },
+    {
+      "path": "docs/anatomy/modules/contracts.md",
+      "sha256": "86360b5c1adef1f45329ce970f1ab2e5137765908ae9097cde033297963306af"
+    },
+    {
+      "path": "docs/anatomy/modules/delivery-ci.md",
+      "sha256": "533a368492e4ff5f65a06c2172ca7513028a7065a23dc067d251db00955cacba"
+    },
+    {
+      "path": "docs/anatomy/modules/evidence-runtime.md",
+      "sha256": "d17f0cfc56c90fc17562fce46ca4a47c9d11eefb02b92b39fa02c67a86fed677"
+    },
+    {
+      "path": "docs/anatomy/modules/foundation-preflight.md",
+      "sha256": "ee760193e904c102a4788690ea7ed7234a3cf9a6a2eb5879b3ab3b318734b74f"
+    },
+    {
+      "path": "docs/anatomy/modules/frontend-foundation.md",
+      "sha256": "de1efc1537c13fe75c555d7afa6912f102ab793d846637a444ac7f0a5e1eb17f"
+    },
+    {
+      "path": "docs/anatomy/modules/infrastructure-smoke.md",
+      "sha256": "462671bdae0e42ecbde27d4372252fbfce5fb2df444abbe1399c5b5e0802c9ee"
+    },
+    {
+      "path": "docs/anatomy/system-diagram.html",
+      "sha256": "7b77234a93fd291db8f358c005b1ae7be0920569d5fcd7723bc3646ec8a6ab3f"
+    },
+    {
+      "path": "docs/anatomy/system-diagram.md",
+      "sha256": "2654854cd62fd154f6a937126c8cac000c1095e3154eb4222f607d113a5fa623"
+    }
+  ],
+  "notes": [
+    "Current-state trace only.",
+    "Target-state architecture is discussed only as a discrepancy.",
+    "Delete this manifest to force a full retrace."
+  ]
+}
