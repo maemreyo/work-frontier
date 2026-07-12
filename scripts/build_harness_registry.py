@@ -33,6 +33,14 @@ FOUNDATION_CLOSURE: tuple[str, ...] = (
 
 FIELD_RE = re.compile(r"\|\s*\*\*([^*]+)\*\*\s*\|\s*(.*?)\s*\|")
 
+# Runner-level semantic overrides that are not expressed in the catalog.
+# These are implementation details of the harness runner, not catalog
+# semantics, so they live here rather than in the catalog markdown.
+_ARTIFACT_MODE_OVERRIDES: dict[str, str] = {
+    "WF-HAR-STATIC-01": "runner_evidence",
+    "WF-HAR-STATIC-04": "runner_evidence",
+}
+
 
 def _clean_cell(value: str) -> str:
     value = value.strip()
@@ -113,6 +121,10 @@ def main() -> int:
     args = parser.parse_args()
 
     harnesses = parse_catalog(CATALOG.read_text(encoding="utf-8"))
+    for h in harnesses:
+        h_id = str(h["id"])
+        if h_id in _ARTIFACT_MODE_OVERRIDES:
+            h["artifact_mode"] = _ARTIFACT_MODE_OVERRIDES[h_id]
     registry = build_registry(harnesses)
     rendered = f"{json.dumps(registry, indent=2, sort_keys=False)}\n"
 

@@ -85,5 +85,6 @@
     "Current-state trace only.",
     "Target-state architecture is discussed only as a discrepancy.",
     "Delete this manifest to force a full retrace."
-  ]
+  ],
+  "content_digest": "92311b464de506d8b1fdfdc4ef6ffc4eeadf4ac00a7927091f3166965917c206"
 }

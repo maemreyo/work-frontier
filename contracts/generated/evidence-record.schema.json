@@ -1,0 +1,312 @@
+{
+  "$defs": {
+    "Artifact": {
+      "additionalProperties": false,
+      "description": "File or resource examined or produced during execution.",
+      "properties": {
+        "hashes": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Content hashes keyed by algorithm name (e.g., sha256)",
+          "title": "Hashes"
+        },
+        "path": {
+          "description": "File path relative to repository root",
+          "minLength": 1,
+          "title": "Path",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "title": "Artifact",
+      "type": "object"
+    },
+    "Invocation": {
+      "additionalProperties": false,
+      "description": "Invocation envelope for harness execution details.",
+      "properties": {
+        "command": {
+          "description": "Full command invoked by the harness",
+          "minLength": 1,
+          "title": "Command",
+          "type": "string"
+        },
+        "duration_seconds": {
+          "description": "Execution duration in seconds",
+          "minimum": 0,
+          "title": "Duration Seconds",
+          "type": "number"
+        },
+        "end_time": {
+          "description": "ISO 8601 timestamp when execution completed",
+          "format": "date-time",
+          "title": "End Time",
+          "type": "string"
+        },
+        "exit_code": {
+          "description": "Process exit code",
+          "title": "Exit Code",
+          "type": "integer"
+        },
+        "start_time": {
+          "description": "ISO 8601 timestamp when execution started",
+          "format": "date-time",
+          "title": "Start Time",
+          "type": "string"
+        },
+        "working_directory": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Working directory where command was executed",
+          "title": "Working Directory"
+        }
+      },
+      "required": [
+        "command",
+        "exit_code",
+        "start_time",
+        "end_time",
+        "duration_seconds"
+      ],
+      "title": "Invocation",
+      "type": "object"
+    },
+    "Result": {
+      "additionalProperties": false,
+      "description": "Individual test result or finding.",
+      "properties": {
+        "detail": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Human-readable detail about the result",
+          "title": "Detail"
+        },
+        "kind": {
+          "description": "Result type identifier",
+          "minLength": 1,
+          "title": "Kind",
+          "type": "string"
+        },
+        "passed": {
+          "description": "Whether this specific result passed",
+          "title": "Passed",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "kind",
+        "passed"
+      ],
+      "title": "Result",
+      "type": "object"
+    },
+    "Tool": {
+      "additionalProperties": false,
+      "description": "Tool driver information.",
+      "properties": {
+        "commit_sha": {
+          "description": "Git commit SHA (40-character hex) of the tested codebase",
+          "pattern": "^[a-f0-9]{40}$",
+          "title": "Commit Sha",
+          "type": "string"
+        },
+        "name": {
+          "description": "Tool name (e.g., pytest, mypy, ruff)",
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "version": {
+          "description": "Tool version string",
+          "minLength": 1,
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "version",
+        "commit_sha"
+      ],
+      "title": "Tool",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Canonical evidence record for verification harness execution.\n\nInspired by SARIF v2.1.0 patterns (invocation envelope, tool.driver,\nartifact.hashes, propertyBag). The property_bag field is an extension\npoint for harness-specific data without requiring schema migration.",
+  "properties": {
+    "artifacts": {
+      "description": "Files or resources examined or produced during execution",
+      "items": {
+        "$ref": "#/$defs/Artifact"
+      },
+      "title": "Artifacts",
+      "type": "array"
+    },
+    "environment": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Environment fingerprint (OS, runtime versions, etc.)",
+      "title": "Environment",
+      "type": "object"
+    },
+    "harness_id": {
+      "description": "Harness identifier matching the authoritative registry",
+      "pattern": "^WF-HAR-[A-Z0-9]+(?:-[A-Z0-9]+)*$",
+      "title": "Harness Id",
+      "type": "string"
+    },
+    "invocation": {
+      "$ref": "#/$defs/Invocation"
+    },
+    "property_bag": {
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Extension point for harness-specific data.",
+      "title": "Property Bag"
+    },
+    "results": {
+      "description": "Individual test results or findings",
+      "items": {
+        "$ref": "#/$defs/Result"
+      },
+      "title": "Results",
+      "type": "array"
+    },
+    "run_id": {
+      "description": "Unique run identifier for this evidence generation",
+      "minLength": 1,
+      "title": "Run Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0.0",
+      "description": "Schema version for forward compatibility",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "status": {
+      "description": "Overall harness execution status",
+      "enum": [
+        "pass",
+        "fail",
+        "skip",
+        "not_applicable"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "stderr_artifact": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Artifact"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Captured stderr artifact"
+    },
+    "stdout_artifact": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Artifact"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Captured stdout artifact"
+    },
+    "subject_sha": {
+      "description": "Git commit SHA of the code being tested",
+      "pattern": "^[a-f0-9]{40}$",
+      "title": "Subject Sha",
+      "type": "string"
+    },
+    "subject_tree_sha": {
+      "description": "Git tree SHA of the committed HEAD^{tree}. Required for revision-bound certification; every record in a closure must match the report's subject_tree_sha.",
+      "pattern": "^[a-f0-9]{40}$",
+      "title": "Subject Tree Sha",
+      "type": "string"
+    },
+    "tool": {
+      "$ref": "#/$defs/Tool"
+    }
+  },
+  "required": [
+    "schema_version",
+    "harness_id",
+    "status",
+    "run_id",
+    "subject_sha",
+    "subject_tree_sha",
+    "invocation",
+    "tool"
+  ],
+  "title": "EvidenceRecord",
+  "type": "object"
+}

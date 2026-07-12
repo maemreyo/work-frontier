@@ -1,6 +1,6 @@
 """Pydantic models for Work Frontier evidence records.
 
-Models match the JSON Schema at contracts/evidence-record.schema.json exactly.
+Models match the JSON Schema at contracts/generated/evidence-record.schema.json exactly.
 Schema version: 1.0.0
 """
 

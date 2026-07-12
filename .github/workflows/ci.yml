@@ -46,15 +46,9 @@ jobs:
         run: uv run python scripts/generate_contracts.py --check
       - name: Check harness registry drift
         run: uv run python scripts/build_harness_registry.py --check
-      - name: Check anatomy docs source_commit drift
+      - name: Check anatomy docs content drift
         run: |
-          ANATOMY_SHA="$(python3 -c "import json; d=json.load(open('docs/anatomy/_manifest.json')); print(d['source_commit'])")"
-          HEAD_SHA="$(git rev-parse HEAD)"
-          if [ "$ANATOMY_SHA" != "$HEAD_SHA" ]; then
-            echo "::error::anatomy docs source_commit ${ANATOMY_SHA} != HEAD ${HEAD_SHA} — regenerate with \`make anatomy\` or re-run the anatomy skill"
-            exit 1
-          fi
-          echo "anatomy docs source_commit matches HEAD: ${ANATOMY_SHA}"
+          python3 scripts/check_anatomy_drift.py docs/anatomy
 
   verify:
     runs-on: ubuntu-latest
@@ -73,9 +67,9 @@ jobs:
           cache: pnpm
       - name: Bootstrap (first clean pass)
         run: make bootstrap
-      - name: Static checks
+      - name: Static checks (first pass)
         run: make check-static
-      - name: Unit tests
+      - name: Unit tests (first pass)
         run: make test
       - name: Regeneration drift guard (clean-clone stability)
         run: |
@@ -87,15 +81,6 @@ jobs:
             exit 1
           fi
           echo "regeneration is stable on a clean checkout"
-      - name: Infrastructure up
-        run: make infra-up
-      - name: Migration smoke
-        run: make migration-smoke
-      - name: Storage smoke
-        run: make storage-smoke
-      - name: Infrastructure down
-        if: always()
-        run: make infra-down
       - name: Second clean pass (idempotency proof)
         run: |
           make bootstrap
@@ -109,8 +94,14 @@ jobs:
             exit 1
           fi
           echo "second clean pass is byte-identical to first"
-      - name: Recertify foundation (exact HEAD)
-        run: make recertify-foundation
+      - name: Install pinned gitleaks
+        run: go install github.com/gitleaks/gitleaks/v8@v8.30.1
+      - name: Infrastructure up + recertify + infrastructure down
+        run: |
+          set -euo pipefail
+          trap 'make infra-down' EXIT
+          make infra-up
+          make recertify-foundation
       - name: Assert recertification subject SHA matches GITHUB_SHA
         run: |
           SUBJECT_SHA="$(python3 -c "import json,sys; d=json.load(open('.omo/evidence/task-5-full-product-implementation/foundation-recertification.json')); print(d['subject_sha'])")"

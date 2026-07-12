@@ -20,6 +20,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -28,9 +29,17 @@ import pytest
 if TYPE_CHECKING:
     from types import ModuleType
 
+from work_frontier.contracts.evidence_record import (
+    Artifact,
+    EvidenceRecord,
+    Invocation,
+    JsonValue,
+    Tool,
+)
 from work_frontier.contracts.harness_runner import (
     CertificationError,
     recertify_foundation,
+    validate_evidence_record,
 )
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -195,3 +204,133 @@ def test_recertify_foundation_records_subject_tree_sha_and_requires_tree_match()
         registry_path.unlink(missing_ok=True)
         with contextlib.suppress(ValueError):
             sys.path.remove(str(clone / "backend" / "src"))
+
+
+# ---------------------------------------------------------------------------
+# Validator negative tests (no git clones needed)
+# ---------------------------------------------------------------------------
+
+_REGISTRY = {
+    "schema_version": "1.0.0",
+    "harness_count": 1,
+    "harnesses": [
+        {
+            "id": "WF-HAR-VALIDATE-TEST-01",
+            "name": "validate-test",
+            "command": "true",
+            "artifact": "s3://example-bucket/test",
+            "blocks_release": True,
+            "what_it_runs": "test",
+            "pass_criteria": "exit 0",
+            "applicability": "standard",
+            "status": "implemented",
+        }
+    ],
+}
+
+_SHA256_HEX = "ab" * 32
+
+
+def _make_valid_record(
+    *,
+    tree_sha_and_commit_match: str = "",
+    stdout: Artifact | None = None,
+    stderr: Artifact | None = None,
+    artifacts: list[Artifact] | None = None,
+    property_bag: dict[str, JsonValue] | None = None,
+) -> EvidenceRecord:
+    """Build a valid EvidenceRecord with optional field overrides."""
+    return EvidenceRecord(
+        schema_version="1.0.0",
+        harness_id="WF-HAR-VALIDATE-TEST-01",
+        status="pass",
+        run_id="run-test-validate",
+        subject_sha="a" * 40,
+        subject_tree_sha=tree_sha_and_commit_match or "b" * 40,
+        invocation=Invocation(
+            command="true",
+            exit_code=0,
+            start_time=datetime(2026, 7, 12, 10, 0, 0, tzinfo=UTC),
+            end_time=datetime(2026, 7, 12, 10, 0, 1, tzinfo=UTC),
+            duration_seconds=1.0,
+        ),
+        tool=Tool(
+            name="test",
+            version="1.0.0",
+            commit_sha=tree_sha_and_commit_match or "a" * 40,
+        ),
+        environment={"os": "test"},
+        stdout_artifact=stdout
+        or Artifact(path="stdout.txt", hashes={"sha256": _SHA256_HEX}),
+        stderr_artifact=stderr
+        or Artifact(path="stderr.txt", hashes={"sha256": _SHA256_HEX}),
+        artifacts=artifacts or [],
+        property_bag=property_bag or {"registry.harness_id": "WF-HAR-VALIDATE-TEST-01"},
+    )
+
+
+def test_validate_rejects_subject_tree_sha_mismatch() -> None:
+    """Record subject_tree_sha differs from expected_subject_tree_sha -> failure."""
+    record = _make_valid_record()
+    failures = validate_evidence_record(
+        record,
+        registry=_REGISTRY,
+        expected_subject_sha="a" * 40,
+        expected_subject_tree_sha="x" * 40,
+    )
+    assert any("subject_tree_sha" in f for f in failures)
+
+
+def test_validate_rejects_tool_commit_sha_mismatch() -> None:
+    """tool.commit_sha differs from expected_subject_sha -> failure."""
+    record = _make_valid_record(tree_sha_and_commit_match="c" * 40)
+    failures = validate_evidence_record(
+        record,
+        registry=_REGISTRY,
+        expected_subject_sha="a" * 40,
+    )
+    assert any("tool.commit_sha" in f for f in failures)
+
+
+def test_validate_rejects_missing_stdout_artifact() -> None:
+    """stdout_artifact is None -> failure."""
+    record = _make_valid_record(stdout=None)
+    failures = validate_evidence_record(record, registry=_REGISTRY)
+    assert any("stdout" in f and "artifact" in f for f in failures)
+
+
+def test_validate_rejects_missing_stderr_artifact() -> None:
+    """stderr_artifact is None -> failure."""
+    record = _make_valid_record(stderr=None)
+    failures = validate_evidence_record(record, registry=_REGISTRY)
+    assert any("stderr" in f and "artifact" in f for f in failures)
+
+
+def test_validate_rejects_stdout_without_sha256() -> None:
+    """stdout_artifact with no sha256 hash -> failure."""
+    record = _make_valid_record(
+        stdout=Artifact(path="stdout.txt", hashes=None),
+    )
+    failures = validate_evidence_record(record, registry=_REGISTRY)
+    assert any("sha256" in f for f in failures)
+
+
+def test_validate_rejects_artifact_without_sha256() -> None:
+    """Declared artifact with no sha256 hash -> failure."""
+    record = _make_valid_record(
+        artifacts=[Artifact(path="output.json", hashes=None)],
+    )
+    failures = validate_evidence_record(record, registry=_REGISTRY)
+    assert any("sha256" in f for f in failures)
+
+
+def test_validate_rejects_missing_declared_artifact_when_flag_set() -> None:
+    """property_bag declares missing artifact -> failure even without on-disk check."""
+    record = _make_valid_record(
+        property_bag={
+            "registry.harness_id": "WF-HAR-VALIDATE-TEST-01",
+            "artifact.declared_missing": "some/file.json",
+        },
+    )
+    failures = validate_evidence_record(record, registry=_REGISTRY)
+    assert any("declared artifact missing" in f for f in failures)

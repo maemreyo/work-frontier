@@ -108,8 +108,16 @@ def run_harness(
         "registry.artifact": declared_artifact,
     }
 
+    artifact_mode = harness.get("artifact_mode", "declared_file")
+
     artifacts: list[Artifact] = []
-    if _is_remote_artifact(declared_artifact):
+    if artifact_mode == "runner_evidence":
+        # The evidence record itself is the only artifact.  Skip the
+        # pre-existence check — a clean clone will not have the evidence
+        # file yet.  The self-reference removal below drops it from the
+        # artifact list to keep validation round-trips stable.
+        property_bag["artifact.kind"] = "runner_evidence"
+    elif _is_remote_artifact(declared_artifact):
         artifacts.append(
             Artifact(
                 path=declared_artifact,
@@ -180,6 +188,34 @@ def run_harness(
     return EvidenceRecord.model_validate_json(evidence_path.read_text(encoding="utf-8"))
 
 
+def _validate_artifact(
+    artifact: Artifact,
+    root: Path,
+    harness_id: str,
+    *,
+    label: str = "artifact",
+) -> list[str]:
+    """Return certification failures for one artifact (regular or stdout/stderr)."""
+    failures: list[str] = []
+    digest = None if artifact.hashes is None else artifact.hashes.get("sha256")
+    if not digest:
+        failures.append(
+            f"{harness_id}: {label} artifact {artifact.path} missing sha256"
+        )
+        return failures
+    if _is_remote_artifact(artifact.path):
+        return failures
+    candidate = root / artifact.path
+    if not candidate.is_file():
+        failures.append(
+            f"{harness_id}: {label} artifact path does not exist: {artifact.path}"
+        )
+        return failures
+    if hash_file(candidate) != digest:
+        failures.append(f"{harness_id}: {label} artifact {artifact.path} hash mismatch")
+    return failures
+
+
 def validate_evidence_record(
     record: EvidenceRecord,
     *,
@@ -213,6 +249,12 @@ def validate_evidence_record(
             f"!= {expected_subject_tree_sha}"
         )
 
+    if expected_subject_sha and record.tool.commit_sha != expected_subject_sha:
+        failures.append(
+            f"{record.harness_id}: tool.commit_sha {record.tool.commit_sha} "
+            f"!= expected_subject_sha {expected_subject_sha}"
+        )
+
     if record.tool.version in {"", "1.0.0", "unknown", "fabricated"}:
         failures.append(f"{record.harness_id}: fabricated or missing tool version")
 
@@ -242,30 +284,28 @@ def validate_evidence_record(
         )
 
     for artifact in record.artifacts:
-        digest = None if artifact.hashes is None else artifact.hashes.get("sha256")
-        if not digest:
-            failures.append(
-                f"{record.harness_id}: artifact {artifact.path} missing sha256"
-            )
-            continue
-        if _is_remote_artifact(artifact.path):
-            continue
-        candidate = root / artifact.path
-        if not candidate.is_file():
-            failures.append(
-                f"{record.harness_id}: artifact path does not exist: {artifact.path}"
-            )
-            continue
-        if hash_file(candidate) != digest:
-            failures.append(
-                f"{record.harness_id}: artifact {artifact.path} hash mismatch"
-            )
+        failures.extend(
+            _validate_artifact(artifact, root, record.harness_id, label="artifact")
+        )
 
-    has_registry_id = bool(bag.get("registry.harness_id"))
-    if (
-        record.stdout_artifact is None or record.stderr_artifact is None
-    ) and has_registry_id:
-        failures.append(f"{record.harness_id}: missing stdout/stderr artifacts")
+    # Validate stdout/stderr artifacts (hash integrity and existence).
+    for label, art in (
+        ("stdout", record.stdout_artifact),
+        ("stderr", record.stderr_artifact),
+    ):
+        if art is None:
+            bag_key = "artifact.declared_missing"
+            if bag.get(bag_key):
+                failures.append(
+                    f"{record.harness_id}: {label} artifact missing "
+                    f"(declared artifact was never produced)"
+                )
+            else:
+                failures.append(f"{record.harness_id}: {label} artifact is None")
+        else:
+            failures.extend(
+                _validate_artifact(art, root, record.harness_id, label=label)
+            )
 
     if (
         require_blocking_pass
@@ -340,12 +380,23 @@ def recertify_foundation(
                 )
             )
 
-    # TOCTOU guard: recheck working tree and tree SHA after full harness closure.
-    # Harness execution must not have mutated the source tree.
+    # TOCTOU guard: recheck commit identity, tree identity, and tree
+    # cleanliness after full harness closure.  Harness execution must not
+    # have mutated the source tree or changed the checked-out revision.
     if not failures:
         if not is_working_tree_clean(root):
             failures.append(
                 "TOCTOU: working tree became dirty during harness execution"
+            )
+        try:
+            post_commit_sha = get_git_commit_sha(root)
+        except Exception:  # noqa: BLE001 - surface as certification failure
+            failures.append("TOCTOU: could not compute commit SHA after closure")
+            post_commit_sha = None
+        if post_commit_sha is not None and post_commit_sha != subject_sha:
+            failures.append(
+                f"TOCTOU: commit SHA changed during harness execution "
+                f"({subject_sha} -> {post_commit_sha})"
             )
         try:
             post_tree_sha = get_git_tree_sha(root)

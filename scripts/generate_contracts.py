@@ -11,16 +11,28 @@ from pathlib import Path
 from typing import Final
 
 from work_frontier.contracts import DecisionRecordContract
+from work_frontier.contracts.evidence_record import (
+    Artifact,
+    EvidenceRecord,
+    Result,
+)
 
 CHECK_ARGUMENT: Final = "--check"
 CONTRACT_DIRECTORY: Final = Path("contracts/generated")
 JSON_SCHEMA_PATH: Final = CONTRACT_DIRECTORY / "decision-record.schema.json"
+EVIDENCE_SCHEMA_PATH: Final = CONTRACT_DIRECTORY / "evidence-record.schema.json"
 ZOD_PATH: Final = Path("frontend/src/contracts/decision-record.generated.ts")
 
 
 def json_schema() -> str:
-    """Return canonical serialized Pydantic JSON Schema."""
+    """Return canonical serialized Pydantic JSON Schema for DecisionRecord."""
     schema = DecisionRecordContract.model_json_schema()
+    return f"{json.dumps(schema, indent=2, sort_keys=True)}\n"
+
+
+def evidence_schema() -> str:
+    """Return canonical serialized Pydantic JSON Schema for EvidenceRecord."""
+    schema = EvidenceRecord.model_json_schema()
     return f"{json.dumps(schema, indent=2, sort_keys=True)}\n"
 
 
@@ -57,7 +69,11 @@ def zod_source() -> str:
 
 def expected_artifacts() -> tuple[tuple[Path, str], ...]:
     """Return every generated artifact and its expected deterministic content."""
-    return ((JSON_SCHEMA_PATH, json_schema()), (ZOD_PATH, zod_source()))
+    return (
+        (JSON_SCHEMA_PATH, json_schema()),
+        (EVIDENCE_SCHEMA_PATH, evidence_schema()),
+        (ZOD_PATH, zod_source()),
+    )
 
 
 def artifacts_are_current() -> bool:
@@ -77,7 +93,6 @@ def write_artifacts() -> None:
 
 def main(arguments: list[str]) -> int:
     """Generate artifacts or report whether checked-in artifacts drifted."""
-    from work_frontier.contracts.evidence_record import Artifact, Result
     from work_frontier.contracts.evidence_writer import hash_file, write_evidence
 
     start_time = datetime.now(UTC)
@@ -92,6 +107,11 @@ def main(arguments: list[str]) -> int:
         results = [
             Result(
                 kind="json_schema_generated", passed=True, detail=str(JSON_SCHEMA_PATH)
+            ),
+            Result(
+                kind="evidence_schema_generated",
+                passed=True,
+                detail=str(EVIDENCE_SCHEMA_PATH),
             ),
             Result(kind="zod_generated", passed=True, detail=str(ZOD_PATH)),
         ]

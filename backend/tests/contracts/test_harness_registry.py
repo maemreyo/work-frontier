@@ -93,7 +93,9 @@ def test_validate_evidence_rejects_fabricated_version_and_stale_subject() -> Non
     )
     assert any("subject_sha" in item for item in failures)
     assert any("tool version" in item for item in failures)
-    assert any("stdout/stderr" in item for item in failures)
+    assert any(
+        "stdout artifact" in item or "stderr artifact" in item for item in failures
+    )
 
 
 def test_registry_file_is_valid_json_with_foundation_closure() -> None:

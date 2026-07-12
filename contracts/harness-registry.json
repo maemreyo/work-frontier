@@ -102,7 +102,8 @@
       "what_it_runs": "basedpyright (Python strict) and TypeScript `tsc --noEmit` for frontend",
       "pass_criteria": "Zero errors",
       "applicability": "standard",
-      "status": "implemented"
+      "status": "implemented",
+      "artifact_mode": "runner_evidence"
     },
     {
       "id": "WF-HAR-STATIC-02",
@@ -135,7 +136,8 @@
       "what_it_runs": "Ruff lint/format and Biome + tsc frontend check",
       "pass_criteria": "Zero violations",
       "applicability": "standard",
-      "status": "implemented"
+      "status": "implemented",
+      "artifact_mode": "runner_evidence"
     },
     {
       "id": "WF-HAR-STATIC-05",
