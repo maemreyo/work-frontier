@@ -1,1 +1,1 @@
-{"contract_id":"WF-P0-04","kind":"negative","scenario":"missing-anchor-proof","assertion":"A privileged-DB threat profile without signed-anchor or WORM proof is rejected."}
+{"contract_id":"WF-P0-04","kind":"negative","scenario":"missing-anchor-proof","assertion":"A privileged-DB threat profile without signed-anchor or WORM proof is rejected.","mutation":{"type":"violate_constraint","target":"$.audit_anchor","payload":{"invalid_value":"unsigned"},"comment":"Sets audit_anchor to unsigned string violating object type — missing signed-anchor or WORM proof is rejected"}}

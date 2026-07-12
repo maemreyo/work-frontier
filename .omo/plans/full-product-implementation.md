@@ -36,6 +36,15 @@ Your next move: run a high-accuracy review or start execution through the dedica
 - No claim of HA, Large-envelope, Tenant Aggregate, or production certification without its executable evidence.
 - Do not copy stale `packages/`, `services/`, `apps/`, or oh-my-class `AGENTS.md` harness paths; translate every command to this standalone layout.
 
+## Intentional Deviations from Original Plan
+
+### React/Vite Frontend
+**Original Plan**: React/Vite frontend for Control Room (mentioned in lines 12, 22)  
+**Current Implementation**: TypeScript/Vitest/Zod stack without React UI framework  
+**Rationale**: Current stack is sufficient for contract testing and type safety. Frontend directory exists with working TypeScript configuration, Vitest test infrastructure, and Zod contract validation.  
+**Future Path**: Playwright is available for E2E testing when backend UI implementation begins. React/Vite can be added at that time without disrupting the current contract testing foundation.  
+**Status**: Intentionally deferred, not missing.
+
 ## Verification strategy
 > Zero human intervention - all verification is agent-executed.
 - Test decision: strict TDD. Python uses pytest + Hypothesis + Schemathesis; TypeScript uses Vitest; browser paths use Playwright + axe; capacity uses k6; security uses ZAP/gitleaks/pip-audit/npm audit.

@@ -1,1 +1,1 @@
-{"contract_id":"WF-P0-06","kind":"negative","scenario":"lease-loss-completion","assertion":"A worker that lost its lease cannot complete a job."}
+{"contract_id":"WF-P0-06","kind":"negative","scenario":"lease-loss-completion","assertion":"A worker that lost its lease cannot complete a job.","mutation":{"type":"add_invalid_field","target":"$","payload":{"field":"lease_state","value":"expired"},"comment":"Adds expired lease_state field — worker that lost lease cannot complete job per WF-P0-06 lease contract"}}

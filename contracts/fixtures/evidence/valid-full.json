@@ -1,0 +1,48 @@
+{
+  "schema_version": "1.0.0",
+  "harness_id": "WF-HAR-CONTRACT-03",
+  "status": "fail",
+  "invocation": {
+    "command": "mypy backend/app --strict",
+    "exit_code": 1,
+    "working_directory": "/Users/trung.ngo/Documents/zaob-dev/work-frontier",
+    "start_time": "2026-07-12T03:21:30Z",
+    "end_time": "2026-07-12T03:22:45Z",
+    "duration_seconds": 75.3
+  },
+  "tool": {
+    "name": "mypy",
+    "version": "1.10.0",
+    "commit_sha": "f1e2d3c4b5a6978012345678901234567890fedc"
+  },
+  "artifacts": [
+    {
+      "path": "backend/app/models/user.py",
+      "hashes": {
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "md5": "d41d8cd98f00b204e9800998ecf8427e"
+      }
+    },
+    {
+      "path": "backend/app/services/auth.py"
+    }
+  ],
+  "results": [
+    {
+      "kind": "type_error",
+      "passed": false,
+      "detail": "backend/app/models/user.py:42: error: Incompatible return value type (got \"Optional[str]\", expected \"str\")"
+    },
+    {
+      "kind": "type_check",
+      "passed": true,
+      "detail": "backend/app/services/auth.py passed strict type checking"
+    }
+  ],
+  "property_bag": {
+    "contract.service_name": "backend",
+    "contract.strict_mode": true,
+    "mypy.config_file": "pyproject.toml",
+    "mypy.cache_dir": ".mypy_cache"
+  }
+}

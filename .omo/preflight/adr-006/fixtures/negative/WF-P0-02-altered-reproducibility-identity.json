@@ -1,1 +1,1 @@
-{"contract_id":"WF-P0-02","kind":"negative","scenario":"altered-reproducibility-identity","assertion":"A replay whose identified input differs is rejected."}
+{"contract_id":"WF-P0-02","kind":"negative","scenario":"altered-reproducibility-identity","assertion":"A replay whose identified input differs is rejected.","mutation":{"type":"violate_constraint","target":"$.source_revision_set","payload":{"invalid_value":"altered-sha"},"comment":"Replaces source_revision_set with altered string violating object type — replay identity must match original commit"}}

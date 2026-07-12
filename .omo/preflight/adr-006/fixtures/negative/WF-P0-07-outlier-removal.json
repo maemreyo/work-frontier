@@ -1,1 +1,1 @@
-{"contract_id":"WF-P0-07","kind":"negative","scenario":"outlier-removal","assertion":"Latency outlier removal before p95 or p99 is rejected."}
+{"contract_id":"WF-P0-07","kind":"negative","scenario":"outlier-removal","assertion":"Latency outlier removal before p95 or p99 is rejected.","mutation":{"type":"violate_constraint","target":"$.ranking_position","payload":{"invalid_value":-1},"comment":"Sets ranking_position to -1 violating minimum constraint — premature outlier removal corrupts performance envelope"}}

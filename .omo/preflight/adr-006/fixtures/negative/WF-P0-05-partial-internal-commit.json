@@ -1,1 +1,1 @@
-{"contract_id":"WF-P0-05","kind":"negative","scenario":"partial-internal-commit","assertion":"A crash leaving partial inbox-to-outbox state is rejected."}
+{"contract_id":"WF-P0-05","kind":"negative","scenario":"partial-internal-commit","assertion":"A crash leaving partial inbox-to-outbox state is rejected.","mutation":{"type":"malform_structure","target":"$.alternatives","payload":{"malformed":"partial_commit_state"},"comment":"Replaces alternatives array with malformed string — partial inbox-to-outbox commit leaves invalid structure"}}

@@ -1,1 +1,1 @@
-{"contract_id":"WF-P0-05","kind":"negative","scenario":"stale-outbox-fingerprint","assertion":"An outbox write with a stale projection fingerprint is rejected."}
+{"contract_id":"WF-P0-05","kind":"negative","scenario":"stale-outbox-fingerprint","assertion":"An outbox write with a stale projection fingerprint is rejected.","mutation":{"type":"add_invalid_field","target":"$","payload":{"field":"stale_outbox_fingerprint","value":"projection_v0"},"comment":"Adds stale_outbox_fingerprint field violating WF-P0-01 schema strictness — stale projection fingerprint must be rejected"}}

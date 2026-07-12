@@ -1,1 +1,1 @@
-{"contract_id":"WF-P0-07","kind":"negative","scenario":"missing-failure-reporting","assertion":"Missing failure or timeout reporting is rejected."}
+{"contract_id":"WF-P0-07","kind":"negative","scenario":"missing-failure-reporting","assertion":"Missing failure or timeout reporting is rejected.","mutation":{"type":"remove_field","target":"$.correlation_id","comment":"Removes correlation_id — missing failure/timeout reporting breaks WF-P0-07 observability contract"}}

@@ -1,0 +1,174 @@
+{
+  "$schema": "http://json-schema.org/draft-2020-12/schema",
+  "$id": "https://work-frontier.dev/schemas/preflight-mutation-descriptor.json",
+  "title": "Preflight Mutation Descriptor",
+  "description": "Describes an executable mutation to apply to a valid baseline document for negative contract testing. Each mutation type targets a specific category of contract violation.",
+  "type": "object",
+  "properties": {
+    "type": {
+      "type": "string",
+      "enum": [
+        "remove_field",
+        "add_invalid_field",
+        "violate_constraint",
+        "malform_structure"
+      ],
+      "description": "Type of mutation to apply to the baseline document"
+    },
+    "target": {
+      "type": "string",
+      "description": "JSONPath expression identifying the mutation target (e.g., '$.decision' for root field, '$.source_revision_set.commit_sha' for nested field). Use '$' for document root when adding fields.",
+      "minLength": 1
+    },
+    "payload": {
+      "type": "object",
+      "description": "Mutation-specific data required to execute the mutation. Structure varies by mutation type.",
+      "properties": {
+        "field": {
+          "type": "string",
+          "description": "Field name to add (for add_invalid_field)"
+        },
+        "value": {
+          "description": "Value to set for added field (for add_invalid_field)"
+        },
+        "invalid_value": {
+          "description": "Invalid value that violates the field's constraint (for violate_constraint)"
+        },
+        "malformed": {
+          "description": "Malformed structure to replace target with (for malform_structure)"
+        }
+      },
+      "additionalProperties": false
+    },
+    "comment": {
+      "type": "string",
+      "description": "Human-readable explanation of what this mutation tests and why it should be rejected"
+    }
+  },
+  "required": ["type", "target"],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "add_invalid_field"
+          }
+        }
+      },
+      "then": {
+        "required": ["payload"],
+        "properties": {
+          "payload": {
+            "required": ["field", "value"]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "violate_constraint"
+          }
+        }
+      },
+      "then": {
+        "required": ["payload"],
+        "properties": {
+          "payload": {
+            "required": ["invalid_value"]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "malform_structure"
+          }
+        }
+      },
+      "then": {
+        "required": ["payload"],
+        "properties": {
+          "payload": {
+            "required": ["malformed"]
+          }
+        }
+      }
+    }
+  ],
+  "examples": [
+    {
+      "type": "remove_field",
+      "target": "$.decision",
+      "comment": "Removes the decision field to trigger WF-P0-02 missing reproducibility identity"
+    },
+    {
+      "type": "remove_field",
+      "target": "$.source_revision_set",
+      "comment": "Removes source_revision_set to trigger WF-P0-02 reproducibility identity violation"
+    },
+    {
+      "type": "add_invalid_field",
+      "target": "$",
+      "payload": {
+        "field": "extra_metadata",
+        "value": "not_allowed"
+      },
+      "comment": "Adds field violating additionalProperties:false to trigger WF-P0-01 taxonomy enforcement"
+    },
+    {
+      "type": "add_invalid_field",
+      "target": "$.source_revision_set",
+      "payload": {
+        "field": "unauthorized_field",
+        "value": {"nested": "data"}
+      },
+      "comment": "Adds nested field violating strict schema to trigger WF-P0-01 taxonomy drift"
+    },
+    {
+      "type": "violate_constraint",
+      "target": "$.ranking_position",
+      "payload": {
+        "invalid_value": -1
+      },
+      "comment": "Sets ranking_position < 1 violating minimum constraint to trigger WF-P0-03 or WF-P0-07"
+    },
+    {
+      "type": "violate_constraint",
+      "target": "$.workspace_id",
+      "payload": {
+        "invalid_value": ""
+      },
+      "comment": "Sets workspace_id to empty string violating minLength constraint to trigger WF-P0-03"
+    },
+    {
+      "type": "violate_constraint",
+      "target": "$.audit_anchor.timestamp",
+      "payload": {
+        "invalid_value": "not-a-timestamp"
+      },
+      "comment": "Sets timestamp to invalid format violating ISO 8601 constraint to trigger WF-P0-04"
+    },
+    {
+      "type": "malform_structure",
+      "target": "$.source_revision_set",
+      "payload": {
+        "malformed": []
+      },
+      "comment": "Changes object to array violating type constraint to trigger WF-P0-04 audit integrity"
+    },
+    {
+      "type": "malform_structure",
+      "target": "$.alternatives",
+      "payload": {
+        "malformed": "not-an-array"
+      },
+      "comment": "Changes array to string violating type constraint to trigger WF-P0-02 or WF-P0-04"
+    }
+  ],
+  "$comment": "Mutation Type → P0 Contract Mapping:\n\n1. remove_field:\n   - Primary: WF-P0-02 (reproducibility identity)\n   - Tests: Missing required fields that establish decision reproducibility\n   - Example: Remove 'decision', 'source_revision_set', 'workspace_id'\n\n2. add_invalid_field:\n   - Primary: WF-P0-01 (taxonomy enforcement)\n   - Tests: Schema strictness via additionalProperties: false\n   - Example: Add 'extra_field' to DecisionRecord root or nested objects\n\n3. violate_constraint:\n   - Primary: WF-P0-02, WF-P0-03, WF-P0-07\n   - Tests: Field-level constraints (minLength, minimum, pattern, enum)\n   - Example: ranking_position = -1, workspace_id = '', invalid timestamp format\n\n4. malform_structure:\n   - Primary: WF-P0-04 (audit integrity)\n   - Tests: Type constraints and structural integrity\n   - Example: Change object to array, array to string, violate union types"
+}

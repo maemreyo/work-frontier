@@ -13,6 +13,43 @@ MIN_PACKAGE_PARTS: Final = 2
 LAYERS: Final = frozenset(
     {"domain", "platform", "application", "adapters", "interfaces"}
 )
+ALLOW_MATRIX: Final = {
+    "domain": {
+        "domain": True,
+        "platform": False,
+        "application": False,
+        "adapters": False,
+        "interfaces": False,
+    },
+    "platform": {
+        "domain": False,
+        "platform": True,
+        "application": False,
+        "adapters": False,
+        "interfaces": False,
+    },
+    "application": {
+        "domain": False,
+        "platform": False,
+        "application": True,
+        "adapters": False,
+        "interfaces": False,
+    },
+    "adapters": {
+        "domain": False,
+        "platform": True,
+        "application": False,
+        "adapters": True,
+        "interfaces": False,
+    },
+    "interfaces": {
+        "domain": False,
+        "platform": False,
+        "application": True,
+        "adapters": False,
+        "interfaces": True,
+    },
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -33,6 +70,29 @@ def layer_for_path(path: Path, source_root: Path) -> str | None:
     return candidate if candidate in LAYERS else None
 
 
+def resolve_relative_import(
+    file_path: Path, source_root: Path, module: str | None, level: int
+) -> str | None:
+    """Resolve a relative import to an absolute module path."""
+    if level == 0:
+        return module
+    
+    relative_path = file_path.relative_to(source_root)
+    module_parts = list(relative_path.with_suffix("").parts)
+    
+    if module_parts and module_parts[-1] == "__init__":
+        _ = module_parts.pop()
+    
+    if len(module_parts) < level:
+        return None
+    base_parts = module_parts[:-level] if level > 0 else module_parts
+    
+    if module:
+        base_parts.extend(module.split("."))
+    
+    return ".".join(base_parts) if base_parts else None
+
+
 def target_for_module(module: str) -> tuple[str, bool] | None:
     """Return the target layer and whether it is the public ports package."""
     parts = module.split(".")
@@ -45,32 +105,43 @@ def violation_rule(
     source_layer: str, target_layer: str, target_is_ports: bool
 ) -> str | None:
     """Return the ADR-006 rule violated by a layer-to-layer import."""
-    rule: str | None = None
-    match source_layer:
-        case "domain" if target_layer != "domain":
-            rule = "domain-cannot-import-non-domain"
-        case "platform" if target_layer == "application" and not target_is_ports:
-            rule = "platform-may-import-only-application-ports"
-        case "application" if target_layer in {"platform", "adapters", "interfaces"}:
-            rule = "application-cannot-import-implementation"
-        case "adapters" if target_layer == "domain":
-            rule = "adapters-cannot-import-domain"
-        case "adapters" if target_layer == "application" and not target_is_ports:
-            rule = "adapters-may-import-only-application-ports"
-        case "adapters" if target_layer == "interfaces":
-            rule = "adapters-cannot-import-interfaces"
-        case "interfaces" if target_layer in {"domain", "platform", "adapters"}:
-            rule = "interfaces-must-call-application"
-        case _:
-            pass
-    return rule
+    if source_layer not in ALLOW_MATRIX or target_layer not in ALLOW_MATRIX[source_layer]:
+        return "unknown-layer-pair"
+    
+    allowed = ALLOW_MATRIX[source_layer][target_layer]
+    
+    if target_layer == "application" and target_is_ports:
+        if source_layer in {"platform", "adapters"}:
+            allowed = True
+    
+    if allowed:
+        return None
+    
+    if source_layer == "domain":
+        return "domain-cannot-import-non-domain"
+    elif source_layer == "platform" and target_layer == "application":
+        return "platform-may-import-only-application-ports"
+    elif source_layer == "application":
+        return "application-cannot-import-implementation"
+    elif source_layer == "adapters" and target_layer == "domain":
+        return "adapters-cannot-import-domain"
+    elif source_layer == "adapters" and target_layer == "application":
+        return "adapters-may-import-only-application-ports"
+    elif source_layer == "adapters" and target_layer == "interfaces":
+        return "adapters-cannot-import-interfaces"
+    elif source_layer == "interfaces":
+        return "interfaces-must-call-application"
+    
+    return "unknown-violation"
 
 
 class ImportCollector(ast.NodeVisitor):
     """Collect absolute Work Frontier imports from an AST."""
 
-    def __init__(self) -> None:
+    def __init__(self, file_path: Path, source_root: Path) -> None:
         """Initialize the mutable AST import accumulator."""
+        self.file_path: Path = file_path
+        self.source_root: Path = source_root
         self.modules: list[tuple[str, int]] = []
 
     @override
@@ -79,13 +150,18 @@ class ImportCollector(ast.NodeVisitor):
 
     @override
     def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
-        if node.level == 0 and node.module is not None:
-            self.modules.append((node.module, node.lineno))
+        resolved = resolve_relative_import(
+            self.file_path, self.source_root, node.module, node.level
+        )
+        if resolved is not None:
+            self.modules.append((resolved, node.lineno))
 
 
-def imported_modules(tree: ast.Module) -> tuple[tuple[str, int], ...]:
+def imported_modules(
+    tree: ast.Module, file_path: Path, source_root: Path
+) -> tuple[tuple[str, int], ...]:
     """Extract absolute Work Frontier imports and their source lines."""
-    collector = ImportCollector()
+    collector = ImportCollector(file_path, source_root)
     collector.visit(tree)
     return tuple(collector.modules)
 
@@ -98,7 +174,7 @@ def validate(source_root: Path) -> tuple[BoundaryViolation, ...]:
         if source_layer is None:
             continue
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=path)
-        for module, line in imported_modules(tree):
+        for module, line in imported_modules(tree, path, source_root):
             target = target_for_module(module)
             if target is None:
                 continue
@@ -111,13 +187,12 @@ def validate(source_root: Path) -> tuple[BoundaryViolation, ...]:
 
 def parse_source_root(arguments: list[str]) -> Path | None:
     """Parse the source root supplied to the standalone checker."""
-    match arguments:
-        case []:
-            return Path("backend/src").resolve()
-        case ["--root", root]:
-            return Path(root).resolve()
-        case _:
-            return None
+    if len(arguments) == 0:
+        return Path("backend/src").resolve()
+    elif len(arguments) == 2 and arguments[0] == "--root":
+        return Path(arguments[1]).resolve()
+    else:
+        return None
 
 
 def main() -> int:

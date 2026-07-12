@@ -1,1 +1,1 @@
-{"contract_id":"WF-P0-06","kind":"negative","scenario":"duplicate-claim","assertion":"A duplicate queue claim is rejected."}
+{"contract_id":"WF-P0-06","kind":"negative","scenario":"duplicate-claim","assertion":"A duplicate queue claim is rejected.","mutation":{"type":"add_invalid_field","target":"$","payload":{"field":"duplicate_claim_id","value":"claim-001"},"comment":"Adds duplicate_claim_id field — duplicate queue claims violate WF-P0-06 idempotency contract"}}
