@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.13"
+      - uses: pnpm/action-setup@v4
+        with:
+          version: "10"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - run: make bootstrap
+      - run: make check-static
+      - run: make infra-up
+      - run: make migration-smoke
+      - run: make storage-smoke
+      - run: make test
+      - run: make infra-down
+        if: always()
+      - uses: gitleaks/gitleaks-action@v2
+      - uses: anchore/sbom-action@v0
+        with:
+          path: .
+          output-file: sbom.spdx.json

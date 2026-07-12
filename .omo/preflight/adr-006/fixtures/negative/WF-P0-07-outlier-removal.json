@@ -1,0 +1,1 @@
+{"contract_id":"WF-P0-07","kind":"negative","scenario":"outlier-removal","assertion":"Latency outlier removal before p95 or p99 is rejected."}

@@ -1,0 +1,1 @@
+{"contract_id":"WF-P0-05","kind":"positive","scenario":"atomic-internal-commit","assertion":"Inbox through cursor advancement commits in one transaction before external writes."}

@@ -6,14 +6,14 @@ owner: Work Frontier delivery
 date: 2026-07-12
 scope: Work Frontier delivery
 classification: delivery
-depends_on: [WF-REF-001, WF-REF-002, ADR-002, ADR-003]
+depends_on: [WF-REF-001, WF-REF-002, ADR-002, ADR-003, ADR-006]
 ---
 
 # WF-DEL-001: Implementation Sequence
 
 ## Purpose
 
-Complete standalone product implementation plan for Work Frontier aligned with the 13-module architecture (ADR-003). Covers foundation through certification. Includes blocking edges, parallel lanes, and full harness gates.
+Complete standalone product implementation plan for Work Frontier aligned with the 13-module architecture and foundation contracts (ADR-006). Covers preflight through certification. Includes blocking edges, parallel lanes, and full harness gates.
 
 ---
 
@@ -22,41 +22,66 @@ Complete standalone product implementation plan for Work Frontier aligned with t
 ### Dependency Graph
 
 ```
-Stage 1: Foundation / Contracts + Domain
+Stage 0: ADR-006 Foundation Contract Gate
     │
-    ├──► Stage 2a: Tenancy + Identity          ──┐
-    │                                              ├──► Stage 5: Graph + Policy + Decision Authority
-    └──► Stage 2b: Persistence + Ledger + Queue ──┘         │
-                                                              ├──► Stage 7: Projections + Proposals + Approvals
-Stage 3: GitHub Connection + Ingestion + Normalization ──► Stage 6: Evidence + Gates ──┘
-    │                                                              │
-    └──► Stage 4: Reconciliation                                   │
-                                                                    ▼
-                                                        Stage 8: Claims + Attention
-                                                                    │
-                                                        Stage 9: REST + CLI
-                                                                    │
-                                                        Stage 10: Control Room UX
-                                                                    │
-                                                        Stage 11: Copilot (Bounded)
-                                                                    │
-                                                        Stage 12: Operations + Security
-                                                                    │
-                                                        Stage 13: Certification + Cutover
+    ▼
+Stage 1: Foundation / Contracts + Domain
+    ├──► Stage 2a: Tenancy + Identity ────────────────────┐
+    ├──► Stage 2b: Persistence + Ledger + Queue ───────┐  │
+    └──► Stage 3: GitHub Connection + Ingestion + Normalization
+                                                       │  │
+Stage 3 + Stage 2b ──► Stage 4: Reconciliation ───────┤  │
+Stage 2a + Stage 2b + Stage 4 ──► Stage 5: Graph + Policy + Decision Authority
+                                                       │
+Stage 5 + Stage 4 ──► Stage 6: Evidence + Gates ──────┤
+                                                       ▼
+                                             Stage 7: Projections + Proposals + Approvals
+                                                       │
+                                             Stage 8: Claims + Attention
+                                                       │
+                                             Stage 9: REST + CLI
+                                                       │
+                                             Stage 10: Control Room UX
+                                                       │
+                                             Stage 11: Copilot (Bounded)
+                                                       │
+                                             Stage 12: Operations + Security
+                                                       │
+                                             Stage 13: Certification + Cutover
 ```
 
 ### Parallel Lanes
 
 | Lane | Stages | Notes |
 |------|--------|-------|
-| **Domain lane** | 1 → 2a → 5 | Pure domain logic, no I/O |
-| **Persistence lane** | 1 → 2b → 5 | Storage and ledger |
-| **Integration lane** | 3 → 4 → 6 | GitHub connection and data flow |
-| **Convergence** | 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 | Sequential from graph onward |
+| **Domain lane** | 0 → 1 → 5 | Pure domain logic, no I/O |
+| **Platform lane** | 0 → 2a / 2b → 5 | Identity, tenancy, persistence, ledger, queue |
+| **Integration lane** | 0 → 3 → 4 → 6 | GitHub connection and data flow |
+| **Convergence** | 3 + 2b → 4; 2a + 2b + 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 | Stage 4 merges Integration and persistence; sequential after graph convergence |
 
 ---
 
 ## 2. Stage Details
+
+### Stage 0: ADR-006 Foundation Contract Gate
+
+**Modules:** Taxonomy and cross-cutting contracts; no runtime implementation.
+
+| Deliverable | Description |
+|-------------|------------|
+| Contract manifest | Machine-readable taxonomy, port ownership, reproducibility, tenancy, audit, atomic-commit, and queue contracts |
+| Negative fixtures | Deterministic failures for contract drift and each P0 invariant violation |
+| Canonical alignment | Architecture, security, domain, integration, delivery, quality, and Vietnamese summary docs agree with ADR-006 |
+
+**Harness Gate:**
+
+| Gate | Criterion |
+|------|-----------|
+| Foundation contract validation | Manifest validates all P0 fields and references; every required negative fixture fails with its contract ID |
+| Taxonomy/port boundary | Domain is pure; only `application.ports` can be imported by Platform/Adapters for implementation |
+| Consistency protocol | Inbox → snapshot → DecisionRecord → projection → audit → outbox → cursor is defined as one internal transaction |
+
+**Depends on:** ADR-006 acceptance. **Blocks:** Stages 1–13.
 
 ### Stage 1: Foundation / Contracts + Domain
 
@@ -68,7 +93,7 @@ Stage 3: GitHub Connection + Ingestion + Normalization ──► Stage 6: Eviden
 | Edge types | `contains`, `blocks`, `requires_gate`, `related_to` |
 | Authority statuses | Source precedence rules, provenance tracking |
 | DecisionRecord schema | Immutable per-WorkItem decision output with snapshot and policy provenance |
-| EvidenceRecord schema | Append-only ledger entry format |
+| Decision reproducibility | Complete snapshot/source/graph/policy/pipeline/engine/profile/causation/correlation envelope |
 
 **Harness Gate:**
 
@@ -77,24 +102,25 @@ Stage 3: GitHub Connection + Ingestion + Normalization ──► Stage 6: Eviden
 | Schema validation | All domain types pass Pydantic/Zod validation |
 | Invariant documentation | Every entity has documented invariants |
 | Round-trip test | Serialize → deserialize produces identical output |
+| Reproducibility rejection | Missing or altered decision-input identity fails deterministically |
 
 ---
 
 ### Stage 2a: Tenancy + Identity
 
-**Modules:** `identity`, `tenancy`.
+**Modules:** Platform `identity`, `tenancy`.
 
 | Deliverable | Description |
 |-------------|------------|
 | Actor identification | Machine vs user identity, token context |
-| Tenant scoping | Tenant config, cross-tenant isolation |
+| Tenant scoping | Tenant config, forced RLS, transaction-local workspace context, scoped namespaces |
 | Access boundaries | Module-level tenant enforcement |
 
 **Harness Gate:**
 
 | Gate | Criterion |
 |------|-----------|
-| Isolation test | Cross-tenant access correctly blocked |
+| Isolation test | Production-equivalent non-BYPASSRLS role blocks missing/mismatched context and all cross-workspace paths |
 | Identity resolution | Actor correctly identified from token |
 
 **Depends on:** Stage 1.
@@ -103,22 +129,22 @@ Stage 3: GitHub Connection + Ingestion + Normalization ──► Stage 6: Eviden
 
 ### Stage 2b: Persistence + Ledger + Queue
 
-**Modules:** `audit` (evidence ledger), persistence layer, durable queue.
+**Modules:** Platform `audit`, persistence layer, durable queue.
 
 | Deliverable | Description |
 |-------------|------------|
-| Evidence ledger | Append-only, checksum chain, tamper detection |
+| Evidence ledger | Segmented canonical-envelope/payload-hash chain, anchors/WORM proof where threat model requires it |
 | WorkItem persistence | Save/load with versioning |
-| Durable queue | Idempotent task queue for sync cycles |
+| Durable queue | Fair `SKIP LOCKED` queue with lease CAS, retry schedule, dead letter, controlled replay |
 | Cursor management | Track sync progress per TrackerConnection |
 
 **Harness Gate:**
 
 | Gate | Criterion |
 |------|-----------|
-| Ledger immutability | Written entries cannot be modified |
-| Checksum chain | Chain valid after write sequence |
-| Queue idempotency | Replaying same window produces identical entries |
+| Ledger immutability | Payload, envelope, order, and privileged-DB rewrite tampering are detected or anchored evidence fails |
+| Checksum chain | Per-workspace chain valid after write sequence |
+| Queue idempotency | Replaying same window produces identical entries; lease-losing worker cannot complete |
 | Persistence round-trip | Save → load produces identical data |
 
 **Depends on:** Stage 1.
@@ -171,7 +197,7 @@ Stage 3: GitHub Connection + Ingestion + Normalization ──► Stage 6: Eviden
 | Staleness detection | Outdated data correctly identified |
 | No silent data loss | Conflicts always surfaced, never silently dropped |
 
-**Depends on:** Stage 3.
+**Depends on:** Stages 2b, 3.
 
 ---
 
@@ -199,7 +225,7 @@ Stage 3: GitHub Connection + Ingestion + Normalization ──► Stage 6: Eviden
 | WF-REF-001 policy edges | #538→#503 and #487/#503/#521→#474 correctly represented |
 | State machine integrity | Only approved transitions execute |
 
-**Depends on:** Stages 2a, 2b.
+**Depends on:** Stages 2a, 2b, 4.
 
 ---
 

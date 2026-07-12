@@ -1,0 +1,1 @@
+{"contract_id":"WF-P0-02","kind":"positive","scenario":"complete-reproducibility-envelope","assertion":"All DecisionRecord input identities are required."}

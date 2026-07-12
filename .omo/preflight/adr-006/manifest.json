@@ -1,0 +1,48 @@
+{
+  "gate": "ADR-006 foundation contracts",
+  "version": 1,
+  "contracts": [
+    {
+      "id": "WF-P0-01",
+      "name": "taxonomy and port ownership",
+      "required_markers": ["Domain", "Platform", "Application", "Interfaces", "application.ports", "Adapters"],
+      "negative_scenarios": ["taxonomy-drift", "domain-io", "wrong-port-owner"]
+    },
+    {
+      "id": "WF-P0-02",
+      "name": "decision reproducibility",
+      "required_markers": ["workspace_id", "normalized_snapshot_id", "source_revision_set", "graph_revision", "policy_bundle_id", "ranking_pipeline_hash", "engine_version", "normalization_profile_version", "causation_id", "correlation_id"],
+      "negative_scenarios": ["missing-reproducibility-identity", "altered-reproducibility-identity"]
+    },
+    {
+      "id": "WF-P0-03",
+      "name": "forced-RLS workspace isolation",
+      "required_markers": ["FORCE ROW LEVEL SECURITY", "BYPASSRLS", "transaction-local workspace context", "cache", "object", "job", "inbox", "audit", "idempotency"],
+      "negative_scenarios": ["missing-workspace-context", "cross-scope-access"]
+    },
+    {
+      "id": "WF-P0-04",
+      "name": "audit evidence integrity",
+      "required_markers": ["canonical event envelope", "payload_hash", "signed anchors", "WORM"],
+      "negative_scenarios": ["audit-envelope-tamper", "missing-anchor-proof"]
+    },
+    {
+      "id": "WF-P0-05",
+      "name": "atomic inbox-to-outbox consistency",
+      "required_markers": ["normalized snapshot", "DecisionRecord set", "current projection", "transactional outbox", "cursor/source-version advancement"],
+      "negative_scenarios": ["partial-internal-commit", "stale-outbox-fingerprint"]
+    },
+    {
+      "id": "WF-P0-06",
+      "name": "lease and CAS queue safety",
+      "required_markers": ["FOR UPDATE SKIP LOCKED", "lease_owner", "dead_letter", "controlled replay"],
+      "negative_scenarios": ["duplicate-claim", "lease-loss-completion", "poison-replay"]
+    },
+    {
+      "id": "WF-P0-07",
+      "name": "honest performance measurement",
+      "required_markers": ["all valid completed requests", "failures", "timeouts", "outlier removal"],
+      "negative_scenarios": ["outlier-removal", "missing-failure-reporting"]
+    }
+  ]
+}

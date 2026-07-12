@@ -7,7 +7,7 @@ date: 2026-07-12
 scope: Work Frontier terminology
 classification: vi-curated
 language: vi
-canonical: [WF-REF-001, ADR-002, ADR-003, ADR-004, product/vision.md]
+canonical: [WF-REF-001, ADR-002, ADR-003, ADR-004, ADR-006, product/vision.md]
 ---
 
 # WF-VI-004: Thuật ngữ
@@ -34,7 +34,7 @@ canonical: [WF-REF-001, ADR-002, ADR-003, ADR-004, product/vision.md]
 | Tiếng Việt | Tiếng Anh | Định nghĩa |
 |-----------|----------|-----------|
 | WorkItem | WorkItem | Đơn vị công việc cơ bản |
-| DecisionRecord | DecisionRecord | WorkItem được phong phú với ranking, gate, provenance |
+| DecisionRecord | DecisionRecord | Envelope bất biến, tái lập được: quyết định + snapshot/graph/policy/pipeline/engine provenance |
 | Authority status | Authority status | Quyền ưu tiên giữa các nguồn dữ liệu |
 | Provenance | Provenance | Ai nói gì, khi nào, từ nguồn nào |
 | WorkLease | WorkLease | Sở hữu chính (leaseholder) và tham gia phụ của một WorkItem |
@@ -47,13 +47,13 @@ canonical: [WF-REF-001, ADR-002, ADR-003, ADR-004, product/vision.md]
 
 | Tiếng Việt | Tiếng Anh | Lớp |
 |-----------|----------|-----|
-| Xác định | identity | Domain |
-| Quản lý tenant | tenancy | Domain |
-| Kết nối tracker | connections | Domain |
 | Đồ thị | graph | Domain |
 | Quy tắc | policies | Domain |
 | Quyết định | decisions | Domain |
-| Sổ chi ghi thêm | audit | Domain |
+| Xác định | identity | Platform |
+| Quản lý tenant | tenancy | Platform |
+| Kết nối tracker | connections | Platform |
+| Sổ chi ghi thêm | audit | Platform |
 | Thu thập | ingestion | Application |
 | Chuẩn hóa | normalization | Application |
 | Ảnh hiện tại | projections | Application |

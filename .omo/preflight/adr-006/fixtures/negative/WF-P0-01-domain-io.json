@@ -1,0 +1,1 @@
+{"contract_id":"WF-P0-01","kind":"negative","scenario":"domain-io","assertion":"A Domain dependency on I/O is rejected."}

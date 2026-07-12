@@ -10,8 +10,10 @@ requirement_prefix: "WF-PERF"
 # Performance Envelope
 
 Performance is not a single number. It is an envelope of dimensions that together
-define what the system can handle. Two envelopes are defined: Standard and Large.
-Every envelope dimension has a measured target and a verification harness.
+define what the system can handle. Standard is the default certified envelope;
+Large and Tenant Aggregate are unsupported claims until their declared harness
+has passed. Every envelope dimension has a measured target and a verification
+harness.
 
 ---
 
@@ -289,7 +291,15 @@ Regressions are flagged when:
 - Client-side measurement (includes network round-trip for API endpoints)
 - Server-side measurement (internal timing for worker/scheduler operations)
 - Minimum 1,000 samples per measurement point
-- Outliers above 3 standard deviations excluded from p95 calculation (but counted in error rate)
+- Compute p95 and p99 from **all valid completed requests**. Do not discard
+  high-latency samples by standard-deviation or percentile prefiltering.
+- Timeouts, client-visible errors, and aborted server operations are failures,
+  not omitted latency samples. Report them separately with count/rate and the
+  configured timeout threshold.
+- Exclude only load-generator defects proven by predeclared instrumentation
+  rules; retain excluded sample count and reason in the evidence artifact.
+- Report p50/p95/p99/max, error rate, timeout rate, queue age, queue depth, and
+  backlog recovery time for every envelope run.
 
 ### How Throughput Is Measured
 

@@ -8,12 +8,15 @@ Related requirements: WF-DOM-07
 
 # DecisionRecord
 
-**WF-DOM-07**: A DecisionRecord is the immutable, persisted decision output produced by the [Frontier Engine](../product/overview.md#frontier-engine). Each engine cycle takes a snapshot of current state plus policies and produces a DecisionRecord. DecisionRecords are never recomputed in place; when the engine reaches a different result on a subsequent cycle, it creates a new DecisionRecord. The product layer persists the decision history.
+**WF-DOM-07**: A DecisionRecord is the immutable, persisted, reproducible decision envelope produced by the [Frontier Engine](../product/overview.md#frontier-engine). Each engine cycle takes an identified normalized snapshot plus a versioned policy bundle and produces one DecisionRecord per evaluated WorkItem. DecisionRecords are never recomputed in place; later cycles append new records. The product layer persists the decision history and may cache a derived projection only when it names this record.
 
 ## What a DecisionRecord Is
 
 A DecisionRecord captures everything the engine knew and decided at a point in time:
 
+- The exact workspace, Program context, normalized snapshot, graph revision,
+  policy bundle, ranking pipeline, engine build, normalization profile, and
+  source-revision set used to decide.
 - Which [WorkItem](work-item.md) this decision concerns.
 - The ranking position and full comparator trace.
 - The [Gate](gates-and-evidence.md#gate) outcomes and pending evidence.
@@ -36,9 +39,26 @@ A DecisionRecord captures everything the engine knew and decided at a point in t
 | Field | Type | Description |
 |-------|------|-------------|
 | `decision_id` | ULID | Unique identifier for this decision. Immutable. |
+| `workspace_id` | ULID | Mandatory data-isolation scope. |
+| `program_id` | ULID or null | Program context used for priority/rollup, if any. |
 | `item_id` | string | The [WorkItem](work-item.md) this decision concerns. |
-| `decision_time` | ISO 8601 | When this decision was produced. |
-| `pipeline_version` | string | Version of the ranking pipeline configuration used. |
+| `computed_at` | ISO 8601 | When this decision was produced. |
+| `causation_id` | ULID or UUID | Direct inbox, mutation, job, or revalidation event that caused computation. |
+| `correlation_id` | ULID or UUID | End-to-end operation/trace identity. |
+
+### Reproducibility Envelope
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `normalized_snapshot_id` | ULID | Immutable normalized input bundle ID. |
+| `normalized_snapshot_hash` | SHA-256 | Canonical hash of all normalized fields consumed by the engine. |
+| `source_revision_set` | map[source_id, revision] | Exact tracker/user/policy source revisions included in that snapshot. |
+| `graph_revision` | ULID or monotonic version | Identifies the typed edge graph consumed. |
+| `policy_bundle_id` | ULID | Versioned policy bundle identity. |
+| `policy_bundle_hash` | SHA-256 | Canonical hash of policy AST/configuration. |
+| `ranking_pipeline_hash` | SHA-256 | Canonical hash of ordered comparator configuration and parameters. |
+| `engine_version` | string | Immutable engine build/algorithm version. |
+| `normalization_profile_version` | string | Connection profile/version used to normalize source data. |
 
 ### Content Snapshot
 
@@ -56,7 +76,7 @@ A DecisionRecord captures everything the engine knew and decided at a point in t
 | Field | Type | Description |
 |-------|------|-------------|
 | `ranking_position` | int | Position in the current ranking (1 = Recommended Next). |
-| `ranking_rationale` | list[ComparatorTrace] | The comparators that determined this position. |
+| `ranking_rationale` | list[ComparatorTrace] | Canonical per-comparator inputs, values, outcome, and tie-break chain. |
 | `ready` | boolean | Whether this WorkItem was ready at decision time. |
 
 ### ComparatorTrace
@@ -64,8 +84,10 @@ A DecisionRecord captures everything the engine knew and decided at a point in t
 | Field | Type | Description |
 |-------|------|-------------|
 | `comparator` | string | Name (e.g., `program_priority`, `work_class`, `downstream_unlock_count_desc`). |
-| `result` | -1, 0, 1 | How this item compared to the next item. |
-| `detail` | string | Human-readable explanation. |
+| `input` | canonical JSON | The item-local input/value consumed by this comparator. |
+| `outcome` | enum | `selected`, `equal`, or `deferred_to_next`. |
+| `tie_break_position` | int or null | Position in the deterministic tie-break chain when needed. |
+| `detail` | string | Human-readable explanation derived from canonical inputs. |
 
 ### Gate Summary
 
@@ -112,11 +134,19 @@ The product layer persists an append-only decision history per WorkItem. The his
 
 ## Invariants
 
-- INV-DR-01: `item_id` identifies the WorkItem this decision concerns.
+- INV-DR-01: `workspace_id`, `item_id`, normalized snapshot, graph revision,
+  policy/pipeline hashes, engine version, normalization profile, source revision
+  set, causation, and correlation identify the decision's complete input context.
 - INV-DR-02: DecisionRecords are immutable once persisted. Never modified.
 - INV-DR-03: DecisionRecords are append-only within their governed retention lifetime; they are never rewritten in place.
-- INV-DR-04: Ranking rationale is trace: every applied comparator is recorded.
+- INV-DR-04: Ranking rationale is reproducible: every applied comparator records
+  canonical item-local input/value and deterministic tie-break participation, not
+  merely comparison against an adjacent item.
 - INV-DR-05: Gate summary reflects the states at decision time.
 - INV-DR-06: Authority map covers every field used in ranking at decision time.
 - INV-DR-07: A DecisionRecord for a WorkItem with unavailable data carries partial data with appropriate authority statuses.
 - INV-DR-08: Only an authoritative decision can support claiming a [WorkLease](work-lease.md).
+- INV-DR-09: Replaying the identified normalized snapshot through the identified
+  graph, policy bundle, ranking pipeline, and engine version produces the same
+  canonical decision payload hash; mismatch emits a deterministic integrity
+  AttentionItem and never overwrites history.

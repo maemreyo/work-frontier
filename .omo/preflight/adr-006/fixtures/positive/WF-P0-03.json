@@ -1,0 +1,1 @@
+{"contract_id":"WF-P0-03","kind":"positive","scenario":"forced-rls-scope-matrix","assertion":"Production isolation requires forced RLS and every scoped namespace."}

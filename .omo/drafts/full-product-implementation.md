@@ -1,6 +1,6 @@
 ---
 slug: full-product-implementation
-status: complete
+status: conditionally-approved-preflight-blocked
 intent: clear
 pending-action: write .omo/plans/full-product-implementation.md
 approach: Build a standalone Python/TypeScript modular monolith through dependency-ordered tracer bullets, with TDD and harness evidence at every slice.
@@ -34,7 +34,8 @@ approach: Build a standalone Python/TypeScript modular monolith through dependen
 
 ## Findings (cited - path:lines)
 
-- `docs/architecture/ARCHITECTURE.md:46-180` fixes the 13-module deep modular-monolith boundary and places `audit` in Application/Infrastructure.
+- `docs/decisions/ADR-006-foundation-contracts.md` fixes the 13-module taxonomy, Application-owned port contracts, reproducible decisions, forced RLS, audit integrity, and atomic consistency protocol.
+- `docs/architecture/ARCHITECTURE.md:46-187` fixes the 13-module deep modular-monolith boundary and places `audit` in Platform.
 - `docs/architecture/ARCHITECTURE.md:230-275` requires three runtime processes sharing one codebase.
 - `docs/architecture/ARCHITECTURE.md:279-400` fixes PostgreSQL current state, append-only audit, S3 evidence, and durable queue semantics.
 - `docs/integrations/GITHUB.md:148-244` requires signed durable webhook inbox, refetch, dedup, solve, append decision, and projection.
@@ -44,13 +45,14 @@ approach: Build a standalone Python/TypeScript modular monolith through dependen
 
 ## Decisions (with rationale)
 
-- Follow canonical architecture over stale ADR categorization: `audit` is Application/Infrastructure.
-- Use `backend/src/work_frontier/{domain,application,adapters,interfaces}` plus `frontend/src`; never recreate the oh-my-class tree.
+- Follow ADR-006: `audit` is Platform; Application owns ports in `application.ports`, which Platform/Adapters may import only to implement.
+- Use `backend/src/work_frontier/{domain,platform,application,adapters,interfaces}` plus `frontend/src`; never recreate the oh-my-class tree.
 - Use monorepo-level `Makefile` as the stable harness command surface; implementation tools may evolve behind it.
 - Freeze #539 source data as versioned fixtures; live GitHub is reserved for sandbox certification.
 - Store source revisions as opaque tracker revision strings plus monotonic local version; stale-write fencing compares local versions and source equality, never timestamp ordering.
 - No SSE requirement is invented; initial UI uses polling/query invalidation. Add real-time transport only through a later ADR.
 - Review fix: dependency matrix now mirrors each Wave-2 todo and Todo 35 exactly; canonical `ARCHITECTURE.md` explicitly wins over ADR-003's stale `audit` layer line.
+- Architecture review P0 fix: ADR-006 is now the preflight contract gate. Bootstrap is blocked until its taxonomy, Application-owned port seams, reproducible DecisionRecord, payload-safe segmented audit chain, mandatory RLS, and inbox/outbox/queue protocol have executable contract coverage.
 
 ## Review receipts
 
@@ -60,8 +62,15 @@ approach: Build a standalone Python/TypeScript modular monolith through dependen
 - Review round 2: Momus `ses_0acc8d928ffe8DkjagwoWhkupB` returned OKAY. Oracle approved with a non-blocking note that Todos 16-18 were still grouped despite different prerequisites; grouping and reverse `Blocks` summaries were normalized before final receipts.
 - Review round 3: Momus `ses_0acc1d766ffeulp3M9k3s7oekH` returned OKAY. Oracle approved and identified one non-blocking matrix typo (`Todo 20 Blocks: 31` instead of `33`); corrected before final hash receipts.
 - Final hash review: Oracle `ses_0accba817ffesP8H8E2pRqfktS` returned APPROVE; Momus `ses_0acbe1808ffeRc5tE1oZtWF2xO` returned OKAY and noted one UX reference filename word-order typo, corrected before locking the plan.
-- Locked plan SHA-256: `4df1d68c0f1b81f276ad5f011f71729c8666f6fe174f1ec9446bc69cdf57d45e`.
-- Final receipts on locked file: Momus `ses_0acbe1808ffeRc5tE1oZtWF2xO` = OKAY; Oracle `ses_0accba817ffesP8H8E2pRqfktS` = APPROVE; structural validator = 35 todos, 0 errors.
+- Superseded plan SHA-256: `4df1d68c0f1b81f276ad5f011f71729c8666f6fe174f1ec9446bc69cdf57d45e`. It predates the ADR-006 P0 rebasing and is not approval for the current plan.
+- Current approved rebased plan SHA-256: `6c19270e3148d4429e9b0bd29069e2ec0faab27334d6ce224875f67974000197`.
+- Current deterministic validation: 52 Markdown files passed frontmatter/local-link validation; stale foundation-term sweep passed; plan validator passed 36 ordered todos (P0 + 1–35) with acceptance/QA blocks and P0→Todo 1 dependency.
+- ADR-006 rebase review: Oracle continuation `ses_0abfeaafeffedr4DM6HltaGAz6` approved P0 execution after verifying all seven `WF-P0-*` contracts, frontmatter, and dependency corrections. Its two non-blocking documentation nits (convergence summary and performance-envelope link) were fixed before this receipt.
+- P0 execution: `.omo/preflight/adr-006/validate.mjs` passed with all seven `WF-P0-*` contracts, 7 positive fixtures, 16 mapped negative fixtures, and zero failures; evidence is `.omo/evidence/preflight-adr-006/validation.json`. This is documentation-contract evidence only, not premature runtime RLS/queue/audit/performance evidence.
+- Todo 1 execution: standalone Python 3.13/uv and Node 22/pnpm toolchains, strict Ruff/basedpyright/Biome/TypeScript gates, reproducible lockfiles, and Python/TypeScript hello-contract tests passed. Evidence: `.omo/evidence/task-1-full-product-implementation/verification.json`.
+- Todo 2 execution: ADR-006 AST import-boundary enforcement accepts only `application.ports` as the Platform/Adapter implementation exception and rejects six forbidden edge mutations with exact rule IDs. Evidence: `.omo/evidence/task-2-full-product-implementation/verification.json`.
+- Todo 3 execution: single-node local/CI Compose runs PostgreSQL 16 and MinIO on isolated ports; Alembic upgrade/downgrade/re-upgrade, seeded-state, and failed-DDL rollback probes plus MinIO object round trip pass. Evidence: `.omo/evidence/task-3-full-product-implementation/verification.json`.
+- Todo 4 execution: immutable Pydantic DecisionRecord envelope generates deterministic JSON Schema and Zod artifacts; Python and Zod enforce round trip and mandatory workspace rejection. Evidence: `.omo/evidence/task-4-full-product-implementation/verification.json`.
 
 ## Scope IN
 
@@ -76,7 +85,7 @@ approach: Build a standalone Python/TypeScript modular monolith through dependen
 - None blocking. Defaults above are reversible and follow the canonical docs.
 
 ## Approval gate
-status: approved-by-user-request
-approved-action: write `.omo/plans/full-product-implementation.md`
+status: todo-4-complete-todo-5-unblocked
+pending-action: execute Todo 5 harness registry and evidence-manifest validation with its own evidence
 <!-- When exploration is exhausted and unknowns are answered, set status: awaiting-approval. -->
 <!-- That durable record is the loop guard: on a later turn read it and resume at the gate instead of re-running exploration. -->

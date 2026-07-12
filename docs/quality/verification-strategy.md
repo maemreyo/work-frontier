@@ -42,6 +42,37 @@ against real code, hit real services, and produced verifiable artifacts.
    not every behavior verified. Coverage numbers never substitute for explicit
    behavioral assertions.
 
+6. **Foundation contracts precede bootstrap.** ADR-006 is a release-blocking
+   preflight gate, not an architecture review receipt. Before runtime packages,
+   migrations, or adapters are created, its taxonomy, `application.ports`
+   ownership, DecisionRecord reproducibility envelope, forced-RLS isolation,
+   audit integrity, and atomic internal consistency protocol must have
+   machine-checked positive and negative fixtures.
+
+---
+
+## P0: ADR-006 Foundation Contract Gate
+
+The P0 gate is the only verification gate that runs before repository bootstrap.
+It is a composite evidence bundle, not a new release-harness ID: it keeps the
+catalog's 67 executable contracts stable while requiring their foundation
+criteria at the earliest point.
+
+| Contract ID | Contract | Required proof | Future harness evidence |
+|-------------|----------|----------------|-------------------------|
+| `WF-P0-01` | Taxonomy and port ownership | A canonical manifest accepts the 13-module ADR-006 taxonomy and rejects any Domain I/O dependency or implementation import outside `application.ports` | WF-HAR-STATIC-02 |
+| `WF-P0-02` | Decision reproducibility | Missing/altered workspace, snapshot, source revision, graph, policy, ranking pipeline, engine, normalization profile, causation, or correlation identity fails; identified replay is byte-identical | WF-HAR-DOMAIN-01, WF-HAR-PROPERTY-01, WF-HAR-META-01 |
+| `WF-P0-03` | Tenant isolation | Absent/mismatched transaction-local workspace context and direct SQL/cache/object/job/inbox/audit/idempotency cross-scope access fail under a non-BYPASSRLS role | WF-HAR-INTEG-01, WF-HAR-SEC-04 |
+| `WF-P0-04` | Audit evidence | Canonical envelope, payload, actor, timestamp, order, and full-segment rewrite tampering fail; privileged-DB profiles require signed-anchor or WORM proof | WF-HAR-SEC-15 |
+| `WF-P0-05` | Atomic consistency | Crash injection at every internal boundary leaves no partial inbox/snapshot/decision/projection/audit/outbox/cursor state; outbox writes have scoped idempotency/fingerprint | WF-HAR-INTEG-03, WF-HAR-OPS-03 |
+| `WF-P0-06` | Queue safety | Fair `SKIP LOCKED` claim, lease-owner CAS, retry/backoff, dead letter, and controlled replay reject duplicate or lease-lost completion | WF-HAR-INTEG-03 |
+| `WF-P0-07` | Honest performance measurement | p95/p99 include all valid completions and separately report failures/timeouts without outlier removal | WF-HAR-OPS-02 and performance evidence |
+
+**Pass criteria:** The machine-readable manifest validates every positive fixture,
+each negative fixture fails with its exact ADR-006 contract identifier, and the
+evidence bundle is retained at `.omo/evidence/preflight-adr-006/`. Failure blocks
+all bootstrap and runtime implementation work.
+
 ---
 
 ## Layer Architecture
@@ -80,7 +111,7 @@ any runtime involvement.
 | Check | Tool | Failure Mode |
 |-------|------|-------------|
 | Type correctness | mypy / tsc strict | Rejects untyped flows, narrows unions |
-| Import boundaries | custom CI check | Prevents package/contract violations |
+| Import boundaries | custom CI check | Prevents package/contract violations, including Application-owned port ownership |
 | Dead code elimination | vulture / ts-prune | Removes unreachable paths before review |
 | Lint (Python) | ruff with full rule set | Enforces formatting, import order, naming |
 | Lint (TypeScript) | Biome | Enforces formatting, import order, naming |
@@ -167,6 +198,7 @@ changes to interfaces do not break consumers.
 | Event schema contract | Published events match consumer expectations | Avro/JSON schema registry check |
 | Inter-service contract | Worker ↔ Web ↔ Scheduler agree on queue message format | Contract test suite |
 | Python ↔ TypeScript schema | Pydantic models match Zod schemas exactly | Cross-language roundtrip test |
+| Foundation manifest | ADR-006 taxonomy/invariant fixtures match canonical documentation | Canonical manifest validator |
 
 **Pass criteria:** Zero contract violations. Schema drift detection runs on every PR.
 Breaking changes require a versioned migration plan reviewed in the same PR.
@@ -180,9 +212,9 @@ full stack in an isolated network.
 
 | Integration Surface | Real Service | What It Proves |
 |--------------------|-------------|-----------------|
-| PostgreSQL | Postgres 16 container | Migrations, queries, connection pooling, transactions |
+| PostgreSQL | Postgres 16 container | Forced RLS with production-equivalent non-BYPASSRLS role, migrations, queries, connection pooling, transactions |
 | Object storage | MinIO container | Upload, download, presigned URL, lifecycle policies |
-| Durable queue | PostgreSQL LISTEN/NOTIFY + table queue | Enqueue, dequeue, retry, dead letter, ordering |
+| Durable queue | PostgreSQL LISTEN/NOTIFY + table queue | Fair enqueue/dequeue, lease CAS, retry, dead letter, controlled replay, atomic outbox |
 | Web server | FastAPI in test mode | Request routing, middleware, auth, response format |
 | Worker | Background worker process | Job pickup, execution, retry, failure handling |
 | Scheduler | Cron scheduler process | Schedule creation, trigger, overlap prevention |
@@ -298,7 +330,7 @@ deployment. Failure blocks release.
 | Authority status manipulation | Authority status cannot be set to `authoritative` without proper source | Attempt spoofed authority status |
 | TrackerConnection credential exposure | Tracker credentials not logged, not in API responses, not in state dumps | Credential scan of all output paths |
 | Evidence record tampering | EvidenceRecords are append-only; old records cannot be modified or deleted | Attempt mutation of existing evidence |
-| Audit log integrity | Audit entries immutable once written | Attempt overwrite of audit log entries |
+| Audit log integrity | Canonical envelope/payload chain and privileged-DB anchors/WORM evidence resist declared tamper threats | Attempt overwrite, reorder, payload/actor/timestamp mutation, and segment rewrite |
 
 ### Accessibility Harness (WF-HAR-A11Y)
 
@@ -329,7 +361,7 @@ Every harness run produces:
 8. **Adapter evidence** — if the commit changes any external integration adapter
    (GitHub, webhooks, etc.), the integration test results against the real sandbox
 9. **Security evidence** — WF-HAR-SEC-* results bundled with the certification
-10. **Performance evidence** — WF-HAR-OPS-02 (load test) results with p95/p99 latencies
+10. **Performance evidence** — WF-HAR-OPS-02 (load test) results with p95/p99 latencies, all-valid-completion sample counts, failure/timeout counts, and excluded-sample reasons
 11. **Restore evidence** — most recent DR drill results proving backup can be restored
 12. **Accessibility evidence** — WF-HAR-A11Y-* results bundled with the certification
 13. **Replay hash** — SHA-256 of the golden-file snapshots used by WF-HAR-539-REPLAY,

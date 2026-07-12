@@ -1,0 +1,1 @@
+{"contract_id":"WF-P0-04","kind":"negative","scenario":"audit-envelope-tamper","assertion":"Payload, actor, timestamp, ordering, envelope, and segment rewriting are rejected."}

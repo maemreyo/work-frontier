@@ -3,7 +3,7 @@
 ## TL;DR (For humans)
 **What you'll get:** A complete standalone Work Frontier product: deterministic readiness engine, GitHub integration, secure multi-tenant control plane, accessible Control Room, operational deployment profiles, certified release evidence, and controlled #539 cutover with rollback.
 
-**Why this approach:** The build proceeds as tested vertical slices, starting with immutable contracts and a pure decision engine, then adding persistence, GitHub, workflows, interfaces, UI, and production certification. This protects the two load-bearing properties: deterministic authority and evidence-backed delivery.
+**Why this approach:** The build starts only after a hard foundation-contract gate proves a single module taxonomy, port ownership, reproducible decisions, payload-safe audit evidence, forced workspace isolation, and atomic internal consistency. It then proceeds as tested vertical slices through the pure engine, persistence, GitHub, workflows, interfaces, UI, and production certification.
 
 **What it will NOT do:** It will not split into microservices, turn audit history into event-sourced current state, add other production trackers, give AI decision authority, or claim production capacity without executable proof.
 
@@ -20,7 +20,8 @@ Your next move: run a high-accuracy review or start execution through the dedica
 ## Scope
 ### Must have
 - A standalone repository with Python backend, React/TypeScript Control Room, PostgreSQL 16, S3-compatible evidence storage, and reproducible local/CI environments.
-- All 13 canonical modules behind enforced import seams; `audit` is Application/Infrastructure, not Domain.
+- All 13 canonical modules behind enforced import seams; `audit` is Platform, not Domain.
+- ADR-006 foundation-contract preflight completes before any Todo 1–5 work: one canonical taxonomy, Application-owned outbound ports, reproducible DecisionRecord envelope, payload-safe segmented audit chain, forced RLS, and atomic inbox/outbox protocol.
 - Pure deterministic snapshot + policy → immutable DecisionRecord-set engine, phased gates, authority provenance, typed containment-cycle rejection, and localized dependency-SCC isolation.
 - Resource-scoped identity/tenancy/RBAC/SoD, append-only-with-retention evidence/audit, durable inbox/queue, idempotent sync, reconciliation, and stale-write fencing.
 - GitHub Level-3 production adapter and frozen #539 reference fixture; explicit `legacy_active`, `shadow`, and `projection_active` writer ownership.
@@ -48,7 +49,8 @@ Your next move: run a high-accuracy review or start execution through the dedica
 ### Parallel execution waves
 > Target 5-8 todos per wave. Fewer than 3 (except the final) means you under-split.
 
-- **Wave 0 — Bootstrap:** Todos 1-5 in dependency order where noted; establishes repository truth and executable gates.
+- **Preflight P0 — Foundation contracts:** ADR-006 and the canonical docs/harness registry must pass the contract gate before Todo 1 begins; this is a hard blocker, not a documentation-only sign-off.
+- **Wave 0 — Bootstrap:** Todos 1-5 in dependency order where noted; establishes repository truth and executable gates after Preflight P0.
 - **Wave 1 — Pure core:** Todos 6-10 parallel by module after contracts land; converges on deterministic DecisionRecord sets.
 - **Wave 2 — Platform:** Todos 11-15 parallel around one migration baseline; converges on transactional persistence and security context.
 - **Wave 3 — GitHub tracer bullet:** Todos 16-20; frozen fixture and adapter can proceed in parallel, then ingest/reconcile/solve converge.
@@ -60,7 +62,8 @@ Your next move: run a high-accuracy review or start execution through the dedica
 ### Dependency matrix
 | Todo | Depends on | Blocks | Can parallelize with |
 | --- | --- | --- | --- |
-| 1 | — | 2-5 | — |
+| P0 | ADR-006 canonical documentation | 1-35 | — |
+| 1 | P0 | 2-5 | — |
 | 2 | 1 | 6-35 | 3,4 |
 | 3 | 1 | 11,16,33 | 2,4 |
 | 4 | 1 | 26-30 | 2,3 |
@@ -88,36 +91,49 @@ Your next move: run a high-accuracy review or start execution through the dedica
 ## Todos
 > Implementation + Test = ONE todo. Never separate.
 <!-- APPEND TASK BATCHES BELOW THIS LINE WITH edit/apply_patch - never rewrite the headers above. -->
-- [ ] 1. Bootstrap the standalone repository and pin toolchains
-  What to do / Must NOT do: Create `backend/src/work_frontier/{domain,application,adapters,interfaces}`, `frontend/src`, `tests`, `scripts`, `infra`, `evidence`; pin Python 3.13 with uv/`pyproject.toml`, Node LTS with package manager lockfile, React/Vite/TypeScript strict, pytest/Hypothesis, Ruff, basedpyright, Biome, Vitest, Playwright. Add `Makefile`, `.env.example`, `.editorconfig`, ignore files, license/readme. Do not create oh-my-class-style directories or runtime coupling.
-  Parallelization: Wave 0 | Blocked by: none | Blocks: 2-35
-  References: `docs/architecture/ARCHITECTURE.md:46-180,587-606`; `docs/quality/harness-catalog.md:20-82`; `docs/decisions/ADR-003-modular-monolith.md`
+- [x] P0. Pass the ADR-006 foundation-contract gate before implementation
+  What to do / Must NOT do: Reconcile all canonical and curated docs to ADR-006; define a machine-readable manifest with exactly `WF-P0-01` taxonomy/port ownership, `WF-P0-02` DecisionRecord reproducibility, `WF-P0-03` forced-RLS workspace isolation, `WF-P0-04` canonical audit/anchor integrity, `WF-P0-05` atomic inbox-to-outbox consistency, `WF-P0-06` lease/CAS queue safety, and `WF-P0-07` honest p95/p99 measurement. Do not scaffold runtime packages, migrations, or product features until this gate passes.
+  Parallelization: Preflight P0 | Blocked by: ADR-006 | Blocks: 1-35
+  References: `docs/decisions/ADR-006-foundation-contracts.md`; `docs/architecture/ARCHITECTURE.md:58-237,302-472`; `docs/domain/decision-record.md`; `docs/security/tenancy-isolation.md`; `docs/quality/verification-strategy.md:54-74`; `docs/quality/harness-catalog.md`
+  Acceptance criteria: canonical-doc/link/term validator passes; manifest contains exactly `WF-P0-01` through `WF-P0-07`; positive fixtures validate all seven contracts; negative fixtures fail deterministically with their contract ID: `WF-P0-01` taxonomy drift/Domain I-O or wrong port owner; `WF-P0-02` each missing or altered reproducibility identity; `WF-P0-03` absent/mismatched workspace plus direct SQL/cache/object/job/inbox/audit/idempotency cross-scope matrix; `WF-P0-04` payload/actor/timestamp/order/envelope/segment-rewrite tampering and missing required anchor/WORM proof; `WF-P0-05` every internal crash boundary, stale outbox fingerprint, and partial commit; `WF-P0-06` duplicate claim, lease-loss completion, retry, dead-letter, and controlled poison replay; `WF-P0-07` rejected outlier removal and missing failure/timeout reporting. Evidence `.omo/evidence/preflight-adr-006/`.
+  QA scenarios: happy—validate all seven manifest contracts and their positive fixtures against canonical docs; failure—inject every listed fixture and assert its precise `WF-P0-*` failure ID. Evidence `.omo/evidence/preflight-adr-006/`.
+  Evidence: `.omo/evidence/preflight-adr-006/validation.json` records 7/7 contract IDs, 7 positive fixtures, 16 negative fixtures, and zero validation failures.
+  Commit: Y | `docs(architecture): gate implementation on foundation contracts`
+
+- [x] 1. Bootstrap the standalone repository and pin toolchains
+  What to do / Must NOT do: Create `backend/src/work_frontier/{domain,platform,application,adapters,interfaces}`, `frontend/src`, `tests`, `scripts`, `infra`, `evidence`; pin Python 3.13 with uv/`pyproject.toml`, Node LTS with package manager lockfile, React/Vite/TypeScript strict, pytest/Hypothesis, Ruff, basedpyright, Biome, Vitest, Playwright. Add `Makefile`, `.env.example`, `.editorconfig`, ignore files, license/readme. Do not create oh-my-class-style directories or runtime coupling.
+  Parallelization: Wave 0 | Blocked by: P0 | Blocks: 2-35
+  References: `docs/decisions/ADR-006-foundation-contracts.md`; `docs/architecture/ARCHITECTURE.md:46-186,587-606`; `docs/quality/harness-catalog.md:20-82`
   Acceptance criteria: `make bootstrap && make check-static` exits 0 from a clean clone; Python and TypeScript hello-contract tests pass; lockfiles are present and reproducible.
   QA scenarios: happy—run bootstrap twice and compare clean status; failure—inject forbidden import and type error, assert gates fail. Evidence `.omo/evidence/task-1-full-product-implementation/`.
+  Evidence: `.omo/evidence/task-1-full-product-implementation/verification.json` records passing bootstrap, static, test, Python import, and frontend contract checks.
   Commit: Y | `chore(repo): bootstrap standalone toolchains`
 
-- [ ] 2. Encode and enforce the 13-module dependency architecture
-  What to do / Must NOT do: Add package public interfaces, dependency rules, `scripts/check_import_boundaries.py`, architecture test fixtures, and root `AGENTS.md` pointing to canonical docs. Treat `audit` as Application/Infrastructure. Domain imports only stdlib/domain contracts; application depends on domain ports; adapters implement ports; interfaces call application. Never allow concrete adapter imports in application.
+- [x] 2. Encode and enforce the 13-module dependency architecture
+  What to do / Must NOT do: Add package public interfaces, dependency rules, `scripts/check_import_boundaries.py`, architecture test fixtures, and root `AGENTS.md` pointing to canonical docs. Follow ADR-006: Domain only pure types/functions; Platform owns identity/tenancy/connections/audit durability; Application owns outbound ports and inbound use cases; Adapters satisfy Application ports; Interfaces call Application. Never allow concrete adapter imports in Application or any I/O dependency in Domain.
   Parallelization: Wave 0 | Blocked by: 1 | Blocks: 6-35
-  References: `docs/architecture/ARCHITECTURE.md:58-180` is canonical and supersedes ADR-003's stale placement of `audit`; `docs/decisions/ADR-003-modular-monolith.md` supplies the modular-monolith decision only; stale WF-HAR-STATIC-02 intent in `docs/quality/harness-catalog.md:44-52`
-  Acceptance criteria: standalone boundary command exits 0; mutation tests for every forbidden edge fail with path and rule; no reference to external repo paths.
+  References: `docs/decisions/ADR-006-foundation-contracts.md`; `docs/architecture/ARCHITECTURE.md:58-186`; `docs/quality/harness-catalog.md:44-52`
+  Acceptance criteria: standalone boundary command exits 0; mutation tests for every forbidden edge and wrong port owner fail with path/rule; no external-repo path reference remains.
   QA scenarios: happy—scan valid skeleton; failure—fixture imports adapter from domain and is rejected. Evidence `.omo/evidence/task-2-full-product-implementation/`.
+  Evidence: `.omo/evidence/task-2-full-product-implementation/verification.json` records the passing checker, one permitted ports exception, six rejected forbidden edges, and a passing full static/test gate.
   Commit: Y | `build(architecture): enforce module boundaries`
 
-- [ ] 3. Establish local/CI infrastructure and migration harness
+- [x] 3. Establish local/CI infrastructure and migration harness
   What to do / Must NOT do: Create Compose with PostgreSQL 16 and MinIO, backend/dev containers, health checks, isolated CI profile, GitHub Actions pipeline, Alembic baseline, test database lifecycle, SBOM and secret scanning. Compose is single-node and must never be labelled HA.
   Parallelization: Wave 0 | Blocked by: 1 | Blocks: 11,16,33
   References: `docs/operations/deployment-profiles.md:10-69,110-151,179-187`; `docs/architecture/ARCHITECTURE.md:230-284`; `docs/quality/harness-catalog.md:270-278,314-378`
   Acceptance criteria: `docker compose up -d --wait`; Alembic upgrade/downgrade/upgrade passes on empty and seeded DB; MinIO roundtrip passes; CI definition runs static and migration gates.
   QA scenarios: happy—fresh stack reaches healthy; failure—invalid migration rolls back without partial schema. Evidence `.omo/evidence/task-3-full-product-implementation/`.
+  Evidence: `.omo/evidence/task-3-full-product-implementation/verification.json` records healthy PostgreSQL/MinIO services, migration and failed-DDL rollback proof, MinIO round trip, full static/test checks, and CI wiring.
   Commit: Y | `build(infra): add reproducible postgres minio stack`
 
-- [ ] 4. Create canonical contract generation and compatibility pipeline
-  What to do / Must NOT do: Implement Pydantic v2 canonical transport schemas, JSON Schema/OpenAPI export, generated TypeScript/Zod validation, compatibility classification, deterministic generation and drift check. Domain entities remain domain types; transport DTOs adapt them. Never manually edit generated artifacts or use dual hand-maintained schemas.
+- [x] 4. Create canonical contract generation and compatibility pipeline
+  What to do / Must NOT do: Implement Pydantic v2 canonical transport schemas, JSON Schema/OpenAPI export, generated TypeScript/Zod validation, compatibility classification, deterministic generation and drift check. Include ADR-006 DecisionRecord envelope fields and canonical JSON/hash rules. Domain entities remain domain types; transport DTOs adapt them. Never manually edit generated artifacts or use dual hand-maintained schemas.
   Parallelization: Wave 0 | Blocked by: 1 | Blocks: 6-10,24,26-30
   References: `docs/domain/*.md`; WF-HAR-CONTRACT-05 `docs/quality/harness-catalog.md:300-308`; `docs/quality/verification-strategy.md`
-  Acceptance criteria: Pydantic→JSON→Zod and reverse fixture roundtrips are lossless; regeneration produces zero diff; incompatible schema changes fail CI.
+  Acceptance criteria: Pydantic→JSON→Zod and reverse fixture roundtrips are lossless; regeneration produces zero diff; incompatible schema changes fail CI; DecisionRecord schema rejects a missing workspace/snapshot/graph/policy/pipeline/engine/source-revision/causation/correlation field.
   QA scenarios: happy—roundtrip representative entities; failure—remove required TS field and assert contract gate fails. Evidence `.omo/evidence/task-4-full-product-implementation/`.
+  Evidence: `.omo/evidence/task-4-full-product-implementation/verification.json` records deterministic generated artifact hashes, Python and Zod round trips, mandatory workspace rejection, and a passing full static/test gate.
   Commit: Y | `feat(contracts): generate cross-language schemas`
 
 - [ ] 5. Implement the harness runner and evidence manifest
@@ -129,7 +145,7 @@ Your next move: run a high-accuracy review or start execution through the dedica
   Commit: Y | `test(harness): add executable evidence registry`
 
 - [ ] 6. Implement domain identities, value objects, WorkItem, Program, and typed edges
-  What to do / Must NOT do: Build strict immutable value objects, branded ULIDs, Actor, tenant/workspace/resource IDs, lifecycle enums, WorkItem, Program, Edge and provenance. Use monotonic local ULID generation behind a port; validate contains/blocks/requires_gate/related_to endpoints. No I/O or ORM in domain.
+  What to do / Must NOT do: Build strict immutable value objects, branded ULIDs, Actor, tenant/workspace/resource IDs, lifecycle enums, WorkItem, Program, Edge and provenance. Make derived WorkItem caches require `derived_from_decision_id`; source truth does not duplicate readiness/ranking. Use monotonic local ULID generation behind a pure utility; validate contains/blocks/requires_gate/related_to endpoints. No I/O or ORM in Domain.
   Parallelization: Wave 1 | Blocked by: 2,4,5 | Blocks: 7-15
   References: `docs/domain/work-item.md`, `program.md`, `edges.md`, `terminology.md`; `docs/architecture/ARCHITECTURE.md:189-205`
   Acceptance criteria: roundtrip and invariant tests pass; invalid edge endpoint/type fails with typed error; import boundary remains clean.
@@ -161,42 +177,42 @@ Your next move: run a high-accuracy review or start execution through the dedica
   Commit: Y | `feat(policies): implement phased evidence gates`
 
 - [ ] 10. Implement deterministic readiness, ranking, and DecisionRecord-set engine
-  What to do / Must NOT do: Create pure engine input snapshot/policy bundle and atomic per-item immutable outputs; readiness filters, configurable lexicographic comparators, stable tie-break, ranking trace, Recommended Next projection, source/policy hashes. No clock/global state/randomness/AI/I/O inside solve.
+  What to do / Must NOT do: Create pure engine input snapshot/policy bundle and atomic per-item immutable outputs; populate the complete reproducibility envelope, comparator item-local inputs/outcomes/tie-break chain, readiness filters, configurable lexicographic comparators, stable tie-break, and Recommended Next projection. No clock/global state/randomness/AI/I/O inside solve.
   Parallelization: Wave 1 convergence | Blocked by: 6-9 | Blocks: 14,19,21,24
   References: `docs/product/overview.md:62-77,122-147`; `docs/domain/decision-record.md`; `readiness-ranking.md`; `recommended-next.md`
-  Acceptance criteria: golden hash, replay, ordering invariance, monotonicity and 10k property inputs pass; same input is bit-for-bit identical.
+  Acceptance criteria: golden envelope hash, replay from identified snapshot/graph/policy/pipeline/engine inputs, ordering invariance, monotonicity and 10k property inputs pass; same input is bit-for-bit identical and an altered payload/input identity is rejected.
   QA scenarios: happy—frozen #539 snapshot returns expected frontier; failure—unsafe authority localizes non-ready reason without corrupting others. Evidence `.omo/evidence/task-10-full-product-implementation/`.
   Commit: Y | `feat(decisions): build deterministic frontier engine`
 
 - [ ] 11. Implement tenant-scoped SQLAlchemy persistence and RLS
-  What to do / Must NOT do: Add SQLAlchemy 2 async models/repositories/migrations for tenants, organizations, workspaces, programs, WorkItems, source versions, edges, policies, decisions, gates, evidence, approvals, overrides, leases, attention, connections, inbox, jobs. Thread workspace context and enable PostgreSQL RLS defense-in-depth. No repository method accepts a bare resource ID.
+  What to do / Must NOT do: Add SQLAlchemy 2 async models/repositories/migrations for tenants, organizations, workspaces, programs, WorkItems, source versions, normalized snapshots, edges, policies, decisions, current projections, gates, evidence, approvals, overrides, leases, attention, connections, inbox, outbox, jobs. Enforce PostgreSQL `ENABLE/FORCE ROW LEVEL SECURITY`, transaction-local workspace context, non-BYPASSRLS app role, workspace composite FKs/uniques and scoped key namespaces. No repository method accepts a bare resource ID.
   Parallelization: Wave 2 | Blocked by: 3,6 | Blocks: 12-25
   References: `docs/architecture/ARCHITECTURE.md:279-317`; `docs/security/tenancy-isolation.md`; `authorization.md:57-68`
-  Acceptance criteria: CRUD/version tests and cross-workspace matrix pass against real PostgreSQL; leakage attempts return typed non-leaking denial.
+  Acceptance criteria: CRUD/version tests and cross-workspace matrix pass against real PostgreSQL using the production-equivalent app role; direct SQL, missing context, cache/object/job/inbox/idempotency cross-scope attempts deny; migration test proves app role cannot BYPASSRLS.
   QA scenarios: happy—same actor uses two explicit workspace contexts; failure—ID from workspace B is invisible in A. Evidence `.omo/evidence/task-11-full-product-implementation/`.
   Commit: Y | `feat(persistence): add tenant-scoped repositories`
 
 - [ ] 12. Implement immutable audit/evidence storage and retention segments
-  What to do / Must NOT do: Append audit events transactionally with canonical UTF-8 serialization, genesis 64-zero hash and SHA-256 chain; content-address bulky artifacts in S3/MinIO; enforce immutable rows/objects; implement governed segment purge with deletion proof. Do not claim event sourcing or rebuild current state from audit.
+  What to do / Must NOT do: Append per-workspace audit events transactionally with canonical UTF-8 JSON, canonical envelope plus payload hash, 64-zero genesis, SHA-256 chain, causation/correlation, and external signed-anchor/WORM capability; content-address bulky artifacts in S3/MinIO; enforce immutable rows/objects; implement governed segment purge with deletion proof. Do not claim event sourcing or rebuild current state from audit.
   Parallelization: Wave 2 | Blocked by: 3,9,11 | Blocks: 13,19,21,23,32,34
   References: `docs/architecture/ARCHITECTURE.md:318-358`; `docs/security/tenancy-isolation.md:110-150`; audit/evidence security harnesses.
-  Acceptance criteria: tamper test detects changed/reordered entry; object hash roundtrip passes; retention purge cannot selectively rewrite chain.
+  Acceptance criteria: payload/actor/timestamp/order/envelope tamper tests detect mismatch; privileged-DB threat profile fails without valid signed anchor/WORM proof; object hash roundtrip passes; retention purge cannot selectively rewrite a segment.
   QA scenarios: happy—append and verify segment; failure—SQL update/object overwrite rejected and alerted. Evidence `.omo/evidence/task-12-full-product-implementation/`.
   Commit: Y | `feat(audit): add immutable evidence ledger`
 
 - [ ] 13. Implement PostgreSQL durable inbox, queue, worker claims, and scheduler fencing
-  What to do / Must NOT do: Build enqueue/idempotency, `SKIP LOCKED` claims, heartbeat, bounded retries/backoff, dead letters, per-tenant sync serialization, stale-job recovery and scheduler leader lock. Preserve original job payload and attempt history. Never acknowledge webhook before durable inbox commit.
+  What to do / Must NOT do: Build workspace-scoped inbox/outbox/job state machines with `received→verified→persisted→claimed→refetched→normalized→solved→projected→completed`, `retry_scheduled`, and `dead_letter`; implement `FOR UPDATE SKIP LOCKED` fair claims, lease owner/expiry CAS, heartbeat, bounded jittered retries, poison replay, per-tenant fairness, transactional outbox and scheduler leader lock. Preserve original payload hash/attempt history. Never acknowledge webhook before durable inbox commit.
   Parallelization: Wave 2 | Blocked by: 3,11,12 | Blocks: 18,19,22,23,34
   References: `docs/architecture/ARCHITECTURE.md:368-400`; `docs/integrations/GITHUB.md:148-244`; WF-HAR-INTEG-03/05/06.
-  Acceptance criteria: concurrent workers execute each idempotency key once; killed worker resumes; max attempts dead-letter; scheduler overlap prevented.
+  Acceptance criteria: concurrent workers execute each workspace idempotency key once; lease-losing worker cannot complete; killed worker resumes; max attempts dead-letter with controlled replay; scheduler overlap prevented; crash injection at every internal commit boundary leaves either no state or all snapshot/decision/projection/audit/outbox state.
   QA scenarios: happy—enqueue/process/complete; failure—kill after claim and recover without duplicate effects. Evidence `.omo/evidence/task-13-full-product-implementation/`.
   Commit: Y | `feat(queue): implement durable background processing`
 
 - [ ] 14. Persist DecisionRecord sets atomically and build current projections
-  What to do / Must NOT do: Adapt normalized DB snapshot into pure engine; in one transaction append complete decision set, update latest pointers/current projections, and emit outbox/audit events with fencing version. Never update an existing DecisionRecord or expose a mixed-cycle frontier.
+  What to do / Must NOT do: Adapt identified normalized DB snapshot into pure engine; in one transaction append complete DecisionRecord set, update latest pointers/current projections carrying `derived_from_decision_id`, append payload-safe audit event, emit outbox intent, and advance source cursor with fencing. Never update an existing DecisionRecord, expose a mixed-cycle frontier, or store computed truth without derivation identity.
   Parallelization: Wave 2 | Blocked by: 10-13 | Blocks: 19,21,24
   References: `docs/domain/decision-record.md`; `docs/product/overview.md:79-91,122-147`; `docs/architecture/ARCHITECTURE.md:404-461`
-  Acceptance criteria: injected failure mid-write rolls back all outputs; concurrent stale writer loses optimistic fence; `/frontier` repository query sees one cycle only.
+  Acceptance criteria: injected failure at each write boundary rolls back all outputs; concurrent stale writer loses optimistic fence; `/frontier` sees one cycle only; stale/missing derived decision identity makes projection non-authoritative.
   QA scenarios: happy—append two cycles and diff history; failure—stale expected version rejected with no partial rows. Evidence `.omo/evidence/task-14-full-product-implementation/`.
   Commit: Y | `feat(decisions): persist atomic decision sets`
 

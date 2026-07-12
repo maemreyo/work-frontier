@@ -1,0 +1,21 @@
+{
+  "name": "@work-frontier/control-room",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=10.0.0"
+  },
+  "scripts": {
+    "check": "biome check src tests && tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "22.18.0",
+    "@biomejs/biome": "2.3.8",
+    "typescript": "5.9.2",
+    "vitest": "3.2.4",
+    "zod": "4.1.0"
+  }
+}

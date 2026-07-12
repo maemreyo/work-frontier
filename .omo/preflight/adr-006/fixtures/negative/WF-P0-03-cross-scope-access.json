@@ -1,0 +1,1 @@
+{"contract_id":"WF-P0-03","kind":"negative","scenario":"cross-scope-access","assertion":"Direct SQL, cache, object, job, inbox, audit, and idempotency access across workspaces is rejected."}

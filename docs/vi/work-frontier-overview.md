@@ -7,7 +7,7 @@ date: 2026-07-12
 scope: Work Frontier product
 classification: vi-curated
 language: vi
-canonical: [WF-REF-001, WF-REF-002, WF-DEL-001, ADR-002, ADR-003]
+canonical: [WF-REF-001, WF-REF-002, WF-DEL-001, ADR-002, ADR-003, ADR-006]
 ---
 
 # WF-VI-001: Tổng quan Work Frontier
@@ -58,13 +58,13 @@ Hệ thống theo dõi (GitHub, Linear, Jira...)
 
 | Lớp | Module | Trách nhiệm |
 |-----|--------|-----------|
-| Domain | identity | Xác định actor |
-| Domain | tenancy | Quản lý tenant |
-| Domain | connections | Quản lý kết nối tracker |
 | Domain | graph | Đồ thị phụ thuộc |
 | Domain | policies | Quy tắc sẵn sàng |
 | Domain | decisions | DecisionRecord, readiness và xếp hạng xác định |
-| Domain | audit | Evidence ledger chỉ ghi thêm |
+| Platform | identity | Xác định actor và session |
+| Platform | tenancy | Cô lập workspace bắt buộc |
+| Platform | connections | Quản lý kết nối tracker và credential |
+| Platform | audit | Audit/evidence chống sửa đổi, inbox/outbox/queue |
 | Application | ingestion | Thu thập dữ liệu từ adapter |
 | Application | normalization | Chuẩn hóa loại tracker → domain |
 | Application | projections | Ảnh hiện tại, auto-projection |
@@ -72,7 +72,7 @@ Hệ thống theo dõi (GitHub, Linear, Jira...)
 | Application | copilot | Giải thích quyết định và đề xuất thay đổi; không sở hữu xếp hạng |
 | Interfaces | control-room | REST/OpenAPI, CLI |
 
-**Nguồn:** [ADR-003](../decisions/ADR-003-modular-monolith.md)
+**Nguồn:** [ADR-006](../decisions/ADR-006-foundation-contracts.md), [Canonical Architecture](../architecture/ARCHITECTURE.md)
 
 ---
 
@@ -108,23 +108,24 @@ Hệ thống theo dõi (GitHub, Linear, Jira...)
 
 ## 6. Điều kiện sẵn sàng sản xuất (DoD)
 
-1. 13 stage đã xây và gate xanh.
-2. 13 module hoàn thành.
-3. 100% fixtrue xử lý đúng.
-4. Writer ownership states hoạt động. Stale-write guard hoạt động.
-5. Evidence ledger chỉ ghi thêm, checksum chain.
-6. Graph acyclic sau mỗi mutation.
-7. Policy deterministic.
-8. AI không bypass lifecycle/gates.
-9. REST/OpenAPI valid.
-10. CLI smoke test.
-11. Control Room UX accessible.
-12. Monitoring, alert, backup/restore.
-13. Security audit pass.
-14. Cutover đạt tương đương ngữ nghĩa chính xác cho DecisionRecord và báo cáo được quản lý; khác biệt trình bày phải được phê duyệt rõ ràng.
-15. Rollback < 5 phút.
-16. Không P0/P1 open.
-17. Tài liệu WF-REF, WF-DEL, ADR, Vietnamese accepted.
+1. P0 ADR-006 pass trước bootstrap: taxonomy/port, DecisionRecord tái lập, forced RLS, audit chain và atomic inbox/outbox có bằng chứng thực thi.
+2. 13 stage đã xây và gate xanh.
+3. 13 module hoàn thành.
+4. 100% fixture xử lý đúng.
+5. Writer ownership states hoạt động. Stale-write guard hoạt động.
+6. Evidence ledger chỉ ghi thêm, chain hash bao gồm envelope/payload và external anchor/WORM khi threat model yêu cầu.
+7. Containment cycle bị reject; dependency SCC được cô lập fail-closed.
+8. Policy deterministic.
+9. AI không bypass lifecycle/gates.
+10. REST/OpenAPI valid.
+11. CLI smoke test.
+12. Control Room UX accessible.
+13. Monitoring, alert, backup/restore.
+14. Security audit pass.
+15. Cutover đạt tương đương ngữ nghĩa chính xác cho DecisionRecord và báo cáo được quản lý; khác biệt trình bày phải được phê duyệt rõ ràng.
+16. Rollback < 5 phút.
+17. Không P0/P1 open.
+18. Tài liệu WF-REF, WF-DEL, ADR, Vietnamese accepted.
 
 **Nguồn:** [WF-DEL-001 §3](../delivery/implementation-sequence.md)
 

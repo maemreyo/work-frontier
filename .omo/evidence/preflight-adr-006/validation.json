@@ -1,0 +1,99 @@
+{
+  "gate": "ADR-006 foundation contracts",
+  "status": "passed",
+  "contracts": [
+    "WF-P0-01",
+    "WF-P0-02",
+    "WF-P0-03",
+    "WF-P0-04",
+    "WF-P0-05",
+    "WF-P0-06",
+    "WF-P0-07"
+  ],
+  "positive_fixture_count": 7,
+  "negative_fixture_count": 16,
+  "negative_fixture_results": [
+    {
+      "contract_id": "WF-P0-01",
+      "scenario": "domain-io",
+      "result": "rejected_by_contract"
+    },
+    {
+      "contract_id": "WF-P0-01",
+      "scenario": "taxonomy-drift",
+      "result": "rejected_by_contract"
+    },
+    {
+      "contract_id": "WF-P0-01",
+      "scenario": "wrong-port-owner",
+      "result": "rejected_by_contract"
+    },
+    {
+      "contract_id": "WF-P0-02",
+      "scenario": "altered-reproducibility-identity",
+      "result": "rejected_by_contract"
+    },
+    {
+      "contract_id": "WF-P0-02",
+      "scenario": "missing-reproducibility-identity",
+      "result": "rejected_by_contract"
+    },
+    {
+      "contract_id": "WF-P0-03",
+      "scenario": "cross-scope-access",
+      "result": "rejected_by_contract"
+    },
+    {
+      "contract_id": "WF-P0-03",
+      "scenario": "missing-workspace-context",
+      "result": "rejected_by_contract"
+    },
+    {
+      "contract_id": "WF-P0-04",
+      "scenario": "audit-envelope-tamper",
+      "result": "rejected_by_contract"
+    },
+    {
+      "contract_id": "WF-P0-04",
+      "scenario": "missing-anchor-proof",
+      "result": "rejected_by_contract"
+    },
+    {
+      "contract_id": "WF-P0-05",
+      "scenario": "partial-internal-commit",
+      "result": "rejected_by_contract"
+    },
+    {
+      "contract_id": "WF-P0-05",
+      "scenario": "stale-outbox-fingerprint",
+      "result": "rejected_by_contract"
+    },
+    {
+      "contract_id": "WF-P0-06",
+      "scenario": "duplicate-claim",
+      "result": "rejected_by_contract"
+    },
+    {
+      "contract_id": "WF-P0-06",
+      "scenario": "lease-loss-completion",
+      "result": "rejected_by_contract"
+    },
+    {
+      "contract_id": "WF-P0-06",
+      "scenario": "poison-replay",
+      "result": "rejected_by_contract"
+    },
+    {
+      "contract_id": "WF-P0-07",
+      "scenario": "missing-failure-reporting",
+      "result": "rejected_by_contract"
+    },
+    {
+      "contract_id": "WF-P0-07",
+      "scenario": "outlier-removal",
+      "result": "rejected_by_contract"
+    }
+  ],
+  "failures": [],
+  "scope": "pre-bootstrap documentation-contract validation; not runtime integration evidence"
+}

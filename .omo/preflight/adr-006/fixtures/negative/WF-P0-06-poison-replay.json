@@ -1,0 +1,1 @@
+{"contract_id":"WF-P0-06","kind":"negative","scenario":"poison-replay","assertion":"Poison work bypassing dead-letter controls is rejected."}

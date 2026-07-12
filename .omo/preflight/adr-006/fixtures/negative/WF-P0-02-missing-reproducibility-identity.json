@@ -1,0 +1,1 @@
+{"contract_id":"WF-P0-02","kind":"negative","scenario":"missing-reproducibility-identity","assertion":"A DecisionRecord missing a required input identity is rejected."}

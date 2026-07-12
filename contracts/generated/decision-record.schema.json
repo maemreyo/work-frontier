@@ -1,0 +1,129 @@
+{
+  "additionalProperties": false,
+  "description": "Immutable cross-language DecisionRecord reproducibility envelope.",
+  "properties": {
+    "causation_id": {
+      "minLength": 1,
+      "title": "Causation Id",
+      "type": "string"
+    },
+    "computed_at": {
+      "format": "date-time",
+      "title": "Computed At",
+      "type": "string"
+    },
+    "correlation_id": {
+      "minLength": 1,
+      "title": "Correlation Id",
+      "type": "string"
+    },
+    "decision_id": {
+      "minLength": 1,
+      "title": "Decision Id",
+      "type": "string"
+    },
+    "engine_version": {
+      "minLength": 1,
+      "title": "Engine Version",
+      "type": "string"
+    },
+    "graph_revision": {
+      "minLength": 1,
+      "title": "Graph Revision",
+      "type": "string"
+    },
+    "item_id": {
+      "minLength": 1,
+      "title": "Item Id",
+      "type": "string"
+    },
+    "normalization_profile_version": {
+      "minLength": 1,
+      "title": "Normalization Profile Version",
+      "type": "string"
+    },
+    "normalized_snapshot_hash": {
+      "maxLength": 64,
+      "minLength": 64,
+      "title": "Normalized Snapshot Hash",
+      "type": "string"
+    },
+    "normalized_snapshot_id": {
+      "minLength": 1,
+      "title": "Normalized Snapshot Id",
+      "type": "string"
+    },
+    "policy_bundle_hash": {
+      "maxLength": 64,
+      "minLength": 64,
+      "title": "Policy Bundle Hash",
+      "type": "string"
+    },
+    "policy_bundle_id": {
+      "minLength": 1,
+      "title": "Policy Bundle Id",
+      "type": "string"
+    },
+    "program_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Program Id"
+    },
+    "ranking_pipeline_hash": {
+      "maxLength": 64,
+      "minLength": 64,
+      "title": "Ranking Pipeline Hash",
+      "type": "string"
+    },
+    "ranking_position": {
+      "minimum": 1,
+      "title": "Ranking Position",
+      "type": "integer"
+    },
+    "ready": {
+      "title": "Ready",
+      "type": "boolean"
+    },
+    "source_revision_set": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "minProperties": 1,
+      "title": "Source Revision Set",
+      "type": "object"
+    },
+    "workspace_id": {
+      "minLength": 1,
+      "title": "Workspace Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "decision_id",
+    "workspace_id",
+    "program_id",
+    "item_id",
+    "computed_at",
+    "causation_id",
+    "correlation_id",
+    "normalized_snapshot_id",
+    "normalized_snapshot_hash",
+    "source_revision_set",
+    "graph_revision",
+    "policy_bundle_id",
+    "policy_bundle_hash",
+    "ranking_pipeline_hash",
+    "engine_version",
+    "normalization_profile_version",
+    "ready",
+    "ranking_position"
+  ],
+  "title": "DecisionRecordContract",
+  "type": "object"
+}

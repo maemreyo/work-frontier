@@ -1,0 +1,1 @@
+{"contract_id":"WF-P0-05","kind":"negative","scenario":"stale-outbox-fingerprint","assertion":"An outbox write with a stale projection fingerprint is rejected."}

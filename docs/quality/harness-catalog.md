@@ -45,17 +45,17 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `python scripts/check-import-boundaries.py` |
-| **What it runs** | Scans all imports across packages/services, verifies no boundary violations |
+| **Command** | `uv run python scripts/check_import_boundaries.py` |
+| **What it runs** | Scans `backend/src/work_frontier` imports, verifies ADR-006 Domain/Platform/Application/Interfaces/Adapter seams and Application-owned ports |
 | **Artifact** | `evidence/static/import-boundaries.json` |
-| **Pass criteria** | Zero violations of the package boundary rules (AGENTS.md §11) |
+| **Pass criteria** | Zero violations of ADR-006 and `architecture/ARCHITECTURE.md` §3.3; fixtures prove Domain cannot import Platform/Application/Adapters/Interfaces, Platform/Adapters can import only `application.ports` (not Application internals), and Interfaces call Application inbound use cases only. |
 | **Blocks release** | Yes |
 
 ### WF-HAR-STATIC-03: Dead Code Detection
 
 | Field | Value |
 |-------|-------|
-| **Command** | `vulture packages/ --min-confidence 90 && ts-prune` |
+| **Command** | `uv run vulture backend/src --min-confidence 90 && pnpm --dir frontend exec ts-prune` |
 | **What it runs** | Detects unused functions, classes, variables above confidence threshold |
 | **Artifact** | `evidence/static/dead-code.json` |
 | **Pass criteria** | No new dead code since last release. Existing dead code tracked in tech-debt backlog. |
@@ -65,7 +65,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `ruff check packages/ services/ && biome check apps/` |
+| **Command** | `uv run ruff check backend/src tests scripts && pnpm --dir frontend exec biome check src` |
 | **What it runs** | Full lint rule sets for Python and TypeScript |
 | **Artifact** | `evidence/static/lint.json` |
 | **Pass criteria** | Zero violations |
@@ -90,9 +90,9 @@ NAME: short lowercase identifier
 | Field | Value |
 |-------|-------|
 | **Command** | `pytest tests/domain/test_frontier_computation.py -v` (intended) |
-| **What it runs** | Imports fixed hierarchy, textual blockers, and configured policy gates; computes deterministic full-solve frontier; compares canonical DecisionRecord hash to golden-file snapshot |
+| **What it runs** | Imports fixed hierarchy, textual blockers, and configured policy gates; computes deterministic full-solve frontier; compares canonical DecisionRecord envelope hash, snapshot/graph/policy/pipeline/engine identifiers, and ranking trace to golden data |
 | **Artifact** | `evidence/domain/frontier-computation.json` |
-| **Pass criteria** | DecisionRecord hash matches golden-file exactly. No item missing. No ordering discrepancy. |
+| **Pass criteria** | DecisionRecord envelope hash matches golden data exactly. Replaying the identified normalized snapshot, source revision set, graph revision, policy bundle, ranking pipeline, and engine version yields identical output. No item missing or ordering discrepancy. |
 | **Blocks release** | Yes |
 
 ### WF-HAR-DOMAIN-02: Precedence Determinism
@@ -316,10 +316,10 @@ NAME: short lowercase identifier
 | Field | Value |
 |-------|-------|
 | **Command** | `pytest tests/integration/test_postgres.py -v` |
-| **What it runs** | Migrations, CRUD, transactions, connection pooling, LISTEN/NOTIFY against real Postgres 16 |
+| **What it runs** | Migrations, forced RLS policies, non-BYPASSRLS app role, transaction-local workspace context, composite scoped constraints, CRUD, transactions, connection pooling, LISTEN/NOTIFY against real Postgres 16 |
 | **Environment** | Docker Compose: postgres:16 |
 | **Artifact** | `evidence/integration/postgres.json` |
-| **Pass criteria** | All operations succeed. No connection leaks (pool stats verified). Transactions ACID. |
+| **Pass criteria** | All scoped operations succeed. Missing/mismatched workspace context and cross-workspace direct SQL are denied; app role cannot bypass RLS; no connection leaks; transactions ACID. |
 | **Blocks release** | Yes |
 
 ### WF-HAR-INTEG-02: Object Storage Integration
@@ -338,10 +338,10 @@ NAME: short lowercase identifier
 | Field | Value |
 |-------|-------|
 | **Command** | `pytest tests/integration/test_durable_queue.py -v` |
-| **What it runs** | Enqueue, dequeue, retry, dead letter, ordering against real Postgres-backed queue |
+| **What it runs** | Atomic `FOR UPDATE SKIP LOCKED` claims, lease-owner CAS, tenant-fair selection, retry scheduling/backoff, poison-message quarantine, dead-letter/replay, and transactional-outbox handoff against real PostgreSQL |
 | **Environment** | Docker Compose: postgres:16 |
 | **Artifact** | `evidence/integration/durable-queue.json` |
-| **Pass criteria** | Items enqueued and dequeued in order. Retry backs off correctly. Dead letter captured. |
+| **Pass criteria** | No duplicate ownership; stale worker cannot complete after lease loss; retry backs off correctly; dead letter/replay is auditable; outbox intent cannot exist without its internal state transaction. |
 | **Blocks release** | Yes |
 
 ### WF-HAR-INTEG-04: Web Server Integration
@@ -463,7 +463,7 @@ NAME: short lowercase identifier
 | **Command** | `k6 run tests/ops/load-test.js --out json=evidence/ops/load-test.json` |
 | **What it runs** | Sustained load at Standard envelope limits (10k items, 50k edges, 100 repos) |
 | **Artifact** | `evidence/ops/load-test.json` |
-| **Pass criteria** | All p95 latencies within targets (see [performance-envelope.md](../quality/performance-envelope.md)): Control Room read < 500ms, Program overview/why-blocked < 1s, Webhook-to-decision < 30s, Full solve Standard < 5s, Incremental < 2s. Error rate < 0.1%. No resource exhaustion. |
+| **Pass criteria** | All p95 latencies within targets (see [performance envelope](performance-envelope.md)): Control Room read < 500ms, Program overview/why-blocked < 1s, Webhook-to-decision < 30s, Full solve Standard < 5s, Incremental < 2s. p95/p99 include all valid completed requests with no latency outlier removal; errors/timeouts are separately counted and reported. Error rate < 0.1%. No resource exhaustion. |
 | **Blocks release** | Yes |
 | **Frequency** | Every release |
 
@@ -494,9 +494,9 @@ NAME: short lowercase identifier
 | Field | Value |
 |-------|-------|
 | **Command** | `pytest tests/ops/test_event_durability.py -v` |
-| **What it runs** | Enqueues events, simulates crash, verifies all acknowledged events survive; measures loss |
+| **What it runs** | Enqueues inbox deliveries, simulates crashes at every internal consistency boundary, verifies atomic snapshot/DecisionRecord/projection/audit/outbox commit and measures acknowledged-event loss |
 | **Artifact** | `evidence/ops/event-durability.json` |
-| **Pass criteria** | Event durability ≥ 99.99%. Zero acknowledged event loss. Unacknowledged events may be lost (tracked, not blocking). |
+| **Pass criteria** | Event durability ≥ 99.99%. Zero acknowledged-event loss. No partial internal commit or orphaned external-write intent; unacknowledged events may be lost only before durable inbox persistence and are tracked. |
 | **Blocks release** | Yes |
 | **Frequency** | Every release |
 
@@ -715,9 +715,9 @@ NAME: short lowercase identifier
 | Field | Value |
 |-------|-------|
 | **Command** | `pytest tests/security/test_audit_integrity.py -v` (intended) |
-| **What it runs** | Attempts overwrite of audit log entries |
+| **What it runs** | Attempts payload, actor, timestamp, ordering, envelope, and full-segment rewrite tampering; verifies per-workspace chain validation and required external-anchor/WORM policy for privileged-DB threat profiles |
 | **Artifact** | `evidence/security/audit-integrity.json` |
-| **Pass criteria** | Audit entries immutable once written. Overwrite attempts rejected. |
+| **Pass criteria** | Canonical envelope/payload hash mismatch is detected. Entry overwrite/reorder fails. Privileged-DB threat profile cannot claim tamper resistance unless signed anchor or WORM evidence validates. |
 | **Blocks release** | Yes |
 
 ### WF-HAR-A11Y-01: WCAG 2.2 AA

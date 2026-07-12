@@ -1,0 +1,1 @@
+"""Durable technical platform modules."""

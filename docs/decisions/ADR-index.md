@@ -18,6 +18,7 @@ classification: index
 | ADR-003 | Deep Modular Monolith | Accepted | 2026-07-12 |
 | ADR-004 | Evidence-Backed Completion | Accepted | 2026-07-12 |
 | ADR-005 | GitHub-First Controlled Writer Cutover | Accepted | 2026-07-12 |
+| ADR-006 | Foundation Contracts: Taxonomy, Ports, Reproducibility, and Consistency | Accepted | 2026-07-12 |
 
 ## Lifecycle
 

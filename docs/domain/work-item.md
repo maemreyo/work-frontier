@@ -42,13 +42,14 @@ Authority statuses apply to [decisions](decision-record.md) and snapshots. Only 
 | `lifecycle` | enum | `planned`, `active`, `completed`, `cancelled`, `unknown`. Tracker-native statuses normalize into these five canonical states. See [Lifecycle](lifecycle-and-completion.md). |
 | `completion` | CompletionPolicy | Structured completion evaluation, evaluated independently of lifecycle. See [Completion](lifecycle-and-completion.md#completion). |
 
-### Computed State
+### Derived Projection State
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `readiness` | boolean | Can this be worked on now? See [Readiness](readiness-ranking.md#readiness). |
-| `ranking` | RankingPosition | Position in the ranking pipeline. See [Ranking](readiness-ranking.md#ranking). |
-| `fan_out` | int | Number of WorkItems that this one blocks. |
+| `derived_from_decision_id` | ULID or null | Immutable [DecisionRecord](decision-record.md) that produced this cache. Required whenever any derived value is exposed. |
+| `readiness` | boolean or null | Cache only. Can this be worked on now? Authoritative truth lives in `derived_from_decision_id`. |
+| `ranking` | RankingPosition or null | Cache only. Authoritative trace lives in `derived_from_decision_id`. |
+| `fan_out` | int or null | Cache only. Authoritative graph revision is named by `derived_from_decision_id`. |
 
 ### Ownership
 
@@ -74,6 +75,11 @@ Authority statuses apply to [decisions](decision-record.md) and snapshots. Only 
 - INV-WI-04: Every field's authority status is evaluated on every engine cycle.
 - INV-WI-05: Lifecycle transitions follow the state machine in [State Machines](state-machines.md#workitem-lifecycle).
 - INV-WI-06: The `completion` field is governed by a [Completion Policy](lifecycle-and-completion.md#completion), separate from lifecycle state.
+- INV-WI-07: A non-null derived `readiness`, `ranking`, or `fan_out` value must
+  carry a non-null `derived_from_decision_id` in the same workspace.
+- INV-WI-08: A projection is stale and non-authoritative when its referenced
+  DecisionRecord snapshot, graph revision, policy bundle, or engine version no
+  longer matches current computation inputs.
 
 ## WorkItem and DecisionRecord
 
@@ -81,14 +87,16 @@ A [DecisionRecord](decision-record.md) is the immutable, persisted decision outp
 
 ## Safe Projections vs Authoritative Mutations
 
-The engine can project outcomes. Projections are labeled, not stored in the WorkItem's fields, and visible as "if-then" scenarios.
+The engine can project outcomes. Current read projections may cache derived
+values only with `derived_from_decision_id`; hypothetical "if-then" scenarios
+remain labeled and are not persisted as WorkItem truth.
 
 Mutations are actual state changes:
 
 | Source | Scope |
 |--------|-------|
 | Human (primary owner or admin) | Any field, **subject to override safety constraints**: scoped, authorized, audited, time-bounded, cannot weaken safety or completion policies. |
-| Engine (deterministic) | Computed fields only: readiness, ranking, fan_out. |
+| Engine (deterministic) | Appends DecisionRecords and updates caches derived from those records only. |
 | Tracker (via TrackerConnection) | Tracker-native fields. Merged via [precedence](authority-statuses.md#source-precedence) with provenance. |
 
 A projection becomes a mutation only when a human confirms it, and only if the mutation passes [safety override constraints](authority-statuses.md#safety-override-constraints).

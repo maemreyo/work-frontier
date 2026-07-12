@@ -1,0 +1,1 @@
+{"contract_id":"WF-P0-05","kind":"negative","scenario":"partial-internal-commit","assertion":"A crash leaving partial inbox-to-outbox state is rejected."}

@@ -1,0 +1,1 @@
+{"contract_id":"WF-P0-04","kind":"positive","scenario":"canonical-audit-envelope","assertion":"Audit integrity covers the canonical envelope, payload hash, and anchors."}

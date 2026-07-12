@@ -1,0 +1,37 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: work_frontier
+      POSTGRES_PASSWORD: work_frontier
+      POSTGRES_USER: work_frontier
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U work_frontier -d work_frontier"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    ports:
+      - "54329:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  minio:
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    command: server /data --console-address :9001
+    environment:
+      MINIO_ROOT_PASSWORD: work-frontier-minio
+      MINIO_ROOT_USER: work-frontier
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:9000/minio/health/live"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    ports:
+      - "9002:9000"
+      - "9003:9001"
+    volumes:
+      - minio-data:/data
+
+volumes:
+  minio-data:
+  postgres-data:

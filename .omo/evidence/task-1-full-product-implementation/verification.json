@@ -1,0 +1,37 @@
+{
+  "task": "1",
+  "status": "passed",
+  "scope": "standalone repository bootstrap",
+  "runtime": {
+    "python": "3.13.5 via uv",
+    "node": "22.23.1",
+    "pnpm": "10.6.0"
+  },
+  "checks": [
+    {
+      "command": "make bootstrap",
+      "result": "passed",
+      "proof": "uv sync and pnpm frozen-lockfile install succeeded"
+    },
+    {
+      "command": "make check-static",
+      "result": "passed",
+      "proof": "Ruff, basedpyright, Biome, and tsc completed without errors"
+    },
+    {
+      "command": "make test",
+      "result": "passed",
+      "proof": "pytest and Vitest hello-contract tests passed"
+    },
+    {
+      "command": "uv run python -c 'from work_frontier import hello_contract; assert hello_contract() == \"work-frontier\"'",
+      "result": "passed",
+      "proof": "Python package imported and returned the stable contract"
+    },
+    {
+      "command": "pnpm --dir frontend exec vitest run tests/hello.test.ts",
+      "result": "passed",
+      "proof": "Control Room hello-contract test passed directly"
+    }
+  ]
+}

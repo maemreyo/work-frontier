@@ -44,10 +44,10 @@ Installation (self-hosted: one org; hosted: one or more orgs)
 | Rule | Description |
 |------|-------------|
 | TEN-01 | A workspace is the strictest data isolation boundary. Data in workspace A is never accessible from workspace B, period. |
-| TEN-02 | Cross-workspace queries are impossible at the database, API, and cache layers. |
+| TEN-02 | Cross-workspace data access is denied by mandatory database RLS, transaction-local workspace context, API authorization, and cache/object/job namespaces. |
 | TEN-03 | A user may belong to multiple workspaces. Their session is scoped to one workspace at a time. Switching workspaces terminates the current session context. |
-| TEN-04 | In hosted deployments, workspaces belonging to different tenants share no infrastructure state beyond the application binary. |
-| TEN-05 | In self-hosted deployments, a single installation hosts one organization. Multiple workspaces within that organization share the same database but are logically isolated via workspace_id on every row. |
+| TEN-04 | Hosted tenants may share managed database infrastructure, never data scope: RLS, encryption keys, cache/object/job/inbox/audit namespaces, and backup/restore controls remain tenant/workspace-scoped. Dedicated infrastructure is an optional deployment tier, not the only safe model. |
+| TEN-05 | In self-hosted deployments, a single installation hosts one organization. Multiple workspaces may share a database only under the same mandatory RLS and scoped-namespace rules as hosted. |
 | TEN-06 | A Repository is scoped within a workspace. A GitHub repository may appear in multiple workspaces (each with its own ingestion), but data from one workspace's ingestion is never visible in another. |
 
 ---
@@ -58,20 +58,20 @@ Installation (self-hosted: one org; hosted: one or more orgs)
 
 | Layer | Mechanism | Enforcement |
 |-------|-----------|-------------|
-| **Database** | Row-level security (RLS) or workspace_id filter on every query | Application-level query builder enforces workspace_id. Database-level RLS as defense-in-depth. |
-| **API** | Every API request carries a workspace context (derived from the authenticated session). All handlers resolve resources within that workspace. | Middleware intercepts every request and injectes workspace scope. Handlers never receive a bare resource ID without workspace context. |
-| **Cache** | Cache keys are prefixed with workspace_id. No cross-workspace cache hits. | Cache layer enforces prefix. No shared keys across workspaces. |
-| **File storage** | Files are stored in workspace-scoped paths: `/workspaces/{workspace_id}/programs/{program_id}/`. | Storage layer rejects paths that escape the workspace prefix. |
-| **Connections** | Connections (GitHub App installations, CI tokens) are workspace-scoped. A Connection in workspace A cannot feed data into workspace B. | Connection registration is bound to a workspace. Ingestion dispatch checks workspace match. |
-| **Logs** | Application logs include workspace_id on every entry. Log queries are workspace-scoped. | Log infrastructure supports workspace-level filtering. |
+| **Database** | PostgreSQL RLS is mandatory for every workspace-owned production table. `FORCE ROW LEVEL SECURITY` is enabled; app roles lack `BYPASSRLS`; every table/index/FK carrying scoped references includes `workspace_id`. | On transaction begin, middleware sets `SET LOCAL work_frontier.workspace_id`; policies deny rows when absent or mismatched. Application query predicates are mandatory defense in depth, never an alternative. |
+| **API** | Every API request carries an authenticated workspace context. Handlers resolve resources only through scoped repositories. | Middleware sets transaction-local context. Handlers never receive a bare resource ID without workspace context. |
+| **Cache** | Cache keys include tenant and workspace namespace plus resource revision. | Cache layer rejects missing scope; invalidation is workspace-scoped. |
+| **File storage** | Objects use tenant/workspace paths and per-workspace encryption-key references. | Storage layer rejects paths/key references outside current scope. |
+| **Connections** | Connections, credentials, installations, webhook inboxes, source revisions, jobs, outbox records, and idempotency keys are workspace-scoped. | Schema composite uniqueness and RLS prevent a Connection in workspace A feeding B. |
+| **Logs and audit** | Operational logs include workspace_id; audit chains are segmented per workspace. | Log queries, retention, anchors, and export are workspace-scoped. |
 
 ### 2.2 Isolation Verification
 
 | Rule | Description |
 |------|-------------|
-| ISO-01 | Automated integration tests verify cross-workspace isolation on every release. Test creates two workspaces, writes to one, and asserts the other cannot read it. |
-| ISO-02 | The isolation test covers database, API, cache, and file storage layers. |
-| ISO-03 | In hosted deployments, the isolation test runs against the production-like staging environment, not just a unit test mock. |
+| ISO-01 | Integration tests use the same non-BYPASSRLS database role as production. They create two workspaces, set transaction-local scope, and prove direct SQL, repository, API, cache, object, queue, inbox, audit, and idempotency access cannot cross scope. |
+| ISO-02 | Tests prove absent/malformed workspace context fails closed; a privileged migration/admin role is never usable by application processes. |
+| ISO-03 | Hosted staging runs the isolation suite against production-like shared infrastructure. Self-hosted certification runs it against the supplied Compose profile. |
 
 ---
 
@@ -163,8 +163,8 @@ AI providers may retain data according to their own policies, independent of Wor
 
 | Aspect | Hosted | Self-Hosted |
 |--------|--------|-------------|
-| Tenant boundary | Workspace (logical, enforced by application) | Workspace (logical, enforced by application) |
-| Database isolation | Shared database with RLS, or dedicated database per organization (tier-dependent) | Single database, workspace_id on every row |
+| Tenant boundary | Workspace (RLS + application enforcement) | Workspace (RLS + application enforcement) |
+| Database isolation | Shared database permitted only with forced RLS and scoped keys/namespaces; dedicated database remains tier-dependent | Single database permitted only with forced RLS and scoped keys/namespaces |
 | Encryption at rest | Platform-managed keys (AES-256) | Customer-managed keys (bring your own key) |
 | Backup scope | Per-organization backups. Cross-org restore is impossible. | Per-installation backups. Customer controls backup scope. |
 | Network isolation | VPC-level isolation between organizations in hosted tier | Customer controls network topology |

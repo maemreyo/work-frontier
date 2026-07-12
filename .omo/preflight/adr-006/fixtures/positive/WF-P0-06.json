@@ -1,0 +1,1 @@
+{"contract_id":"WF-P0-06","kind":"positive","scenario":"fair-leased-queue","assertion":"Queue claims use skip-locked leasing, CAS, dead letters, and controlled replay."}

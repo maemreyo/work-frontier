@@ -24,6 +24,8 @@ cross_refs:
     label: "Deployment profiles"
   - doc: "../decisions/"
     label: "Architecture Decision Records"
+  - doc: "../decisions/ADR-006-foundation-contracts.md"
+    label: "Foundation contracts"
 ---
 
 # Work Frontier — Architecture
@@ -36,10 +38,9 @@ graph, computes readiness and ranking, and surfaces the single recommended next
 task. It is not coupled to any consumer; it has no knowledge of oh-my-class or
 any other system that queries it.
 
-The oh-my-class repo contains a `work-frontier/` directory that houses this
-package. GitHub issue #539 is a reference fixture for development, not an
-architectural dependency. Work Frontier imports nothing from `packages/`,
-`services/`, `apps/`, or `common/`.
+Work Frontier is extracted as its own repository. GitHub issue #539 is a
+reference fixture for development, not an architectural dependency. Work
+Frontier imports nothing from any consumer repository.
 
 ---
 
@@ -57,16 +58,17 @@ door open without paying the cost. See [ADR-003](../decisions/ADR-003-modular-mo
 
 ## 3. Module Taxonomy
 
-Work Frontier's modules are organized in four layers plus adapters. The layers
-enforce a strict dependency direction.
+Work Frontier's modules are organized in Domain, Platform, Application, and
+Interfaces layers plus concrete adapters. ADR-006 is the canonical taxonomy and
+port-ownership decision. The layers enforce a strict dependency direction.
 
 ### 3.1 The Thirteen Modules
 
 | Module | Layer | Responsibility |
 |--------|-------|---------------|
-| `identity` | Domain | Actor identification, machine vs user identity, token context |
-| `tenancy` | Domain | Tenant scoping, tenant config, cross-tenant isolation |
-| `connections` | Domain | Tracker connection registry, credential lifecycle, adapter binding |
+| `identity` | Platform | Actor/session identity and authentication context |
+| `tenancy` | Platform | Workspace isolation, tenant configuration, scoped data access |
+| `connections` | Platform | Connection registry, credential lifecycle, adapter binding |
 | `graph` | Domain | Dependency graph construction, topological sort, cycle detection |
 | `policies` | Domain | Readiness rules, blocking logic, priority calculation, configurable policy engine |
 | `decisions` | Domain | DecisionRecord (core entity), lifecycle states, state machines, **deterministic frontier and ranking** |
@@ -75,7 +77,7 @@ enforce a strict dependency direction.
 | `projections` | Application | Current-state views, safe auto-projections, authoritative mutation gating |
 | `approvals` | Application | Gated mutations, approval workflows, human-in-the-loop checkpoints |
 | `copilot` | Application | Explanations, proposals, recommendation context (not ranking) |
-| `audit` | Application / Infrastructure | Append-only audit trail, checksum chain, tamper detection, evidence recording |
+| `audit` | Platform | Tamper-evident audit/evidence recording, durable inbox, outbox, queue implementation |
 | `control-room` | Interfaces | REST/OpenAPI surface, CLI surface, health endpoints |
 
 ### 3.2 Layer Diagram
@@ -92,6 +94,12 @@ flowchart TB
         PROJ["projections"]
         APRV["approvals"]
         COP["copilot"]
+    end
+
+    subgraph Platform ["Platform Layer"]
+        ID["identity"]
+        TEN["tenancy"]
+        CONN["connections"]
         AUD["audit"]
     end
 
@@ -103,9 +111,6 @@ flowchart TB
     end
 
     subgraph Domain ["Domain Layer (pure)"]
-        ID["identity"]
-        TEN["tenancy"]
-        CONN["connections"]
         GRA["graph"]
         POL["policies"]
         DEC["decisions"]
@@ -118,7 +123,6 @@ flowchart TB
 
     ING --> NORM
     ING --> CONN
-    ING --> AUD
     NORM --> DEC
     NORM --> GRA
     PROJ --> DEC
@@ -134,14 +138,18 @@ flowchart TB
     FIX --> CONN
     MEM --> CONN
 
-    DEC --> TEN
-    DEC --> ID
+    ING --> TEN
+    ING --> AUD
+    APRV --> ID
+    APRV --> TEN
+    AUD --> TEN
     GRA --> DEC
     POL --> DEC
     AUD --> DEC
 
     style Domain fill:#e8f5e9,stroke:#2e7d32
     style Application fill:#e3f2fd,stroke:#1565c0
+    style Platform fill:#f3e5f5,stroke:#7b1fa2
     style Adapters fill:#fff3e0,stroke:#e65100
     style Interfaces fill:#fce4ec,stroke:#c62828
 ```
@@ -149,30 +157,30 @@ flowchart TB
 ### 3.3 Forbidden Import Edges
 
 ```
-domain/       ──X──>  application/
-domain/       ──X──>  adapters/
-domain/       ──X──>  interfaces/
-application/  ──X──>  interfaces/
-application/  ──X──>  adapters/    (uses adapter port interfaces only)
-adapters/     ──X──>  application/
-adapters/     ──X──>  interfaces/
-interfaces/   ──X──>  domain/      (may only import via application layer)
-interfaces/   ──X──>  adapters/    (may only import via application layer)
+domain/       ──X──>  platform/ | application/ | adapters/ | interfaces/
+platform/     ──X──>  application/ except application.ports
+application/  ──X──>  platform/ implementations | adapters/ | interfaces/
+adapters/     ──X──>  domain/ | application/ except application.ports | interfaces/
+interfaces/   ──X──>  domain/ | platform/ | adapters/
 ```
 
-Adapters implement domain interfaces. Application defines port interfaces;
-adapters satisfy those ports. Application never imports concrete adapter
-implementations.
+Application owns the outbound port interfaces used by its use cases in the
+public `application.ports` package. Platform and Adapters may import only those
+port contracts to implement them; neither may import Application use cases or
+internals. Domain exposes only pure types/functions and never owns a transport,
+persistence, or external-service port. Interfaces call Application inbound use
+cases. The composition root wires Platform/Adapter implementations into the
+Application; Application never imports a concrete implementation.
 
 ### 3.4 Module Roles: Domain vs Application
 
 Domain modules contain pure business rules. No I/O, no infrastructure
-dependencies. Application modules orchestrate domain logic with infrastructure
-concerns (persistence, messaging, external APIs).
+dependencies. Platform modules own durable technical capabilities. Application
+modules orchestrate Domain and Platform interfaces for use cases.
 
-`audit` sits in the Application/Infrastructure layer because it records
-evidence to persistent storage. It is not a pure domain concept; it is the
-infrastructure-facing witness that everything else writes through.
+`audit` sits in Platform because it records durable evidence, maintains
+tamper-evident chains, and implements inbox/outbox/queue capabilities. It is
+not a pure domain concept.
 
 `copilot` sits in the Application layer because it composes domain queries
 (readiness, ranking, dependency context) into explanation payloads and
@@ -190,23 +198,24 @@ interface, invariants, and failure behavior.
 
 | Module | Key Invariant | Failure Mode | Recovery |
 |--------|--------------|--------------|----------|
-| `decisions` | Core entity; state changes only via approved transitions; owns frontier/ranking | State corruption | Replay from immutable source snapshots |
-| `audit` | Append-only; entries are immutable once written | Checksum mismatch | Halt writes, alert, manual review |
+| `decisions` | Reproducible envelope identifies exact snapshot/graph/policy/pipeline/engine inputs; owns frontier/ranking | Replay hash mismatch | Halt authoritative projection, emit integrity AttentionItem |
+| `audit` | Per-workspace canonical envelope/payload hash chain; entries immutable within retention | Checksum/anchor mismatch | Halt segment writes, alert, manual review |
 | `graph` | Typed validation detects containment cycles and dependency SCCs, then isolates invalid components | Cycle detected | Localized fail-closed; unaffected components continue |
 | `policies` | Policy evaluation is pure; same input yields same readiness | Stale policy config | Re-evaluate; reads are side-effect-free |
-| `projections` | Safe projections auto-apply; authoritative mutations require approval | Projection drift | Rebuild from source-item snapshots |
+| `projections` | Every computed cache names `derived_from_decision_id`; authoritative mutations require approval | Projection derivation drift | Rebuild atomically from identified source snapshot |
 | `approvals` | No authoritative mutation lands without an approval record | Unauthorized write | Reject, audit event, alert |
-| `ingestion` | Sync is idempotent; replaying the same window produces identical state | Partial sync | Resume from last committed cursor |
+| `ingestion` | Inbox/snapshot/decision/projection/audit/outbox commit atomically; replaying a source revision produces identical state | Partial sync | Retry claimed delivery; cursor advances only with atomic commit |
 | `connections` | Credentials are never stored in the audit trail | Credential leak | Immediate rotation, audit alert |
 | `identity` | Machine and user identities are never confused | Impersonation | Reject, audit event |
-| `tenancy` | Every query and write is tenant-scoped | Cross-tenant leak | Fail closed |
+| `tenancy` | Every workspace-owned table uses forced RLS and scoped namespaces | Cross-tenant leak | Fail closed; alert and preserve forensic event |
 | `copilot` | Explanations and proposals never become authority without deterministic validation and approval | Provider failure or unsafe output | Disable copilot path; deterministic decisions remain available |
 | `normalization` | Tracker-native types map deterministically to domain types | Mapping drift | Re-evaluate with current profile |
 
 ### 4.2 Adapters
 
-Adapters satisfy domain interfaces. Each adapter owns its own persistence,
-transport, and error handling.
+Adapters satisfy Application-owned outbound interfaces and use Platform
+capabilities for scoped persistence, credentials, and durable delivery. An
+adapter owns tracker transport/error translation; Platform owns persistence.
 
 | Adapter | Role | Certification |
 |---------|------|--------------|
@@ -219,11 +228,16 @@ GitHub is the only production tracker. File, Fixture, and InMemory adapters
 exist solely to support deterministic test harnesses. See
 [GITHUB.md](../integrations/GITHUB.md) section 4 for adapter certification.
 
-### 4.3 Tenant-Aware Persistence
+### 4.3 Workspace-Scoped Persistence
 
-Every query and write is scoped to a tenant. The tenant id is threaded through
-from the Interfaces layer down to every adapter call. Adapters that ignore the
-tenant scope are considered buggy and must fail closed.
+Every query, write, object key, job, inbox delivery, cache key, audit segment,
+and idempotency key is scoped to `workspace_id`; `tenant_id` remains a required
+parent scope for administration and partitioning. The Interfaces layer sets
+workspace context transaction-locally from the authenticated session. PostgreSQL
+RLS with `FORCE ROW LEVEL SECURITY` is mandatory on every workspace-owned
+production table, and the application role must not have `BYPASSRLS`.
+Application query predicates are required defense in depth, not an alternative
+to RLS. Adapters that cannot propagate workspace scope fail closed.
 
 ---
 
@@ -295,8 +309,9 @@ tables.
 
 **Core entity tables:**
 
-- `work_items` — WorkItem entities with lifecycle state, computed fields, and
-  metadata. Immutable source-item versions stored alongside for diff tracking.
+- `work_items` — authoritative tracker/user/policy fields and metadata. It does
+  **not** own mutable readiness or ranking truth; immutable source-item versions
+  are stored alongside for diff tracking.
 - `decision_records` — immutable, context-complete decisions produced from a
   specific normalized snapshot and policy bundle. They retain ranking
   rationale, gate outcomes, authority status, and recommendation context.
@@ -313,9 +328,18 @@ tables.
 - `audit_events` — Append-only audit trail entries (see section 6.2).
 - `source_item_versions` — Immutable snapshots of what the tracker reported
   at each sync. Used for diff and drift detection.
+- `normalized_snapshots` — Canonical normalized input bundles with content hash,
+  graph revision, source-revision set, and ingestion-profile version.
+- `current_projections` — Read models that cache computed fields only with a
+  non-null `derived_from_decision_id`, source snapshot hash, and graph/policy
+  revisions. A projection with a missing or stale derivation is not authoritative.
+- `transactional_outbox` — Committed external-write intents with idempotency key,
+  projection fingerprint, causation, and correlation IDs.
+- `webhook_inbox` — Signed raw delivery metadata/payload hashes and processing
+  state, unique by workspace plus delivery ID.
 - `job_queue` — Durable queue for background work (see section 7).
 
-### 6.2 Audit Trail (Append-Only)
+### 6.2 Audit Trail (Append-Only and Tamper-Evident)
 
 The audit trail is a permanent, immutable record of every event Work Frontier
 has observed or produced. It is the traceability layer. It is **not** the
@@ -323,20 +347,37 @@ source of truth for current state.
 
 Each entry carries:
 
-- `seq` — Monotonic sequence number.
-- `tenant_id` — Tenant scope.
+- `segment_id` / `seq` — Workspace-scoped append-only segment and monotonic
+  sequence number. A segment is never shared across workspaces.
+- `tenant_id` / `workspace_id` — Required administrative and data scope.
 - `item_id` — Reference to the affected WorkItem, if applicable.
 - `event_id` — Idempotency key (UUID). Unique per tenant.
 - `event_type` — What happened: `ingested`, `normalized`, `state_changed`,
   `approved`, `rejected`, `override_applied`, `gate_evaluated`, etc.
 - `actor` — Who did it: `machine:github`, `user:<id>`, `system:scheduler`.
 - `payload` — JSONB event details.
+- `causation_id` / `correlation_id` — The direct triggering event and end-to-end
+  operation identity.
+- `payload_hash` — SHA-256 of canonical payload JSON.
 - `checksum` — SHA-256 chain for tamper detection.
 - `created_at` — Timestamp.
 
-**Checksum chain**: Each entry's `checksum` is
-`SHA256(prev_checksum || event_id || event_type)`. The first entry uses a
-zero-padded genesis hash. This chain detects tampering or corruption.
+**Checksum chain**: Canonical JSON uses UTF-8, sorted object keys, normalized
+timestamps, and no insignificant whitespace. Each entry's checksum is:
+
+```
+SHA256(previous_checksum || canonical_event_envelope || payload_hash)
+```
+
+`canonical_event_envelope` includes segment/sequence, tenant/workspace, event
+ID/type, actor, subject, causation/correlation IDs, and timestamp. The first
+entry uses a 64-character zero genesis hash. This detects payload, actor,
+timestamp, ordering, and envelope tampering within a segment.
+
+The chain alone does not defend against a privileged actor rewriting the entire
+database segment. Production threat models that include that actor require
+periodic externally signed segment anchors or WORM object-store retention; the
+anchor reference is recorded in the next segment.
 
 The audit trail is append-only within its governed retention lifetime: entries
 are never updated in place or selectively removed. Retention expiry and legal
@@ -372,32 +413,36 @@ Background work is tracked through a durable queue backed by PostgreSQL.
 The queue table stores:
 
 - `id` — Job identifier.
-- `tenant_id` — Tenant scope.
+- `tenant_id` / `workspace_id` — Required scope.
 - `job_type` — What kind of work: `sync`, `normalize`, `reconcile`, etc.
-- `state` — `pending`, `claimed`, `completed`, `failed`.
-- `idempotency_key` — Derived from job inputs. Unique per tenant.
+- `state` — `pending`, `claimed`, `retry_scheduled`, `completed`, `dead_letter`.
+- `idempotency_key` — Derived from canonical job inputs. Unique per workspace.
 - `payload` — JSONB job parameters.
 - `result` — JSONB outcome on completion.
-- `heartbeat_at` — Worker heartbeat timestamp.
-- `attempts` / `max_attempts` — Retry tracking.
+- `lease_owner` / `lease_expires_at` / `heartbeat_at` — Compare-and-swap claim
+  ownership and liveness.
+- `attempts` / `max_attempts` / `next_attempt_at` — Retry and backoff tracking.
+- `dead_letter_reason` / `replay_of` — Poison-message quarantine and controlled replay.
 - `created_at`, `claimed_at`, `completed_at` — Lifecycle timestamps.
 
 ### 7.1 Job Lifecycle
 
-1. **Enqueue**: Application layer writes a job row with state `pending` and an
-   idempotency key derived from the job's inputs.
-2. **Claim**: Worker process selects the oldest `pending` job for its tenant,
-   sets state to `claimed`, writes a heartbeat timestamp.
-3. **Execute**: Worker runs the job logic. Updates heartbeat every 30 seconds.
-4. **Complete/Fail**: Worker sets state to `completed` (with result) or `failed`
-   (with error).
+1. **Enqueue**: Application transaction writes a `pending` job with a canonical
+   idempotency key and workspace scope.
+2. **Claim**: A worker selects an eligible job using `FOR UPDATE SKIP LOCKED`,
+   fair tenant/workspace ordering, and a compare-and-swap update that assigns
+   `lease_owner` and `lease_expires_at`.
+3. **Execute**: The worker heartbeats only while it owns the lease.
+4. **Complete/Retry/Quarantine**: Ownership-checked completion writes `completed`;
+   retryable failure schedules exponential backoff with jitter; exhausted or
+   non-retryable jobs move to `dead_letter` and require auditable replay.
 
 ### 7.2 Stale Job Recovery
 
-If `heartbeat_at` is older than 90 seconds and the job is in `claimed` state,
-the scheduler process considers it stale and re-enqueues it (incrementing
-`attempts`). If `attempts >= max_attempts`, the job moves to `failed`
-permanently.
+If a claim lease expires, the scheduler can reclaim only through a
+compare-and-swap transition. It increments attempts and schedules retry; an
+exhausted job moves to `dead_letter`, never silently disappears. The timeout,
+backoff, fairness quantum, and maximum attempts are versioned Platform policy.
 
 ---
 
@@ -406,18 +451,33 @@ permanently.
 Work Frontier keeps bidirectional sync between its PostgreSQL state and
 external trackers. The `ingestion` module drives this process.
 
-### 8.1 Incremental Sync
+### 8.1 Incremental Sync Consistency Protocol
 
-1. **Poll for changes**: On each sync cycle, the adapter fetches items modified
-   since the last sync cursor (stored in a `sync_cursors` table).
-2. **Record evidence**: For each changed item, the `ingestion` module writes an
-   `ingested` event to the audit trail atomically.
-3. **Normalize**: The `normalization` module maps tracker-native data to a
-   versioned normalized WorkItem snapshot.
-4. **Decide and project**: The decisions module produces a new immutable
-   DecisionRecord; projections update PostgreSQL read/current-state tables.
-5. **Advance cursor**: The sync cursor moves forward only after the state
-   write commits.
+The internal state machine is:
+
+```
+received → verified → persisted → claimed → refetched → normalized
+        → solved → projected → completed
+                         ↘ retry_scheduled → dead_letter
+```
+
+`received` accepts no authority claim. `verified` validates signature/scope.
+`persisted` durably records the inbox delivery before acknowledgment.
+`claimed` has a lease owner. `refetched` is the authoritative tracker read.
+
+For one source revision, the following commit in **one PostgreSQL transaction**:
+
+1. normalized snapshot and its canonical hash/revision set;
+2. immutable DecisionRecord set;
+3. current projections with `derived_from_decision_id`;
+4. audit event and checksum entry;
+5. transactional outbox intents; and
+6. cursor/source-version advancement.
+
+Any failure rolls back the entire internal commit. After commit, an outbox worker
+performs external GitHub writes using a workspace-scoped idempotency key and
+projection fingerprint. The tracker response re-enters the inbound protocol;
+external write success never substitutes for local atomicity.
 
 ### 8.2 Reconciliation
 
@@ -454,11 +514,12 @@ sequenceDiagram
 
 ### 8.3 Idempotency and Fencing
 
-- **Idempotency**: Every event carries an `event_id` (UUID). The audit
-  trail's unique constraint on `(tenant_id, event_id)` ensures replay safety.
-- **Fencing**: The `version` column on current-state tables acts as a fencing
-  token. Updates use `WHERE version = $expected_version` and fail if the
-  version has advanced.
+- **Idempotency**: Inbox, source revision, job, outbox, and audit identities are
+  unique within `workspace_id`; one layer's dedup key is never reused as another
+  layer's fencing token.
+- **Fencing**: Source versions, graph revision, policy-bundle hash, projection
+  fingerprint, and row version are checked by compare-and-swap. Timestamp order
+  is never used as a stale-write decision.
 
 ---
 

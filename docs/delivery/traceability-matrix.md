@@ -6,7 +6,7 @@ owner: Work Frontier delivery
 date: 2026-07-12
 scope: Work Frontier
 classification: delivery
-depends_on: [WF-REF-001, WF-DEL-001, ADR-002, ADR-003, ADR-004]
+depends_on: [WF-REF-001, WF-DEL-001, ADR-002, ADR-003, ADR-004, ADR-006]
 ---
 
 # WF-DEL-002: Traceability Matrix
@@ -19,17 +19,30 @@ Maps every Work Frontier requirement family to its implementing module(s), docum
 
 ## 1. Requirement Family → Module Mapping
 
+### Foundation Contract Gate
+
+| Requirement Family | Contract | Key invariants | Harness Gate |
+|-------------------|----------|----------------|-------------|
+| Module taxonomy and ports | ADR-006 | Domain is pure; `application.ports` is the only implementation-contract exception | Stage 0: foundation contract validation + static boundary enforcement |
+| Decision reproducibility | ADR-006 / `decisions` | Complete identified input envelope replays bit-for-bit | Stage 0 + Stage 1: DecisionRecord determinism |
+| Internal consistency | ADR-006 / `ingestion` | Inbox/snapshot/decision/projection/audit/outbox/cursor commit atomically | Stage 0 + Stage 2b queue/event durability |
+
 ### Domain Layer
 
 | Requirement Family | Module | Key invariants | Harness Gate |
 |-------------------|--------|---------------|-------------|
-| Actor identification | `identity` | Machine vs user correctly resolved | Stage 2a: identity resolution |
-| Tenant isolation | `tenancy` | Cross-tenant access blocked | Stage 2a: isolation test |
-| Tracker connection | `connections` | Credential lifecycle managed | Stage 3: fixture import |
 | Dependency graph | `graph` | Containment cycles rejected; dependency SCCs isolated fail-closed | Stage 5: typed cycle handling |
 | Readiness policy | `policies` | Deterministic: same input → same output | Stage 5: policy determinism |
 | Decision lifecycle | `decisions` | State changes via approved transitions only | Stage 5: state machine integrity |
-| Evidence ledger | `audit` | Append-only, checksum chain | Stage 2b: ledger immutability |
+
+### Platform Layer
+
+| Requirement Family | Module | Key invariants | Harness Gate |
+|-------------------|--------|---------------|-------------|
+| Actor identification | `identity` | Machine vs user correctly resolved | Stage 2a: identity resolution |
+| Tenant isolation | `tenancy` | Forced RLS and scoped namespaces deny cross-workspace access | Stage 2a: isolation test |
+| Tracker connection | `connections` | Credential lifecycle managed | Stage 3: fixture import |
+| Evidence ledger and durable delivery | `audit` | Segmented canonical chain, atomic inbox/outbox, fair lease queue | Stage 2b: integrity + queue tests |
 
 ### Application Layer
 
@@ -39,7 +52,7 @@ Maps every Work Frontier requirement family to its implementing module(s), docum
 | Type normalization | `normalization` | Tracker-native → domain types | Stage 3: marker/edge accuracy |
 | Safe projections | `projections` | Auto-projections labeled; mutations require approval | Stage 7: projection labeling |
 | Approval workflows | `approvals` | No mutation without approval record | Stage 7: approval enforcement |
-| Recommended Next | `decisions` | Deterministic frontier and lexicographic ranking | Stage 5: decision determinism |
+| Recommended Next | `decisions` via `projections` | Deterministic frontier/ranking; cached fields name their DecisionRecord | Stage 5/7: decision determinism + projection derivation |
 | Recommendation explanation | `copilot` | Bounded explanation or proposal; never ranking authority | Stage 11: AI boundary |
 
 ### Interfaces Layer
@@ -57,14 +70,15 @@ Maps every Work Frontier requirement family to its implementing module(s), docum
 
 | Requirement Family | Primary doc | Reference doc |
 |-------------------|------------|--------------|
-| Domain types | ARCHITECTURE.md §4 | ADR-003 |
+| Foundation contracts | ADR-006 | ARCHITECTURE.md §3–8 |
+| Domain types | ARCHITECTURE.md §4 | ADR-006 |
 | Tracker neutrality | ADR-002 | ARCHITECTURE.md §3 |
-| Evidence ledger | ARCHITECTURE.md §4.1 | ADR-004 |
+| Evidence ledger | ARCHITECTURE.md §6.2 | ADR-006 |
 | Graph/policy | ARCHITECTURE.md §4.1 | WF-DEL-001 Stage 5 |
 | Cutover | WF-REF-002 | ADR-005 |
 | Fixture facts | WF-REF-001 | WF-DEL-001 Stage 3 |
 | Completion standard | ADR-004 | WF-DEL-001 Stage 13 |
-| Module taxonomy | ADR-003 | ARCHITECTURE.md §3 |
+| Module taxonomy | ADR-006 | ARCHITECTURE.md §3 |
 
 ---
 
@@ -73,10 +87,11 @@ Maps every Work Frontier requirement family to its implementing module(s), docum
 | Requirement Family | Stage | Gate | Evidence required |
 |-------------------|-------|------|------------------|
 | Domain schema | 1 | Schema validation | Round-trip test |
+| Foundation contracts | 0 | Manifest + negative fixtures | ADR-006 contract evidence |
 | Tenancy isolation | 2a | Isolation test | Cross-tenant block test |
 | Identity resolution | 2a | Identity test | Token resolution test |
-| Ledger integrity | 2b | Immutability + checksum | Write-sequence test |
-| Queue idempotency | 2b | Replay test | Identical-output test |
+| Ledger integrity | 2b | Canonical envelope/payload/anchor integrity | Tamper and anchor test |
+| Queue idempotency | 2b | CAS lease + fair replay test | No duplicate/late completion test |
 | Marker extraction | 3 | 100% on fixture | WF-REF-001 marker coverage |
 | Edge extraction | 3 | 100% on fixture | WF-REF-001 §6 edge coverage |
 | No invented facts | 3 | Negative tests | Empty-output on invalid input |
@@ -138,6 +153,7 @@ Every requirement family has: module, doc, gate, evidence. No orphan.
 | Control Room | Yes | Yes | Yes | Yes | Complete |
 | Security | Yes | Yes | Yes | Yes | Complete |
 | Cutover | Yes | Yes | Yes | Yes | Complete |
+| ADR-006 foundation contracts | Yes | Yes | Yes | Yes | Complete |
 
 ---
 

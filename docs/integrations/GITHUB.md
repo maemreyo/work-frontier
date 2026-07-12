@@ -148,25 +148,28 @@ User → Work Frontier UI → GitHub OAuth authorize
 ## 3. Webhook Inbox
 
 Work Frontier treats GitHub webhooks as a **durable signed inbox**. Every
-incoming event goes through the same pipeline: verify, persist, dedup,
-refetch, normalize, solve, project.
+incoming event follows a fenced state machine; internal state commits atomically
+before any external projection write.
 
 ### 3.1 Webhook Pipeline
 
 ```mermaid
 flowchart TB
-    Receipt["Webhook receipt"]
-    Verify["Verify X-Hub-Signature-256"]
-    Persist["Persist to durable inbox"]
-    Dedup["Dedup by delivery_id"]
-    Refetch["Authoritative refetch from API"]
-    Normalize["Normalize revision"]
-    Solve["Affected-region solve"]
-    DecisionRecord["Immutable DecisionRecord"]
-    Project["Idempotent projection"]
-    Audit["Audit trail entry"]
+    Receipt["received"]
+    Verify["verified"]
+    Persist["persisted"]
+    Claim["claimed"]
+    Refetch["refetched"]
+    Normalize["normalized"]
+    Solve["solved"]
+    Project["projected"]
+    Complete["completed"]
+    Retry["retry_scheduled"]
+    Dead["dead_letter"]
 
-    Receipt --> Verify --> Persist --> Dedup --> Refetch --> Normalize --> Solve --> DecisionRecord --> Project --> Audit
+    Receipt --> Verify --> Persist --> Claim --> Refetch --> Normalize --> Solve --> Project --> Complete
+    Claim --> Retry --> Claim
+    Retry --> Dead
 ```
 
 **Step by step:**
@@ -175,13 +178,15 @@ flowchart TB
    using HMAC-SHA256. Reject invalid signatures with `401 Unauthorized` at
    the HTTP boundary.
 
-2. **Persist to durable inbox**: Write the raw webhook payload to PostgreSQL
-   immediately. This is the durable inbox. Even if processing fails later, the
-   raw event is safe.
+2. **Persist to durable inbox**: Write the raw webhook payload hash, delivery
+   metadata, workspace scope, and state `persisted` to PostgreSQL immediately.
+   This is the durable inbox. Even if processing fails later, the raw event is
+   safe. The delivery is acknowledged only after this commit.
 
-3. **Dedup**: Use `X-GitHub-Delivery` (UUID) as the deduplication key. If this
-   delivery_id has been seen before, acknowledge and stop. The inbox has a
-   unique constraint on it.
+3. **Dedup and claim**: Use `X-GitHub-Delivery` with `workspace_id` as the inbox
+   deduplication key. A worker claims persisted work with `FOR UPDATE SKIP
+   LOCKED`, `lease_owner`, expiry, and compare-and-swap state transition. A
+   replayed delivery acknowledges without duplicate processing.
 
 4. **Authoritative refetch**: Do **not** trust the webhook payload as the
    final state. The adapter refetches the item from the GitHub API using the
@@ -197,15 +202,20 @@ flowchart TB
    everything it blocks. Do not re-solve the entire graph for a single item
    change.
 
-7. **Immutable DecisionRecord**: Append a new DecisionRecord in PostgreSQL.
-   Existing DecisionRecords are never updated in place.
+7. **Atomic internal commit**: In one transaction append normalized snapshot,
+   immutable DecisionRecord set, current projections naming
+   `derived_from_decision_id`, audit event, outbox intent, and source cursor.
+   Existing DecisionRecords are never updated in place. Any failure rolls back
+   all these writes.
 
-8. **Idempotent projection**: Update current-state PostgreSQL tables. All
-   projection writes are idempotent; replaying the same event produces
-   identical state.
+8. **External idempotent projection**: After commit, an outbox worker performs
+   any GitHub write with a workspace-scoped idempotency key and projection
+   fingerprint. GitHub responses return through inbound processing; no external
+   success can create partial local state.
 
-9. **Audit trail entry**: Append an event to the audit trail with the
-   delivery_id as the event_id.
+9. **Retry/dead letter**: Retryable processing failures receive scheduled
+   backoff. Poison or exhausted deliveries enter auditable `dead_letter` state
+   and require controlled replay.
 
 ### 3.2 Events Processed
 
@@ -229,9 +239,10 @@ follow the same pipeline and write to the same PostgreSQL tables with
 idempotency guarantees:
 
 - Webhook events carry a `delivery_id` used as the dedup key.
-- Poll results carry a `connection_id + item_id + source_revision` idempotency
-  key. Webhooks and polls may have different inbox keys, so normalization also
-  deduplicates by authoritative source revision before solving.
+- Poll results carry a `workspace_id + connection_id + item_id + source_revision`
+  idempotency key. Webhooks and polls may have different inbox keys, so
+  normalization also deduplicates by authoritative source revision before
+  solving.
 
 ### 3.4 Webhook Security
 
@@ -308,7 +319,10 @@ external state. The ownership model distinguishes **safe projections** from
 ### 5.1 Safe Projections (Auto)
 
 Safe projections are derived from tracker data and auto-apply without human
-approval. They represent computed facts, not behavioral changes.
+approval. They represent computed facts, not behavioral changes. Every cached
+readiness/ranking/fan-out value carries `derived_from_decision_id`, normalized
+snapshot hash, graph revision, and policy-bundle hash; it is stale when any
+derivation input differs.
 
 **Safe (auto):**
 
