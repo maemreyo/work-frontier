@@ -241,7 +241,7 @@ Large todos may use the execution slices listed below, but the parent checkbox r
      QA scenarios: happy—entry pass activates then completion evidence completes; failure—prior-revision evidence rejected. Evidence `.omo/evidence/task-9-full-product-implementation/`.
      Commit: Y | `feat(policies): implement phased evidence gates`
 
-- [ ] 10. Implement deterministic readiness, ranking, and DecisionRecord-set engine
+- [x] 10. Implement deterministic readiness, ranking, and DecisionRecord-set engine
       What to do / Must NOT do: Create pure engine input snapshot/policy bundle and atomic per-item immutable outputs; populate the complete reproducibility envelope, comparator item-local inputs/outcomes/tie-break chain, readiness filters, configurable lexicographic comparators, stable tie-break, and Recommended Next projection. No clock/global state/randomness/AI/I/O inside solve.
       Parallelization: Wave 1 convergence | Blocked by: 6-9 | Blocks: 14,19,21,24
       References: `docs/product/overview.md:62-77,122-147`; `docs/domain/decision-record.md`; `readiness-ranking.md`; `recommended-next.md`
@@ -249,7 +249,7 @@ Large todos may use the execution slices listed below, but the parent checkbox r
       QA scenarios: happy—frozen #539 snapshot returns expected frontier; failure—unsafe authority localizes non-ready reason without corrupting others. Evidence `.omo/evidence/task-10-full-product-implementation/`.
       Commit: Y | `feat(decisions): build deterministic frontier engine`
 
-- [ ] 11. Implement tenant-scoped SQLAlchemy persistence and RLS
+- [x] 11. Implement tenant-scoped SQLAlchemy persistence and RLS
       What to do / Must NOT do: Add SQLAlchemy 2 async models/repositories/migrations for tenants, organizations, workspaces, programs, WorkItems, source versions, normalized snapshots, edges, policies, decisions, current projections, gates, evidence, approvals, overrides, leases, attention, connections, inbox, outbox, jobs. Enforce PostgreSQL `ENABLE/FORCE ROW LEVEL SECURITY`, transaction-local workspace context, non-BYPASSRLS app role, workspace composite FKs/uniques and scoped key namespaces. No repository method accepts a bare resource ID.
       Execution slices: 11a—schema, roles, migrations and RLS; 11b—tenant-scoped repositories/composite constraints; 11c—direct-SQL and cross-workspace attack matrix. Each slice emits evidence; the parent remains open until all three pass.
       Parallelization: Wave 2 | Blocked by: 3,6 | Blocks: 12-25
@@ -258,7 +258,7 @@ Large todos may use the execution slices listed below, but the parent checkbox r
       QA scenarios: happy—same actor uses two explicit workspace contexts; failure—ID from workspace B is invisible in A. Evidence `.omo/evidence/task-11-full-product-implementation/`.
       Commit: Y | `feat(persistence): add tenant-scoped repositories`
 
-- [ ] 12. Implement immutable audit/evidence storage and retention segments
+- [x] 12. Implement immutable audit/evidence storage and retention segments
       What to do / Must NOT do: Append per-workspace audit events transactionally with canonical UTF-8 JSON, canonical envelope plus payload hash, 64-zero genesis, SHA-256 chain, causation/correlation, and external signed-anchor/WORM capability; content-address bulky artifacts in S3/MinIO; enforce immutable rows/objects; implement governed segment purge with deletion proof. Do not claim event sourcing or rebuild current state from audit.
       Parallelization: Wave 2 | Blocked by: 3,9,11 | Blocks: 13,19,21,23,32,34
       References: `docs/architecture/ARCHITECTURE.md:318-358`; `docs/security/tenancy-isolation.md:110-150`; audit/evidence security harnesses.
@@ -266,7 +266,7 @@ Large todos may use the execution slices listed below, but the parent checkbox r
       QA scenarios: happy—append and verify segment; failure—SQL update/object overwrite rejected and alerted. Evidence `.omo/evidence/task-12-full-product-implementation/`.
       Commit: Y | `feat(audit): add immutable evidence ledger`
 
-- [ ] 13. Implement PostgreSQL durable inbox, queue, worker claims, and scheduler fencing
+- [x] 13. Implement PostgreSQL durable inbox, queue, worker claims, and scheduler fencing
       What to do / Must NOT do: Build workspace-scoped inbox/outbox/job state machines with `received→verified→persisted→claimed→refetched→normalized→solved→projected→completed`, `retry_scheduled`, and `dead_letter`; implement `FOR UPDATE SKIP LOCKED` fair claims, lease owner/expiry CAS, heartbeat, bounded jittered retries, poison replay, per-tenant fairness, transactional outbox and scheduler leader lock. Preserve original payload hash/attempt history. Never acknowledge webhook before durable inbox commit.
       Execution slices: 13a—durable inbox/dedup; 13b—queue lease/CAS/retry/dead-letter; 13c—transactional outbox and scheduler fencing; 13d—crash injection, fairness and controlled replay. Parent completion requires all slices and convergence evidence.
       Parallelization: Wave 2 | Blocked by: 3,11,12 | Blocks: 18,19,22,23,34
@@ -275,7 +275,7 @@ Large todos may use the execution slices listed below, but the parent checkbox r
       QA scenarios: happy—enqueue/process/complete; failure—kill after claim and recover without duplicate effects. Evidence `.omo/evidence/task-13-full-product-implementation/`.
       Commit: Y | `feat(queue): implement durable background processing`
 
-- [ ] 14. Persist DecisionRecord sets atomically and build current projections
+- [x] 14. Persist DecisionRecord sets atomically and build current projections
       What to do / Must NOT do: Adapt identified normalized DB snapshot into pure engine; in one transaction append complete DecisionRecord set, update latest pointers/current projections carrying `derived_from_decision_id`, append payload-safe audit event, emit outbox intent, and advance source cursor with fencing. Never update an existing DecisionRecord, expose a mixed-cycle frontier, or store computed truth without derivation identity.
       Parallelization: Wave 2 | Blocked by: 10-13 | Blocks: 19,21,24
       References: `docs/domain/decision-record.md`; `docs/product/overview.md:79-91,122-147`; `docs/architecture/ARCHITECTURE.md:404-461`
