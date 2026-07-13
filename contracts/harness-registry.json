@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.0.0",
+  "schema_version": "1.1.0",
   "source": "docs/quality/harness-catalog.md",
   "harness_count": 68,
   "catalog_harness_count": 68,
@@ -146,7 +146,7 @@
     {
       "id": "WF-HAR-STATIC-04",
       "name": "Lint and Format",
-      "command": "uv run ruff check backend/src backend/tests scripts && uv run ruff format --check backend/src backend/tests scripts && pnpm --dir frontend run check",
+      "command": "uv run ruff check backend/lib backend/src backend/tests scripts && uv run ruff format --check backend/lib backend/src backend/tests scripts && pnpm --dir frontend run check",
       "artifact": ".omo/evidence/static/WF-HAR-STATIC-04.json",
       "blocks_release": true,
       "what_it_runs": "Ruff lint/format and Biome + tsc frontend check",

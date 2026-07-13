@@ -18,7 +18,7 @@ from work_frontier.contracts.harness_registry import (  # noqa: E402
 from work_frontier.contracts.harness_runner import (  # noqa: E402
     CertificationError,
     recertify_foundation,
-    run_harness,
+    run_harness_with_prerequisites,
 )
 
 
@@ -70,9 +70,18 @@ def main() -> int:
     if not args.id:
         parser.error("provide --id or --recertify-foundation or --validate-registry")
 
-    record = run_harness(args.id, repo_root=args.repo_root)
-    print(record.model_dump_json(indent=2))
-    return 0 if record.status == "pass" else 1
+    try:
+        records = run_harness_with_prerequisites(
+            args.id,
+            repo_root=args.repo_root,
+        )
+    except CertificationError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+
+    target_record = records[-1]
+    print(target_record.model_dump_json(indent=2))
+    return 0
 
 
 if __name__ == "__main__":

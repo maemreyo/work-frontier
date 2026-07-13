@@ -233,10 +233,9 @@ def _cmd_update(args: argparse.Namespace) -> int:
 
     manifest["source_inputs"] = _get_source_input_files(repo_root)
 
-    # Remove the stale source_commit field — it was previously
-    # hard-coded and never updated automatically, creating provenance
-    # contradictions.  The content_digest and source_input_digest
-    # already pin the exact state without a separate commit field.
+    # Machine-local roots and manually pinned commits are not portable
+    # provenance. Content/source digests already bind the generated state.
+    _ = manifest.pop("source_root", None)
     _ = manifest.pop("source_commit", None)
 
     _ = manifest_path.write_text(f"{json.dumps(manifest, indent=2)}\n")

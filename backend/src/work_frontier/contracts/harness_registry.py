@@ -295,8 +295,9 @@ def _validate_foundation_closure(data: dict[str, Any], seen: set[str]) -> list[s
 
 
 def validate_registry(data: dict[str, Any]) -> None:
-    if data.get("schema_version") != "1.0.0":
-        msg = "registry schema_version must be 1.0.0"
+    schema_version = data.get("schema_version")
+    if schema_version not in {"1.0.0", "1.1.0"}:
+        msg = "registry schema_version must be 1.0.0 or 1.1.0"
         raise HarnessRegistryError(msg)
     harnesses_raw = data.get("harnesses")
     if not isinstance(harnesses_raw, list) or not harnesses_raw:
@@ -310,14 +311,24 @@ def validate_registry(data: dict[str, Any]) -> None:
         hid = _validate_harness_entry(harness_entry, seen)
         all_ids.add(hid)
 
-    # Validate prerequisites for every harness after all IDs are known.
+    # Registry 1.1 makes prerequisites an explicit, typed contract.
+    # Version 1.0 remains readable for historical/local test fixtures.
     for harness_entry in harnesses:
         prereqs_entry = harness_entry.get("prerequisites")
         hid = str(harness_entry["id"])
-        if isinstance(prereqs_entry, list):
-            prereqs_raw: list[object] = cast("list[object]", prereqs_entry)
-            prereqs: list[str] = [str(p) for p in prereqs_raw]
-            _validate_prerequisites(prereqs, hid, all_ids)
+        if schema_version == "1.1.0" and not isinstance(prereqs_entry, list):
+            msg = f"{hid}: prerequisites must be an explicit array"
+            raise HarnessRegistryError(msg)
+        if prereqs_entry is None:
+            continue
+        if not isinstance(prereqs_entry, list):
+            msg = f"{hid}: prerequisites must be an array"
+            raise HarnessRegistryError(msg)
+        if not all(isinstance(item, str) for item in prereqs_entry):
+            msg = f"{hid}: prerequisites must contain only harness ID strings"
+            raise HarnessRegistryError(msg)
+        prereqs = cast("list[str]", prereqs_entry)
+        _validate_prerequisites(prereqs, hid, all_ids)
 
     _validate_prerequisite_cycles(harnesses)
     _ = _validate_registry_counts(data, harnesses)
@@ -344,7 +355,47 @@ def foundation_closure(registry: dict[str, Any]) -> list[str]:
 def get_prerequisites(registry: dict[str, Any], harness_id: str) -> list[str]:
     harness = get_harness(registry, harness_id)
     prereqs_entry = harness.get("prerequisites")
-    if isinstance(prereqs_entry, list):
-        prereqs_raw: list[object] = cast("list[object]", prereqs_entry)
-        return [str(p) for p in prereqs_raw]
-    return []
+    if prereqs_entry is None and registry.get("schema_version") == "1.0.0":
+        return []
+    if not isinstance(prereqs_entry, list) or not all(
+        isinstance(item, str) for item in prereqs_entry
+    ):
+        msg = f"{harness_id}: prerequisites are missing or invalid"
+        raise HarnessRegistryError(msg)
+    return cast("list[str]", prereqs_entry)
+
+
+def dependency_closure(registry: dict[str, Any], target_id: str) -> list[str]:
+    """Return target prerequisites in deterministic topological order.
+
+    Every member must be implemented. A specified/deferred dependency blocks
+    certification instead of disappearing from the graph.
+    """
+    ordered: list[str] = []
+    visiting: set[str] = set()
+    visited: set[str] = set()
+
+    def visit(harness_id: str) -> None:
+        if harness_id in visited:
+            return
+        if harness_id in visiting:
+            msg = f"prerequisite graph contains a cycle at {harness_id}"
+            raise HarnessRegistryError(msg)
+
+        harness = get_harness(registry, harness_id)
+        if harness.get("status") != "implemented":
+            msg = (
+                f"{harness_id}: status={harness.get('status')!r}; "
+                "dependency closure requires implemented harnesses"
+            )
+            raise HarnessRegistryError(msg)
+
+        visiting.add(harness_id)
+        for prereq_id in get_prerequisites(registry, harness_id):
+            visit(prereq_id)
+        visiting.remove(harness_id)
+        visited.add(harness_id)
+        ordered.append(harness_id)
+
+    visit(target_id)
+    return ordered

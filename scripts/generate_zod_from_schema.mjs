@@ -77,6 +77,11 @@ try {
   // Post-process: add required-key refinements for object+additionalProperties schemas
   zodCode = addRequiredKeyRefinements(zodCode, jsonSchema);
 
+  // Pydantic materializes default_factory=list as JSON Schema default: [].
+  // x-to-zod emits .optional(); replace it with .default([]) so canonical
+  // parsed output is identical across runtimes.
+  zodCode = addEmptyArrayDefaults(zodCode, jsonSchema);
+
   // Re-format the z.object with each field on its own line for readability
   zodCode = formatObjectFields(zodCode);
 
@@ -184,6 +189,51 @@ function addRequiredKeyRefinements(zodCode, jsonSchema) {
       }
     }
   }
+  return zodCode;
+}
+
+
+/**
+ * Materialize top-level empty-array defaults emitted by Pydantic.
+ */
+function addEmptyArrayDefaults(zodCode, jsonSchema) {
+  if (!jsonSchema.properties) return zodCode;
+
+  for (const [propName, propSchema] of Object.entries(jsonSchema.properties)) {
+    if (
+      propSchema.type !== "array" ||
+      !Array.isArray(propSchema.default) ||
+      propSchema.default.length !== 0
+    ) {
+      continue;
+    }
+
+    const needle = `"${propName}": z.array(`;
+    const start = zodCode.indexOf(needle);
+    if (start === -1) continue;
+
+    const openParenPos = start + needle.length - 1;
+    const closeEnd = findMatchingCloseParen(zodCode, openParenPos);
+    if (closeEnd === -1) continue;
+
+    const optionalPos = zodCode.indexOf(".optional()", closeEnd);
+    const tail = zodCode.slice(closeEnd);
+    const nextFieldMatch = tail.match(/,\s*"/);
+    const nextFieldPos =
+      nextFieldMatch?.index === undefined
+        ? -1
+        : closeEnd + nextFieldMatch.index;
+    if (
+      optionalPos !== -1 &&
+      (nextFieldPos === -1 || optionalPos < nextFieldPos)
+    ) {
+      zodCode =
+        zodCode.slice(0, optionalPos) +
+        ".default([])" +
+        zodCode.slice(optionalPos + ".optional()".length);
+    }
+  }
+
   return zodCode;
 }
 

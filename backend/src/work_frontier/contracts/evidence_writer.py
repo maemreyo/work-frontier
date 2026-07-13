@@ -427,7 +427,7 @@ def write_evidence(
         schema_version="1.0.0",
         harness_id=harness_id,
         status=status,
-        run_id=run_id or generate_run_id(),
+        run_id=run_id or os.environ.get("WF_RUN_ID") or generate_run_id(),
         subject_sha=commit_sha,
         subject_tree_sha=tree_sha,
         invocation=invocation,

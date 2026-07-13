@@ -75,7 +75,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `uv run ruff check backend/src backend/tests scripts && uv run ruff format --check backend/src backend/tests scripts && pnpm --dir frontend run check` |
+| **Command** | `uv run ruff check backend/lib backend/src backend/tests scripts && uv run ruff format --check backend/lib backend/src backend/tests scripts && pnpm --dir frontend run check` |
 | **What it runs** | Ruff lint/format and Biome + tsc frontend check |
 | **Artifact** | `.omo/evidence/static/WF-HAR-STATIC-04.json` |
 | **Pass criteria** | Zero violations |

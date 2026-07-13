@@ -43,6 +43,11 @@ FOUNDATION_CLOSURE: tuple[str, ...] = (
     "WF-HAR-INTEG-02",
 )
 
+# Implementation lifecycle and recertification scope are separate concepts.
+# Future todos add implemented harnesses here without expanding Todo 5's
+# historical foundation closure.
+IMPLEMENTED_HARNESSES: frozenset[str] = frozenset(FOUNDATION_CLOSURE)
+
 FIELD_RE = re.compile(r"\|\s*\*\*([^*]+)\*\*\s*\|\s*(.*?)\s*\|")
 
 # Section names whose harnesses live outside the numbered layer sequence.
@@ -216,7 +221,11 @@ def parse_catalog(text: str) -> list[dict[str, object]]:
                 applicability = "large"
             elif harness_id.endswith("-T"):
                 applicability = "tenant"
-            status = "implemented" if harness_id in FOUNDATION_CLOSURE else "specified"
+            status = (
+                "implemented"
+                if harness_id in IMPLEMENTED_HARNESSES
+                else "specified"
+            )
 
             # Derive layer metadata from harness ID.
             layer_order = _layer_number_for_harness(harness_id)
@@ -255,7 +264,7 @@ def build_registry(harnesses: list[dict[str, object]]) -> dict[str, object]:
         if item.get("blocks_release") and item.get("applicability") == "standard"
     ]
     registry: dict[str, object] = {
-        "schema_version": "1.0.0",
+        "schema_version": "1.1.0",
         "source": "docs/quality/harness-catalog.md",
         "harness_count": len(harnesses),
         "catalog_harness_count": len(harnesses),

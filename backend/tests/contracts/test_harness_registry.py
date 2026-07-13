@@ -32,7 +32,7 @@ REGISTRY_PATH = ROOT / "contracts" / "harness-registry.json"
 
 def test_registry_loads_and_matches_catalog_counts() -> None:
     registry = load_registry(REGISTRY_PATH)
-    assert registry["schema_version"] == "1.0.0"
+    assert registry["schema_version"] == "1.1.0"
     assert registry["catalog_harness_count"] == registry["harness_count"] == 68
     assert "WF-HAR-PREFLIGHT-01" in registry["foundation_closure"]
     assert "WF-HAR-STATIC-01" in registry["foundation_closure"]
@@ -158,6 +158,7 @@ def _minimal_harness(**overrides: object) -> dict[str, object]:
         "applicability": "standard",
         "artifact_mode": "declared_file",
         "status": "implemented",
+        "prerequisites": [],
     }
     base.update(overrides)
     return base
@@ -354,11 +355,14 @@ def test_registry_rejects_larger_prerequisite_cycle() -> None:
         validate_registry(registry)
 
 
-def test_registry_missing_prerequisites_is_ok() -> None:
-    """Harnesses without a prerequisites field pass validation."""
+def test_registry_v11_rejects_missing_prerequisites() -> None:
+    """Canonical registry entries cannot silently lose dependencies."""
     h1 = _minimal_harness(id="WF-HAR-PREREQ-NONE-01")
+    _ = h1.pop("prerequisites")
     registry = _minimal_registry(h1)
-    _ = validate_registry(registry)
+    registry["schema_version"] = "1.1.0"
+    with pytest.raises(HarnessRegistryError, match="explicit array"):
+        validate_registry(registry)
 
 
 # ---------------------------------------------------------------------------
@@ -380,7 +384,11 @@ def _derive_harness_entry(
     seq: int = 1,
 ) -> dict[str, object]:
     """Build a harness entry dict for derive_prerequisites tests."""
-    entry: dict[str, object] = {"id": hid, "_sequence": seq}
+    entry: dict[str, object] = {
+        "id": hid,
+        "_sequence": seq,
+        "status": "implemented",
+    }
     if layer is not None:
         entry["_layer_order"] = layer
     return entry

@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto"
 import { readFileSync, readdirSync } from "node:fs"
 import { join } from "node:path"
 import { describe, expect, it } from "vitest"
@@ -39,6 +40,40 @@ const REQUIRED_FIXTURE_INVENTORY: ReadonlySet<string> = new Set([
   ...REQUIRED_VALID_FIXTURES,
   ...REQUIRED_INVALID_FIXTURES,
 ])
+
+function pythonCanonicalJson(value: unknown, path: readonly string[] = []): string {
+  if (value === null) return "null"
+  if (typeof value === "string") return JSON.stringify(value)
+  if (typeof value === "boolean") return value ? "true" : "false"
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) {
+      throw new Error(`non-finite number at ${path.join(".")}`)
+    }
+    // Pydantic's typed float serializes integral duration values as 15.0,
+    // while JSON.parse/JSON.stringify would otherwise collapse them to 15.
+    if (path.at(-1) === "duration_seconds" && Number.isInteger(value)) {
+      return `${value}.0`
+    }
+    return JSON.stringify(value)
+  }
+  if (Array.isArray(value)) {
+    return `[${value
+      .map((item, index) => pythonCanonicalJson(item, [...path, String(index)]))
+      .join(",")}]`
+  }
+  if (typeof value === "object") {
+    const entries = Object.entries(value as Record<string, unknown>).sort(
+      ([left], [right]) => left.localeCompare(right),
+    )
+    return `{${entries
+      .map(
+        ([key, item]) =>
+          `${JSON.stringify(key)}:${pythonCanonicalJson(item, [...path, key])}`,
+      )
+      .join(",")}}`
+  }
+  throw new Error(`unsupported canonical value at ${path.join(".")}`)
+}
 
 // A minimal valid record to use in unit tests.
 const validRecord = {
@@ -252,10 +287,17 @@ describe("EvidenceRecordSchema", () => {
     // reach the same verdict.  For valid fixtures, both must accept.
     expect(result.success).toBe(true)
 
-    // Semantic validation must also pass for valid fixtures
+    // Semantic validation must also pass for valid fixtures.
+    // The parsed canonical bytes must also match Python's golden digest.
     if (result.success) {
       const semanticErrors = validateEvidenceRecordSemantic(result.data)
       expect(semanticErrors).toEqual([])
+
+      const canonical = pythonCanonicalJson(result.data)
+      const digest = createHash("sha256").update(canonical).digest("hex")
+      const goldenPath = fixturePath.replace(/\.json$/, ".canonical.sha256")
+      const expected = readFileSync(goldenPath, "utf-8").trim()
+      expect(digest).toBe(expected)
     }
   })
 

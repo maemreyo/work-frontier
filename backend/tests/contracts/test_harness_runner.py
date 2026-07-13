@@ -526,6 +526,46 @@ def test_recertify_rejects_unexpected_evidence_record_on_disk() -> None:
         registry_path.unlink(missing_ok=True)
 
 
+def test_recertify_rejects_unreferenced_nested_artifact() -> None:
+    clone = _make_clean_clone()
+    registry_path = Path(tempfile.mkstemp(suffix=".json")[1])
+    try:
+        registry = {
+            "schema_version": "1.0.0",
+            "harness_count": 1,
+            "catalog_harness_count": 1,
+            "standard_blocker_count": 1,
+            "standard_blockers": ["WF-HAR-NESTED-EXTRA-01"],
+            "harnesses": [
+                {
+                    "id": "WF-HAR-NESTED-EXTRA-01",
+                    "name": "writes-unreferenced-nested-file",
+                    "command": (
+                        'mkdir -p "$(dirname "$WF_HARNESS_ARTIFACT")" && '
+                        'echo output > "$WF_HARNESS_ARTIFACT" && '
+                        'echo stale > "$(dirname "$WF_HARNESS_ARTIFACT")/'
+                        'old-failure.json"'
+                    ),
+                    "artifact": ".omo/evidence/static/output.txt",
+                    "artifact_mode": "declared_file",
+                    "blocks_release": True,
+                    "what_it_runs": "writes an unreferenced nested artifact",
+                    "pass_criteria": "closure rejects every unreferenced file",
+                    "applicability": "standard",
+                    "status": "implemented",
+                }
+            ],
+            "foundation_closure": ["WF-HAR-NESTED-EXTRA-01"],
+        }
+        _ = registry_path.write_text(json.dumps(registry))
+
+        with pytest.raises(CertificationError, match="unexpected"):
+            _ = recertify_foundation(repo_root=clone, registry_path=registry_path)
+    finally:
+        shutil.rmtree(clone, ignore_errors=True)
+        registry_path.unlink(missing_ok=True)
+
+
 def _make_two_harness_evidence_tamper_registry(path: Path) -> None:
     """Write a registry where the second harness deletes the first's evidence JSON.
 

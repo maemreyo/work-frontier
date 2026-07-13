@@ -27,6 +27,7 @@ from work_frontier.contracts.evidence_writer import (
     write_evidence,
 )
 from work_frontier.contracts.harness_registry import (
+    dependency_closure,
     foundation_closure,
     get_harness,
     get_prerequisites,
@@ -36,10 +37,6 @@ from work_frontier.contracts.harness_registry import (
 
 class CertificationError(ValueError):
     """Raised when evidence cannot certify a subject revision."""
-
-
-# Minimum path parts for artifacts/<harness_id>/<filename>
-_ARTIFACT_MIN_PARTS = 3
 
 
 def tool_name_for_harness(harness_id: str) -> str:
@@ -118,6 +115,7 @@ def run_harness(  # noqa: PLR0915 - harness lifecycle spans pre/post validation
     harness_env = {
         **os.environ,
         "WF_EVIDENCE_ROOT": str(evidence_root),
+        "WF_RUN_ID": resolved_run_id,
     }
     if artifact_mode == "declared_file" and not _is_remote_artifact(declared_artifact):
         run_artifact_dir.mkdir(parents=True, exist_ok=True)
@@ -247,6 +245,68 @@ def run_harness(  # noqa: PLR0915 - harness lifecycle spans pre/post validation
 
     evidence_path = evidence_root / evidence_filename
     return EvidenceRecord.model_validate_json(evidence_path.read_text(encoding="utf-8"))
+
+
+def run_harness_with_prerequisites(
+    harness_id: str,
+    *,
+    repo_root: Path | None = None,
+    registry_path: Path | None = None,
+) -> list[EvidenceRecord]:
+    """Run and certify a target together with its prerequisite closure."""
+    root = repo_root or Path.cwd()
+    resolved_registry_path = registry_path or (
+        root / "contracts" / "harness-registry.json"
+    )
+    registry = load_registry(resolved_registry_path)
+    closure = dependency_closure(registry, harness_id)
+
+    if not is_working_tree_clean(root):
+        msg = "working tree is dirty; standalone certification requires exact HEAD"
+        raise CertificationError(msg)
+
+    subject_sha = get_git_commit_sha(root)
+    subject_tree_sha = get_git_tree_sha(root)
+    resolved_run_id = generate_run_id()
+    evidence_root = (
+        root
+        / ".omo"
+        / "evidence"
+        / "runs"
+        / subject_sha[:12]
+        / resolved_run_id
+    )
+
+    records: list[EvidenceRecord] = []
+    for member_id in closure:
+        record = run_harness(
+            member_id,
+            repo_root=root,
+            registry_path=resolved_registry_path,
+            evidence_root=evidence_root,
+            run_id=resolved_run_id,
+        )
+        failures = validate_evidence_record(
+            record,
+            registry=registry,
+            expected_subject_sha=subject_sha,
+            expected_subject_tree_sha=subject_tree_sha,
+            require_blocking_pass=True,
+            repo_root=root,
+        )
+        if record.status != "pass":
+            failures.append(
+                f"{member_id}: prerequisite closure member status is "
+                f"{record.status!r}, not 'pass'"
+            )
+        if failures:
+            raise CertificationError(
+                "standalone harness certification failed:\n"
+                + "\n".join(failures)
+            )
+        records.append(record)
+
+    return records
 
 
 def _validate_artifact(
@@ -569,65 +629,100 @@ def recertify_foundation(  # noqa: PLR0915 - certification lifecycle spans 8 har
                 )
             )
 
-    # Build evidence manifest with SHA-256 of every file under the
-    # evidence root (recursive).  This proves which exact record content
-    # was certified and enables downstream tamper detection.  The manifest
-    # covers what is actually on disk so that an extra, stale, or nested
-    # evidence file cannot sneak in unnoticed.
-    #
-    # Expected files are:
-    #   - <harness_id>.json          — evidence record for each closure member
-    #   - <harness_id>.stdout.txt    — stdout sidecar
-    #   - <harness_id>.stderr.txt    — stderr sidecar
-    #   - artifacts/<harness_id>/*   — declared artifact copies
-    # Any file outside these patterns is rejected as unexpected.
-    evidence_manifest: dict[str, str] = {}
-    disk_json_stems: set[str] = set()
-    unexpected_files: list[str] = []
-    for path in sorted(evidence_root.rglob("*")):
-        if not path.is_file():
-            continue
-        rel = path.relative_to(evidence_root)
-        rel_str = str(rel)
+    # Build an exact expected-file set from the disk-reloaded records.
+    # Merely living under artifacts/<harness_id>/ is not sufficient:
+    # every certified file must be referenced by a validated EvidenceRecord.
+    expected_files = {f"{harness_id}.json" for harness_id in closure}
+    evidence_root_resolved = evidence_root.resolve()
 
-        # Classify the file.
-        is_expected = False
-        # Evidence JSON for a closure member
-        if rel.parent == Path() and rel.suffix == ".json":
-            stem = path.stem
-            if stem in closure:
-                is_expected = True
-                disk_json_stems.add(stem)
-                evidence_manifest[rel_str] = hash_file(path)
-                continue
-        # Stdout/stderr sidecar for a closure member
-        if rel.parent == Path() and rel_str.endswith((".stdout.txt", ".stderr.txt")):
-            base_stem = path.stem.rsplit(".", 2)[0]  # removes .stdout or .stderr
-            if base_stem in closure:
-                is_expected = True
-                evidence_manifest[rel_str] = hash_file(path)
-                continue
-        # Declared artifact under artifacts/<harness_id>/
-        if rel.parts[:1] == ("artifacts",) and len(rel.parts) >= _ARTIFACT_MIN_PARTS:
-            artifact_harness_id = rel.parts[1]
-            if artifact_harness_id in closure:
-                is_expected = True
-                evidence_manifest[rel_str] = hash_file(path)
-                continue
-
-        if not is_expected:
-            unexpected_files.append(rel_str)
-            evidence_manifest[rel_str] = hash_file(path)
-
-    # Reject both missing records AND extra/unexpected files on disk.
-    if not failures:
-        missing = set(closure) - disk_json_stems
-        if missing:
-            failures.append(f"evidence manifest missing records for: {sorted(missing)}")
-        if unexpected_files:
-            failures.append(
-                f"evidence disk has unexpected files: {sorted(unexpected_files)}"
+    def add_expected_artifact(
+        artifact: Artifact,
+        *,
+        owner_id: str,
+    ) -> None:
+        candidate = (root / artifact.path).resolve()
+        failures.extend(
+            _validate_artifact(
+                artifact,
+                root,
+                owner_id,
+                label="nested artifact",
             )
+        )
+        try:
+            rel = candidate.relative_to(evidence_root_resolved)
+        except ValueError:
+            return
+        expected_files.add(rel.as_posix())
+
+    for record in disk_records:
+        for artifact in [
+            record.stdout_artifact,
+            record.stderr_artifact,
+            *record.artifacts,
+        ]:
+            add_expected_artifact(artifact, owner_id=record.harness_id)
+
+        # Writer-backed producers may use their declared JSON artifact as a
+        # nested EvidenceRecord. Validate its run/revision binding and include
+        # only the sidecars it explicitly references.
+        for artifact in record.artifacts:
+            candidate = (root / artifact.path).resolve()
+            if candidate.suffix != ".json" or not candidate.is_file():
+                continue
+            try:
+                nested = EvidenceRecord.model_validate_json(
+                    candidate.read_text(encoding="utf-8")
+                )
+            except Exception:  # noqa: BLE001 - JSON may use another schema
+                nested = None
+            if nested is None:
+                continue
+            if nested.run_id != run_id:
+                failures.append(
+                    f"{record.harness_id}: nested evidence run_id "
+                    f"{nested.run_id!r} does not match {run_id!r}"
+                )
+            if nested.subject_sha != subject_sha:
+                failures.append(
+                    f"{record.harness_id}: nested evidence subject_sha "
+                    f"{nested.subject_sha} != {subject_sha}"
+                )
+            if nested.subject_tree_sha != subject_tree_sha:
+                failures.append(
+                    f"{record.harness_id}: nested evidence subject_tree_sha "
+                    f"{nested.subject_tree_sha} != {subject_tree_sha}"
+                )
+            for nested_artifact in [
+                nested.stdout_artifact,
+                nested.stderr_artifact,
+                *nested.artifacts,
+            ]:
+                add_expected_artifact(
+                    nested_artifact,
+                    owner_id=record.harness_id,
+                )
+
+    actual_files = {
+        path.relative_to(evidence_root).as_posix()
+        for path in evidence_root.rglob("*")
+        if path.is_file()
+    }
+    evidence_manifest = {
+        rel: hash_file(evidence_root / rel)
+        for rel in sorted(actual_files)
+    }
+
+    missing_files = expected_files - actual_files
+    unexpected_files = actual_files - expected_files
+    if missing_files:
+        failures.append(
+            f"evidence disk is missing referenced files: {sorted(missing_files)}"
+        )
+    if unexpected_files:
+        failures.append(
+            f"evidence disk has unexpected files: {sorted(unexpected_files)}"
+        )
     if not failures:
         disk_ids = [record.harness_id for record in disk_records]
         if disk_ids != closure:
@@ -677,9 +772,18 @@ def recertify_foundation(  # noqa: PLR0915 - certification lifecycle spans 8 har
         ),
     }
 
-    out_dir = root / ".omo" / "evidence" / "task-5-full-product-implementation"
+    # Reports are immutable, run-scoped records. A fixed global report path
+    # allowed concurrent recertifications to overwrite one another.
+    out_dir = (
+        root
+        / ".omo"
+        / "evidence"
+        / "reports"
+        / subject_sha[:12]
+    )
     out_dir.mkdir(parents=True, exist_ok=True)
-    out_path = out_dir / "foundation-recertification.json"
+    out_path = out_dir / f"{run_id}.foundation-recertification.json"
+    report["report_path"] = str(out_path.relative_to(root))
     _ = out_path.write_text(f"{json.dumps(report, indent=2)}\n", encoding="utf-8")
 
     if not certified:
