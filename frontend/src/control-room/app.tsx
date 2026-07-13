@@ -151,7 +151,7 @@ export function ControlRoomApp() {
         </a>
         <main className="wf-onboarding" id="wf-main">
         <h1>Connect Work Frontier</h1>
-        <p role="status">{onboarding.conflict ?? status}</p>
+        <output>{onboarding.conflict ?? status}</output>
         {onboarding.step === "install" ? (
           <button
             type="button"
@@ -210,9 +210,9 @@ export function ControlRoomApp() {
         workspaceId: "workspace-1",
       }}
     >
-      <p aria-live="polite" role="status">
+      <output>
         {status}
-      </p>
+      </output>
       {activeView === "builder" ? (
         <>
           <BuilderView
@@ -281,7 +281,7 @@ export function ControlRoomApp() {
       {activeView === "executive" ? <ExecutiveView metrics={metrics} /> : null}
       {activeView === "operator" ? (
         <OperatorView
-          role="operator"
+          userRole="operator"
           status={operatorStatus}
           onReconcile={() => setStatus("Guarded reconciliation requested")}
           onRetryDeadLetter={() => setStatus("Dead letter retry requested")}

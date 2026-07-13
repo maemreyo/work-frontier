@@ -31,6 +31,8 @@ describe("Builder view model", () => {
 
   it("requires a divergence reason for another authoritative-ready item", () => {
     const workspace = buildBuilderWorkspace([ready("first", 1), ready("second", 2)])
-    expect(claimDivergenceRequired(workspace.ready[1]!, workspace.recommended)).toBe(true)
+    const second = workspace.ready[1]
+    if (second === undefined) throw new Error("Expected second ready decision")
+    expect(claimDivergenceRequired(second, workspace.recommended)).toBe(true)
   })
 })

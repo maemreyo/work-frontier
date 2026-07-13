@@ -15,10 +15,10 @@ export function CopilotPanel({
     <aside aria-labelledby="copilot-heading">
       <h2 id="copilot-heading">Optional Copilot</h2>
       {!enabled ? (
-        <p role="status">
+        <output>
           Copilot is off. All readiness, ranking, gates, evidence and approvals remain
           fully available without AI.
-        </p>
+        </output>
       ) : (
         <>
           <button onClick={onExplain} type="button">

@@ -145,12 +145,9 @@ def _install_read_routes(app: FastAPI, service: ControlPlaneService) -> None:
     @app.get("/metrics", response_class=PlainTextResponse)
     def metrics() -> str:
         return (
-            "# HELP work_frontier_up Process health
-"
-            "# TYPE work_frontier_up gauge
-"
-            "work_frontier_up{process="web"} 1
-"
+            "# HELP work_frontier_up Process health\n"
+            "# TYPE work_frontier_up gauge\n"
+            'work_frontier_up{process="web"} 1\n'
         )
 
     @app.get("/frontier", response_model=FrontierPage)

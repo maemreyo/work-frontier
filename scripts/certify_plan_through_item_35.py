@@ -8,18 +8,14 @@ import subprocess
 from pathlib import Path
 from typing import Final
 
+from work_frontier.contracts.final_certification import (
+    FinalCertificationInputError,
+    validate_exact_certification_environment,
+    validate_plan_ready_for_final_certification,
+)
+
 ROOT: Final = Path(__file__).resolve().parents[1]
 PLAN: Final = ROOT / ".omo" / "plans" / "full-product-implementation.md"
-_REQUIRED_ENV: Final = (
-    "WF_GITHUB_SANDBOX_REPOSITORY",
-    "WF_GITHUB_SANDBOX_TOKEN",
-    "WF_RELEASE_SIGNING_KEY_B64",
-    "WF_RELEASE_KEY_ID",
-    "WF_CUTOVER_CONFIRM",
-    "WF_CUTOVER_APPROVAL_ID",
-    "WF_CUTOVER_SOURCE_REVISION",
-    "WF_CUTOVER_REPOSITORY",
-)
 
 
 def _run(*args: str, capture: bool = False) -> subprocess.CompletedProcess[str]:
@@ -51,7 +47,9 @@ def _close_items(subject_sha: str) -> None:
     old_status = (
         "**Continuation status:** P0 through Todo 27 are implemented and verified; "
         "the next executable work is Todo 28, Coordinator proposal and dependency "
-        "workflows."
+        "workflows. Todos 28-35 remain open until exact-revision GA certification; "
+        "F1-F4 additionally require surfaced audit results and explicit user "
+        "acceptance."
     )
     new_status = (
         "**Continuation status:** P0 through Todo 35 are implemented and exact-"
@@ -113,24 +111,20 @@ def main() -> int:
     if status:
         msg = "working tree must be clean before exact certification:\n" + status
         raise SystemExit(msg)
-    missing = [name for name in _REQUIRED_ENV if not os.environ.get(name)]
-    if missing:
-        msg = "missing exact-certification environment: " + ", ".join(missing)
-        raise SystemExit(msg)
-    if os.environ.get("WF_CUTOVER_CONFIRM") != "ACTIVATE_539":
-        msg = "WF_CUTOVER_CONFIRM must equal ACTIVATE_539"
-        raise SystemExit(msg)
+    try:
+        validate_exact_certification_environment(os.environ)
+    except FinalCertificationInputError as exc:
+        raise SystemExit(str(exc)) from exc
     soak_seconds = int(os.environ.get("WF_SOAK_DURATION_SECONDS", "0"))
     if soak_seconds < 72 * 60 * 60:
         msg = "WF_SOAK_DURATION_SECONDS must be at least 259200 for GA"
         raise SystemExit(msg)
 
     plan = PLAN.read_text(encoding="utf-8")
-    missing_done = [item for item in range(1, 28) if f"- [x] {item}." not in plan]
-    not_open = [item for item in range(28, 36) if f"- [ ] {item}." not in plan]
-    if missing_done or not_open:
-        msg = f"unexpected plan state: missing_done={missing_done}, not_open={not_open}"
-        raise SystemExit(msg)
+    try:
+        validate_plan_ready_for_final_certification(plan)
+    except FinalCertificationInputError as exc:
+        raise SystemExit(str(exc)) from exc
 
     subject_sha = _capture("git", "rev-parse", "HEAD")
     _ = _run("make", "check")

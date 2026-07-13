@@ -5,25 +5,25 @@ import {
 } from "./executive-operator"
 
 export interface OperatorViewProps {
-  readonly role: string
+  readonly userRole: string
   readonly status: OperatorStatus
   readonly onRetryDeadLetter: () => void
   readonly onReconcile: () => void
 }
 
 export function OperatorView({
-  role,
+  userRole,
   status,
   onRetryDeadLetter,
   onReconcile,
 }: OperatorViewProps) {
-  if (!canViewOperations(role)) {
+  if (!canViewOperations(userRole)) {
     return (
       <section aria-labelledby="operator-heading">
         <h1 id="operator-heading">Operator view</h1>
-        <p role="status">
+        <output>
           Operational data is available only to an Operator or Admin role.
-        </p>
+        </output>
       </section>
     )
   }

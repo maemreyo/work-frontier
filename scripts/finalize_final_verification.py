@@ -74,7 +74,13 @@ def main() -> int:
     plan = PLAN.read_text(encoding="utf-8")
     missing = [item for item in range(1, 36) if f"- [x] {item}." not in plan]
     if missing:
-        msg = f"implementation todos remain open: {missing}"
+        if missing == [35]:
+            msg = (
+                "Item 35 remains open; run scripts/certify_plan_through_item_35.py "
+                "from a clean committed implementation revision before F1-F4."
+            )
+        else:
+            msg = f"implementation todos remain open: {missing}"
         raise SystemExit(msg)
     _run(
         "uv",

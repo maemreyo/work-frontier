@@ -337,8 +337,7 @@ def run_harness_with_prerequisites(
         )
         member = get_harness(registry, member_id)
         acceptable = record.status == "pass" or (
-            record.status == "not_applicable"
-            and not bool(member.get("blocks_release"))
+            record.status == "not_applicable" and not bool(member.get("blocks_release"))
         )
         if not acceptable:
             failures.append(

@@ -34,7 +34,7 @@ export function ControlRoomShell(props: ControlRoomShellProps) {
         <a className="wf-skip-link" href="#wf-main">Skip to main content</a>
         <header className="wf-shell-header">
           <strong>Work Frontier</strong>
-          <span aria-label="Current workspace">{props.session.workspaceId}</span>
+          <span><strong>Workspace:</strong> {props.session.workspaceId}</span>
         </header>
         <nav aria-label="Control Room views" className="wf-shell-nav">
           {views.map((view) => (

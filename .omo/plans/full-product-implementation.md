@@ -389,7 +389,7 @@ Large todos may use the execution slices listed below, but the parent checkbox r
       QA scenarios: happy—claim Recommended Next and view timeline; failure—stale/conflicted item disables claim with exact reason. Evidence `.omo/evidence/task-27-full-product-implementation/`.
       Commit: Y | `feat(ui): implement builder decision workspace`
 
-- [x] 28. Implement Coordinator proposal and dependency workflows
+- [ ] 28. Implement Coordinator proposal and dependency workflows
       What to do / Must NOT do: Show blocked chains/unlock impact/conflicts/proposals, approve/reject with SoD and stale checks, graph interaction with keyboard/table alternative, scoped bulk actions. No individual content editing or silent mutation.
       Parallelization: Wave 5 | Blocked by: 21,22,24,26 | Blocks: 33,34
       References: `docs/ux/ux-architecture.md:99-115,190-201`; `ux-critical-journeys.md`; WF-HAR-PRODUCT-02/04/06.
@@ -397,7 +397,7 @@ Large todos may use the execution slices listed below, but the parent checkbox r
       QA scenarios: happy—approve repair and see unlock delta; failure—self/expired approval rejected without optimistic UI lie. Evidence `.omo/evidence/task-28-full-product-implementation/`.
       Commit: Y | `feat(ui): add coordinator workflows`
 
-- [x] 29. Implement Executive and Operator views
+- [ ] 29. Implement Executive and Operator views
       What to do / Must NOT do: Executive renders terminal outcomes/risk/trends/export with authority metadata; Operator renders connection health, queue depth, attempts/reconciliation/audit and guarded retry/reconcile. Respect roles and explanatory empty states; no readiness editing in Operator.
       Parallelization: Wave 5 | Blocked by: 23,24,26 | Blocks: 33,34
       References: `docs/ux/ux-architecture.md:116-151`; `docs/operations/slo-observability.md`; `docs/security/authorization.md:70-104`
@@ -405,7 +405,7 @@ Large todos may use the execution slices listed below, but the parent checkbox r
       QA scenarios: happy—Operator retries dead letter; failure—Viewer sees empty explanation, not operational data. Evidence `.omo/evidence/task-29-full-product-implementation/`.
       Commit: Y | `feat(ui): add executive and operator views`
 
-- [x] 30. Complete WCAG 2.2 AA, responsive, and visual-system certification
+- [ ] 30. Complete WCAG 2.2 AA, responsive, and visual-system certification
       What to do / Must NOT do: Audit every route/component for semantics, focus, contrast, reduced motion, keyboard, drag alternatives, screen-reader announcements, density and mobile behavior; add Playwright screenshots/axe baselines. Fix actual UI rather than suppressing axe rules.
       Parallelization: Wave 5 convergence | Blocked by: 26-29 | Blocks: 34
       References: `docs/ux/ux-accessibility-design-system.md`; WF-HAR-A11Y-01..04; UX architecture disclosure rules.
@@ -413,7 +413,7 @@ Large todos may use the execution slices listed below, but the parent checkbox r
       QA scenarios: happy—keyboard-only complete claim/approval; failure—automated focus-loss/contrast mutation is caught. Evidence `.omo/evidence/task-30-full-product-implementation/`.
       Commit: Y | `fix(a11y): certify control room wcag 2.2 aa`
 
-- [x] 31. Implement provider-neutral, default-off Copilot
+- [ ] 31. Implement provider-neutral, default-off Copilot
       What to do / Must NOT do: Define provider port, redaction/purpose limits, prompt-injection boundaries, grounded explanations and ProposedChange drafts referencing Decision/Evidence IDs, budgets/timeouts/circuit breaker and deterministic fake. Copilot cannot access credentials/PII or call mutation/readiness/ranking methods.
       Parallelization: Wave 6 | Blocked by: 21,24,26 | Blocks: 34
       References: `docs/security/ai-governance.md`; `docs/architecture/ARCHITECTURE.md:167-180,191-205`; UX AI suggestion rules.
@@ -421,7 +421,7 @@ Large todos may use the execution slices listed below, but the parent checkbox r
       QA scenarios: happy—explain missing evidence and draft proposal; failure—provider proposes rank change and boundary rejects/logs it. Evidence `.omo/evidence/task-31-full-product-implementation/`.
       Commit: Y | `feat(copilot): add bounded optional explanations`
 
-- [x] 32. Finish security hardening and all 15 security harnesses
+- [ ] 32. Finish security hardening and all 15 security harnesses
       What to do / Must NOT do: Add CSRF for cookie sessions, CSP/security headers, SSRF egress allowlist, rate limiting, input/file validation, dependency scanning, TLS production config, secret redaction, IDOR/privilege/safety/override/authority/tamper tests and threat-model traceability. No ignored high/critical finding.
       Execution slices: 32a—session/browser controls; 32b—input, file, SSRF/egress and rate controls; 32c—authorization/IDOR/SoD/override/authority mutations; 32d—supply-chain scans, ZAP and threat-model coverage closure. Registry IDs and severity policy are fixed before execution.
       Parallelization: Wave 6 | Blocked by: 12,15,23,24,26-30 | Blocks: 34
@@ -430,7 +430,7 @@ Large todos may use the execution slices listed below, but the parent checkbox r
       QA scenarios: happy—authorized flows survive hardening; failure—SSRF/IDOR/CSRF/safety bypass payloads blocked and audited. Evidence `.omo/evidence/task-32-full-product-implementation/`.
       Commit: Y | `fix(security): close production threat controls`
 
-- [x] 33. Implement deployment, observability, backup/DR, and upgrade operations
+- [ ] 33. Implement deployment, observability, backup/DR, and upgrade operations
       What to do / Must NOT do: Produce hardened multi-stage images, Compose self-host profile with capability truth, hosted manifests/templates, metrics/traces/logs, dashboards/alerts, backup/PITR/object inventory, restore/failover/upgrade/rollback runbooks and executable drills. Never call single-node Compose HA.
       Execution slices: 33a—reproducible hardened images and deployment profiles; 33b—metrics/traces/logs/dashboards/alerts; 33c—backup/PITR/object inventory and restore/DR drills; 33d—upgrade/rollback, failure injection, load and soak certification. Todo 3 supplies only data-service development infrastructure.
       Parallelization: Wave 6 | Blocked by: 3,20,24-30 | Blocks: 34,35
@@ -439,7 +439,7 @@ Large todos may use the execution slices listed below, but the parent checkbox r
       QA scenarios: happy—backup clean stack restore and serve; failure—kill worker/DB/disk-full triggers recovery and alerts without acknowledged loss. Evidence `.omo/evidence/task-33-full-product-implementation/`.
       Commit: Y | `feat(ops): add certified deployment and recovery`
 
-- [x] 34. Complete all 68 harnesses and signed Standard ReleaseCertification
+- [ ] 34. Complete all 68 harnesses and signed Standard ReleaseCertification
       What to do / Must NOT do: Implement missing commands/artifacts, run bottom-up layers, produce canonical manifest tied to exact commit/service versions, SBOM/provenance, sign Ed25519, publish verification command/key ID and coverage report. Standard certification requires 65 blockers; dead-code informational; scoped capacity marked N/A with reason unless declared.
       Parallelization: Wave 6 convergence | Blocked by: 1-33 | Blocks: 35,F1-F4
       References: `docs/quality/harness-catalog.md`; `verification-strategy.md`; `release-certification.md`; `performance-envelope.md`

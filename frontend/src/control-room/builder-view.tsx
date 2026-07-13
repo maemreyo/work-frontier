@@ -13,7 +13,7 @@ export function BuilderView({ workspace, onClaim, onOpen }: BuilderViewProps) {
       <section aria-labelledby="recommended-heading">
         <h2 id="recommended-heading">Recommended Next</h2>
         {workspace.recommended === null ? (
-          <p role="status">No authoritative ready recommendation is available.</p>
+          <output>No authoritative ready recommendation is available.</output>
         ) : (
           <DecisionCard decision={workspace.recommended} onClaim={onClaim} onOpen={onOpen} />
         )}
@@ -37,7 +37,7 @@ function DecisionCard({ decision, onClaim, onOpen }: { readonly decision: Builde
       <p><strong>Decision type:</strong> {decision.item.decision_type}</p>
       <p><strong>Authority:</strong> {decision.item.authority}; <strong>freshness:</strong> {decision.item.freshness}</p>
       <ol aria-label="Deterministic ranking rationale">{decision.item.why.map((reason) => <li key={reason}>{reason}</li>)}</ol>
-      {decision.disabledReason === null ? null : <p role="status">{decision.disabledReason}</p>}
+      {decision.disabledReason === null ? null : <output>{decision.disabledReason}</output>}
       <button disabled={!decision.claimable} onClick={() => onClaim(decision)} type="button">Claim</button>
       <button onClick={() => onOpen(decision)} type="button">Open decision detail</button>
     </article>
