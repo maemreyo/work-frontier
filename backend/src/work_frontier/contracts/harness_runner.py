@@ -524,6 +524,7 @@ def recertify_foundation(  # noqa: PLR0915 - certification lifecycle spans 8 har
     # Run-scoped evidence directory prevents stale-artifact fabrication:
     # each recertification starts with a clean directory.
     evidence_root = root / ".omo" / "evidence" / "runs" / subject_sha[:12] / run_id
+    evidence_root.mkdir(parents=True, exist_ok=True)
 
     records: list[EvidenceRecord] = []
     initial_record_hashes: dict[str, str] = {}

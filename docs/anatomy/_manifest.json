@@ -45,7 +45,7 @@
   },
   "generated_at": "2026-07-13T02:36:48Z",
   "content_digest": "e32bf9bdc6757a6145f48801032cf0e2e0cea257724f36c1b2fee9f7606edfc8",
-  "source_input_digest": "78a2c8d34ae4d4887f85c14b1532578ae72b5ca35fafee3218d06405847da3f8",
+  "source_input_digest": "f25a5df00e4df1afd499d6abffbed9b34950cdab8376ecfd384d4630ebd3cda4",
   "generator_version": "anatomy-skill@1.0.0",
   "source_inputs": [
     ".agents/skills/anatomy-ask/SKILL.md",

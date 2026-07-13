@@ -100,6 +100,7 @@ const validRecord = {
     commit_sha: "a1b2c3d4e5f6789012345678901234567890abcd",
   },
   applicability: "standard" as const,
+  release_stage: "pre_ga" as const,
   applicability_reason: "Standard foundation closure fixture",
   environment: { os: "linux-x86_64", python: "3.13.5" },
   stdout_artifact: {

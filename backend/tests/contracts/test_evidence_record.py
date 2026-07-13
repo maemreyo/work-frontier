@@ -281,8 +281,10 @@ REQUIRED_VALID_FIXTURES: frozenset[str] = frozenset(
 REQUIRED_INVALID_FIXTURES: frozenset[str] = frozenset(
     {
         "invalid-absolute-working-directory.json",
+        "invalid-backslash-working-directory.json",
         "invalid-traversal-working-directory.json",
         "invalid-absolute-artifact-path.json",
+        "invalid-backslash-artifact-path.json",
         "invalid-traversal-artifact-path.json",
         "invalid-missing-environment-os.json",
         "invalid-pass-with-failing-result.json",
@@ -327,8 +329,10 @@ def test_evidence_record_invalid_fixtures_cover_required_mutations() -> None:
     """Assert each mutation scenario is exercised by at least one fixture."""
     scenarios = {
         "absolute working directory": {"invalid-absolute-working-directory.json"},
+        "backslash working directory": {"invalid-backslash-working-directory.json"},
         "traversal working directory": {"invalid-traversal-working-directory.json"},
         "absolute artifact path": {"invalid-absolute-artifact-path.json"},
+        "backslash artifact path": {"invalid-backslash-artifact-path.json"},
         "traversal artifact path": {"invalid-traversal-artifact-path.json"},
         "missing environment.os": {"invalid-missing-environment-os.json"},
         "pass with failing result": {"invalid-pass-with-failing-result.json"},

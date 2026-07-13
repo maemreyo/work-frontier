@@ -1247,7 +1247,7 @@ def _make_prereq_registry(path: Path, *, first_fails: bool = False) -> None:
     """Write a two-harness registry where the second depends on the first.
 
     When *first_fails* is True the first harness command exits nonzero.
-    The second harness writes a sentinel file to prove whether it executed.
+    The second harness's declared artifact proves whether it executed.
     """
     first_command = (
         'mkdir -p "$(dirname "$WF_HARNESS_ARTIFACT")" && '
@@ -1260,8 +1260,7 @@ def _make_prereq_registry(path: Path, *, first_fails: bool = False) -> None:
         )
     second_command = (
         'mkdir -p "$(dirname "$WF_HARNESS_ARTIFACT")" && '
-        'echo second > "$WF_HARNESS_ARTIFACT" && '
-        'echo "EXECUTED" > "$(dirname "$WF_HARNESS_ARTIFACT")/sentinel.txt"'
+        'echo second > "$WF_HARNESS_ARTIFACT"'
     )
     registry: dict[str, object] = {
         "schema_version": "1.0.0",
@@ -1319,13 +1318,12 @@ def test_recertify_prerequisite_failure_prevents_dependent_execution() -> None:
                 registry_path=registry_path,
             )
 
-        # The sentinel file must NOT exist (second harness was skipped).
-        # Sentinel is under evidence_root/artifacts/<harness_id>/sentinel.txt.
-        sentinel_root = clone / ".omo" / "evidence" / "runs"
-        matching = sorted(sentinel_root.rglob("**/sentinel.txt"))
+        # The dependent declared artifact must not exist when it is skipped.
+        artifact_root = clone / ".omo" / "evidence" / "runs"
+        matching = sorted(artifact_root.rglob("**/output-b.txt"))
         assert not matching, (
             f"dependent harness should not have executed, "
-            f"but sentinel found: {matching}"
+            f"but declared artifact found: {matching}"
         )
 
         # The first harness's evidence root should exist under runs/
@@ -1351,10 +1349,9 @@ def test_recertify_prerequisite_pass_allows_dependent_execution() -> None:
         )
         assert report["certified"] is True
 
-        # The sentinel must exist (dependent harness ran).
-        # Sentinel is under evidence_root/artifacts/<harness_id>/sentinel.txt.
-        sentinel_root = clone / ".omo" / "evidence" / "runs"
-        matching = sorted(sentinel_root.rglob("**/sentinel.txt"))
+        # The dependent declared artifact proves that the harness ran.
+        artifact_root = clone / ".omo" / "evidence" / "runs"
+        matching = sorted(artifact_root.rglob("**/output-b.txt"))
         assert matching, "dependent harness should have executed"
     finally:
         shutil.rmtree(clone, ignore_errors=True)
