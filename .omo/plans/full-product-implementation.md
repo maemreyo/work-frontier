@@ -275,7 +275,7 @@ Large todos may use the execution slices listed below, but the parent checkbox r
       QA scenarios: happy—enqueue/process/complete; failure—kill after claim and recover without duplicate effects. Evidence `.omo/evidence/task-13-full-product-implementation/`.
       Commit: Y | `feat(queue): implement durable background processing`
 
-- [ ] 14. Persist DecisionRecord sets atomically and build current projections
+- [x] 14. Persist DecisionRecord sets atomically and build current projections
       What to do / Must NOT do: Adapt identified normalized DB snapshot into pure engine; in one transaction append complete DecisionRecord set, update latest pointers/current projections carrying `derived_from_decision_id`, append payload-safe audit event, emit outbox intent, and advance source cursor with fencing. Never update an existing DecisionRecord, expose a mixed-cycle frontier, or store computed truth without derivation identity.
       Parallelization: Wave 2 | Blocked by: 10-13 | Blocks: 19,21,24
       References: `docs/domain/decision-record.md`; `docs/product/overview.md:79-91,122-147`; `docs/architecture/ARCHITECTURE.md:404-461`
@@ -283,7 +283,7 @@ Large todos may use the execution slices listed below, but the parent checkbox r
       QA scenarios: happy—append two cycles and diff history; failure—stale expected version rejected with no partial rows. Evidence `.omo/evidence/task-14-full-product-implementation/`.
       Commit: Y | `feat(decisions): persist atomic decision sets`
 
-- [ ] 15. Implement identity, sessions, scoped RBAC, SoD, and credential encryption ports
+- [x] 15. Implement identity, sessions, scoped RBAC, SoD, and credential encryption ports
       What to do / Must NOT do: Add OIDC/OAuth identity port, self-host local credential plus MFA path, opaque revocable sessions, resource-scoped role grants and deny rules, six-level permission checks, SoD decision service, tenant bootstrap, AES-GCM envelope-encryption port. Never trust UI, role-bearing long-lived JWT, or silently waive SoD.
       Execution slices: 15a—identity/session/MFA and revocation; 15b—resource-scoped RBAC, deny rules, SoD and break-glass; 15c—credential references, AES-GCM envelope encryption, rotation and plaintext-absence proof.
       Parallelization: Wave 2 | Blocked by: 11,12 | Blocks: 18,21-24,32,34
@@ -292,7 +292,7 @@ Large todos may use the execution slices listed below, but the parent checkbox r
       QA scenarios: happy—Builder claims within Program scope; failure—same actor cannot solely approve own claim and cross-scope ID does not leak. Evidence `.omo/evidence/task-15-full-product-implementation/`.
       Commit: Y | `feat(identity): enforce scoped authorization and sod`
 
-- [ ] 16. Freeze and validate the #539 reference fixture corpus
+- [x] 16. Freeze and validate the #539 reference fixture corpus
       What to do / Must NOT do: Store raw API-shaped fixture, expected marker/edge classifications, policy edges and canonical expected outputs with provenance/hash. Add updater that requires explicit review but tests never fetch live GitHub. Do not elevate fixture vocabulary into core domain.
       Parallelization: Wave 3 | Blocked by: 5,6 | Blocks: 19,34
       References: `docs/reference/oh-my-class/verified-facts.md`; `docs/delivery/traceability-matrix.md:103-115`; WF-HAR-539-REPLAY.
@@ -300,7 +300,7 @@ Large todos may use the execution slices listed below, but the parent checkbox r
       QA scenarios: happy—parse frozen corpus; failure—tamper one marker and golden validation fails. Evidence `.omo/evidence/task-16-full-product-implementation/`.
       Commit: Y | `test(fixtures): freeze verified 539 corpus`
 
-- [ ] 17. Implement connection ports and deterministic harness adapters
+- [x] 17. Implement connection ports and deterministic harness adapters
       What to do / Must NOT do: Define isolated adapter protocol and capability/certification metadata; implement InMemory, File, Fixture adapters with pagination/revision semantics and fault injection; executable adapter loader communicates through typed port. Do not load arbitrary untrusted in-process plugins.
       Parallelization: Wave 3 | Blocked by: 2,6 | Blocks: 18,19,34
       References: `docs/architecture/ARCHITECTURE.md:206-220,515-532`; `docs/integrations/GITHUB.md:248-299`
@@ -308,7 +308,7 @@ Large todos may use the execution slices listed below, but the parent checkbox r
       QA scenarios: happy—FixtureAdapter pages all issues; failure—malformed adapter response quarantined. Evidence `.omo/evidence/task-17-full-product-implementation/`.
       Commit: Y | `feat(connections): add certified adapter ports`
 
-- [ ] 18. Implement GitHub App adapter and webhook boundary
+- [x] 18. Implement GitHub App adapter and webhook boundary
       What to do / Must NOT do: Add App JWT/install token refresh, OAuth/OIDC user attribution, permissions check, pagination/rate-budget/backoff/circuit breaker, HMAC webhook verification, authoritative refetch, encrypted credential references. Installation tokens remain memory-only. Projection write methods require writer lease and approval token.
       Parallelization: Wave 3 | Blocked by: 13,15,17 | Blocks: 19,34,35
       References: `docs/integrations/GITHUB.md:39-144,148-299,469-518`; `docs/security/authorization.md:179-199`
@@ -316,7 +316,7 @@ Large todos may use the execution slices listed below, but the parent checkbox r
       QA scenarios: happy—signed delivery refetches current issue; failure—replayed delivery dedups and unauthorized write method refuses. Evidence `.omo/evidence/task-18-full-product-implementation/`.
       Commit: Y | `feat(github): implement app adapter and webhook security`
 
-- [ ] 19. Build ingestion, normalization, reconciliation, and incremental solve tracer bullet
+- [x] 19. Build ingestion, normalization, reconciliation, and incremental solve tracer bullet
       What to do / Must NOT do: Execute durable receipt→refetch→source version→profile normalization→authority merge→graph affected region→engine→atomic DecisionRecords/projections→cursor commit. Dedup webhook and polling at source revision. Orphans flag, never delete. Do not advance cursor on partial failure.
       Parallelization: Wave 3 convergence | Blocked by: 7-18 | Blocks: 20-25
       References: `docs/architecture/ARCHITECTURE.md:404-461`; `docs/integrations/GITHUB.md:148-244,390-435`; `docs/delivery/implementation-sequence.md:128-174`
