@@ -155,7 +155,7 @@ Large todos may use the execution slices listed below, but the parent checkbox r
 
 <!-- APPEND TASK BATCHES BELOW THIS LINE WITH edit/apply_patch - never rewrite the headers above. -->
 
-- [ ] P0. Pass the ADR-006 foundation-contract gate before implementation
+- [x] P0. Pass the ADR-006 foundation-contract gate before implementation
       What to do / Must NOT do: Reconcile all canonical and curated docs to ADR-006; define exactly `WF-P0-01` through `WF-P0-07`; implement a separate abstract contract model and validator for taxonomy/ports, decision reproducibility, tenancy scoping, audit integrity, atomic consistency, queue safety, and honest performance results. Do not validate unrelated concerns by adding arbitrary fields to one generic DecisionRecord-shaped stub. Do not report rejection without executing the mutation.
       Parallelization: Foundation repair | Blocked by: ADR-006 | Blocks: 1-35
       References: `docs/decisions/ADR-006-foundation-contracts.md`; `docs/architecture/ARCHITECTURE.md:58-237,302-472`; `docs/domain/decision-record.md`; `docs/security/tenancy-isolation.md`; `docs/quality/verification-strategy.md:54-74`; `docs/quality/harness-catalog.md`
@@ -164,7 +164,7 @@ Large todos may use the execution slices listed below, but the parent checkbox r
       Completion note: earlier 7/7 marker/fixture reports are superseded as inventory evidence only until this executable gate passes.
       Commit: Y | `fix(preflight): execute contract-specific foundation mutations`
 
-- [ ] 1. Bootstrap the standalone repository and pin toolchains
+- [x] 1. Bootstrap the standalone repository and pin toolchains
      What to do / Must NOT do: Maintain `backend/src/work_frontier/{domain,platform,application,adapters,interfaces}`, `frontend/src`, tests, scripts and infra; pin the exact Python, Node and pnpm versions; use one root pnpm workspace/lockfile that installs generator and frontend dependencies from a clean clone; keep TypeScript strict, pytest/Hypothesis, Ruff, basedpyright, Biome and Vitest. React/Vite/Playwright/axe are explicitly deferred to Todos 26/30 and must not be claimed here. Do not keep independent root/frontend lock universes or depend on pre-existing local `node_modules`.
      Parallelization: Foundation repair | Blocked by: P0 | Blocks: 2-5
      References: `docs/decisions/ADR-006-foundation-contracts.md`; `docs/architecture/ARCHITECTURE.md:46-186,587-606`; `docs/quality/harness-catalog.md:20-82`
@@ -173,7 +173,7 @@ Large todos may use the execution slices listed below, but the parent checkbox r
      Completion note: existing scaffold is an implementation candidate; checkbox remains open until clean-clone CI and Todo 5 recertification pass.
      Commit: Y | `fix(repo): make bootstrap reproducible from clean clone`
 
-- [ ] 2. Encode and enforce the 13-module dependency architecture
+- [x] 2. Encode and enforce the 13-module dependency architecture
      What to do / Must NOT do: Enforce the canonical dependency matrix: Domain→Domain; Platform→Platform/Domain plus public `application.ports`; Application→Application/Domain; Adapters→Adapters/Platform plus public `application.ports`; Interfaces→Interfaces/Application. Document a composition-root exception that may wire all layers. Classify `work_frontier.contracts` explicitly as transport/schema infrastructure and forbid Domain from importing it. Add root `AGENTS.md` pointing to canonical docs. Never allow concrete implementation imports in Application or I/O dependencies in Domain.
      Parallelization: Foundation repair | Blocked by: 1 | Blocks: 6-35
      References: `docs/decisions/ADR-006-foundation-contracts.md`; `docs/architecture/ARCHITECTURE.md:58-186`; `docs/quality/harness-catalog.md:44-52`
@@ -182,7 +182,7 @@ Large todos may use the execution slices listed below, but the parent checkbox r
      Completion note: the prior 25-boolean matrix and six edge fixtures are insufficient certification until behavioral coverage above passes.
      Commit: Y | `fix(architecture): align import enforcement with canonical seams`
 
-- [ ] 3. Establish local/CI data-service infrastructure and migration harness
+- [x] 3. Establish local/CI data-service infrastructure and migration harness
      What to do / Must NOT do: Provide PostgreSQL 16 and pinned MinIO with health checks, isolated test/CI project naming and ports, GitHub Actions wiring, Alembic baseline, empty/seeded lifecycle, real failed-revision rollback probe, SBOM and secret scanning. This Todo is the data-service baseline only; hardened backend/web/worker/scheduler images and production/self-host deployment profiles are owned by Todo 33 and must not be claimed here. Compose is single-node and never HA.
      Parallelization: Foundation repair | Blocked by: 1 | Blocks: 11,16,33
      References: `docs/operations/deployment-profiles.md:10-69,110-151,179-187`; `docs/architecture/ARCHITECTURE.md:230-284`; `docs/quality/harness-catalog.md:270-278,314-378`
@@ -191,7 +191,7 @@ Large todos may use the execution slices listed below, but the parent checkbox r
      Completion note: prior generic transactional-DDL proof remains useful but does not replace the failed Alembic revision scenario.
      Commit: Y | `fix(infra): certify isolated postgres minio baseline`
 
-- [ ] 4. Create canonical contract generation and compatibility pipeline
+- [x] 4. Create canonical contract generation and compatibility pipeline
      What to do / Must NOT do: Keep Pydantic v2 as source, emit deterministic JSON Schema/OpenAPI, and generate TypeScript/Zod by consuming that emitted schema from a clean root workspace install. Add schema version, strict validation, timezone-aware timestamps, lowercase-hex hash patterns, immutable/canonically ordered source revisions, canonical JSON serialization/hash rules, compatibility classification and deterministic drift checks. Domain entities remain pure domain types; transport DTOs adapt them. Never maintain a second hand-authored validation schema or use regex formatting as semantic transformation.
      Parallelization: Foundation repair | Blocked by: 1 | Blocks: 6-10,24,26-30
      References: `docs/domain/*.md`; WF-HAR-CONTRACT requirements in `docs/quality/harness-catalog.md`; `docs/quality/verification-strategy.md`
@@ -200,7 +200,7 @@ Large todos may use the execution slices listed below, but the parent checkbox r
      Completion note: existing JSON Schema→Zod generation and fixture files are partial progress; fixtures are not proof until both runtimes consume the same corpus.
      Commit: Y | `fix(contracts): enforce strict cross-language canonical parity`
 
-- [ ] 5. Implement the authoritative harness registry, runner, and evidence lifecycle
+- [x] 5. Implement the authoritative harness registry, runner, and evidence lifecycle
      What to do / Must NOT do: Encode the exact canonical harness IDs, commands, blocking scope, expected artifacts, prerequisites and Standard/Large/Tenant/GA applicability in one machine-readable registry. Build `make harness ID=...`, dependency-closure recertification and evidence/certification validation. The registry owns IDs; scripts may not invent aliases such as STATIC/SMOKE/OPS variants for the same check. Do not mark intended, skipped, N/A, stale, self-reported or unexecuted harnesses passed.
      Parallelization: Wave 0 convergence | Blocked by: repaired P0 and implementation candidates 1-4 | Blocks: every feature-wave completion claim
      References: entire `docs/quality/harness-catalog.md`; `docs/quality/release-certification.md`; `docs/delivery/traceability-matrix.md`
@@ -209,7 +209,7 @@ Large todos may use the execution slices listed below, but the parent checkbox r
      Evidence: `.omo/evidence/task-5-full-product-implementation/` plus CI-uploaded run artifacts; current proof never includes stale local fail files next to a certified-pass summary.
      Commit: Y | `test(harness): enforce truthful revision-bound evidence`
 
-- [ ] 6. Implement domain identities, value objects, WorkItem, Program, and typed edges
+- [x] 6. Implement domain identities, value objects, WorkItem, Program, and typed edges
      What to do / Must NOT do: Build strict immutable value objects, branded ULIDs, Actor, tenant/workspace/resource IDs, lifecycle enums, WorkItem, Program, Edge and provenance. Make derived WorkItem caches require `derived_from_decision_id`; source truth does not duplicate readiness/ranking. Use monotonic local ULID generation behind a pure utility; validate contains/blocks/requires_gate/related_to endpoints. No I/O or ORM in Domain.
      Parallelization: Wave 1 | Blocked by: 2,4,5 | Blocks: 7-15
      References: `docs/domain/work-item.md`, `program.md`, `edges.md`, `terminology.md`; `docs/architecture/ARCHITECTURE.md:189-205`
@@ -217,7 +217,7 @@ Large todos may use the execution slices listed below, but the parent checkbox r
      QA scenarios: happy—construct nested multi-parent Program; failure—containment self-edge rejected. Evidence `.omo/evidence/task-6-full-product-implementation/`.
      Commit: Y | `feat(domain): add core entities and typed edges`
 
-- [ ] 7. Implement authority merge, provenance, freshness, and conflict semantics
+- [x] 7. Implement authority merge, provenance, freshness, and conflict semantics
      What to do / Must NOT do: Implement six-level source precedence, five authority statuses, conflict details, TTL/configured freshness, source revision inputs, and Attention basis output. Higher precedence chooses current value but never hides disagreement. AI remains inference-only.
      Parallelization: Wave 1 | Blocked by: 6 | Blocks: 10,14,19
      References: `docs/domain/authority-statuses.md`; `docs/domain/attention-items.md`; WF-HAR-DOMAIN-02/05 and security authority manipulation harnesses.
@@ -225,7 +225,7 @@ Large todos may use the execution slices listed below, but the parent checkbox r
      QA scenarios: happy—tracker and valid override reconcile with conflict provenance; failure—spoofed authoritative inference rejected. Evidence `.omo/evidence/task-7-full-product-implementation/`.
      Commit: Y | `feat(domain): implement authority reconciliation`
 
-- [ ] 8. Implement graph validation and affected-region traversal
+- [x] 8. Implement graph validation and affected-region traversal
      What to do / Must NOT do: Implement containment DAG validation, Tarjan/Kosaraju SCC detection for blocks edges, localized invalid-component quarantine, deterministic component ordering, hard/soft blockers, fan-out and root-cause paths. Never globally disable unaffected components.
      Parallelization: Wave 1 | Blocked by: 6 | Blocks: 10,19,27
      References: `docs/domain/edges.md`; `docs/domain/readiness-ranking.md`; WF-HAR-DOMAIN-03, PROPERTY-02, META-05.
@@ -233,7 +233,7 @@ Large todos may use the execution slices listed below, but the parent checkbox r
      QA scenarios: happy—acyclic #539 graph resolves; failure—inject SCC and verify only SCC excluded. Evidence `.omo/evidence/task-8-full-product-implementation/`.
      Commit: Y | `feat(graph): add typed cycle and traversal engine`
 
-- [ ] 9. Implement versioned policy DSL, phased gates, evidence, and completion
+- [x] 9. Implement versioned policy DSL, phased gates, evidence, and completion
      What to do / Must NOT do: Define parse-don't-validate policy AST; implement entry/completion/certification gates, gate types, EvidenceRecord revision binding/attestation/expiry, completion policies and non-waivable safety. Reject unknown policy constructs and AI evidence.
      Parallelization: Wave 1 | Blocked by: 6,7 | Blocks: 10,21,22
      References: `docs/domain/gates-and-evidence.md`; `lifecycle-and-completion.md`; `state-machines.md`; `docs/decisions/ADR-004-evidence-backed-completion.md`

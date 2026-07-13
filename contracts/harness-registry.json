@@ -224,16 +224,18 @@
     {
       "id": "WF-HAR-DOMAIN-04",
       "name": "Policy Gate Evaluation",
-      "command": "pytest tests/domain/test_policy_gates.py -v",
+      "command": "uv run python scripts/run_domain_policy_harness.py",
       "artifact": "evidence/domain/policy-gates.json",
       "blocks_release": true,
       "what_it_runs": "Matrix: every (item_state, gate_config) triple; verifies gate evaluation per configured policy (policy gates are not body edges)",
       "pass_criteria": "Every gate correctly classifies items. Safety gates cannot be waived. Localized fail-closed when uncertain.",
       "applicability": "standard",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-DOMAIN-05"
+      ]
     },
     {
       "id": "WF-HAR-DOMAIN-05",

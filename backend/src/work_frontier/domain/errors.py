@@ -18,6 +18,10 @@ class DomainErrorCode(StrEnum):
     INVALID_PROVENANCE = "invalid_provenance"
     INVALID_FRESHNESS_POLICY = "invalid_freshness_policy"
     AUTHORITATIVE_INFERENCE = "authoritative_inference"
+    INVALID_POLICY = "invalid_policy"
+    INVALID_GATE = "invalid_gate"
+    INVALID_EVIDENCE = "invalid_evidence"
+    SAFETY_GATE_WAIVER = "safety_gate_waiver"
 
 
 class DomainInvariantError(ValueError):

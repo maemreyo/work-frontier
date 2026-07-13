@@ -22,6 +22,7 @@
     "WF-HAR-DOMAIN-02",
     "WF-HAR-DOMAIN-05",
     "WF-HAR-DOMAIN-03",
+    "WF-HAR-DOMAIN-04",
     "WF-HAR-PROPERTY-02",
     "WF-HAR-META-05"
   ],
@@ -38,6 +39,7 @@
     "WF-HAR-DOMAIN-02",
     "WF-HAR-DOMAIN-05",
     "WF-HAR-DOMAIN-03",
+    "WF-HAR-DOMAIN-04",
     "WF-HAR-PROPERTY-02",
     "WF-HAR-META-05"
   ],
@@ -78,6 +80,9 @@
     ],
     "WF-HAR-META-05": [
       "WF-HAR-PROPERTY-02"
+    ],
+    "WF-HAR-DOMAIN-04": [
+      "WF-HAR-DOMAIN-05"
     ]
   }
 }

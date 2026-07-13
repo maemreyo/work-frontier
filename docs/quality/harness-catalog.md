@@ -129,7 +129,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `pytest tests/domain/test_policy_gates.py -v` (intended) |
+| **Command** | `uv run python scripts/run_domain_policy_harness.py` |
 | **What it runs** | Matrix: every (item_state, gate_config) triple; verifies gate evaluation per configured policy (policy gates are not body edges) |
 | **Artifact** | `evidence/domain/policy-gates.json` |
 | **Pass criteria** | Every gate correctly classifies items. Safety gates cannot be waived. Localized fail-closed when uncertain. |

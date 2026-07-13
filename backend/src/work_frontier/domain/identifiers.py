@@ -63,6 +63,10 @@ class GateId(ResourceId):
     """Gate identity."""
 
 
+class EvidenceId(ResourceId):
+    """EvidenceRecord identity."""
+
+
 class EdgeId(ResourceId):
     """Edge identity."""
 
