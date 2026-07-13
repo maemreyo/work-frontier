@@ -24,14 +24,14 @@ UNSUPPORTED_MIGRATION_OPERATION: Final = "unsupported migration operation"
 UPGRADE_MISSING_MARKER: Final = "upgrade missing bootstrap marker"
 SEED_ROW_LOST_AFTER_FAILURE: Final = "seed row lost after failed revision rollback"
 SEED_ROW_NOT_FOUND_AFTER_SEEDING: Final = "seed row not found after seeding"
-FAILING_REVISION_ID: Final = "0002_failing_revision_probe"
+FAILING_REVISION_ID: Final = "0003_failing_revision_probe"
 VERSIONS_DIR: Final = Path("infra/alembic/versions")
 FAILING_REVISION_PATH: Final = VERSIONS_DIR / f"{FAILING_REVISION_ID}.py"
 
 FAILING_REVISION_SOURCE: Final = '''"""Temporary failing revision for smoke probe.
 
-Revision ID: 0002_failing_revision_probe
-Revises: 0001_bootstrap_marker
+Revision ID: 0003_failing_revision_probe
+Revises: 0002_platform_core
 Create Date: 2026-07-12
 """
 
@@ -40,8 +40,8 @@ from __future__ import annotations
 import sqlalchemy as sa
 from alembic import op
 
-revision = "0002_failing_revision_probe"
-down_revision = "0001_bootstrap_marker"
+revision = "0003_failing_revision_probe"
+down_revision = "0002_platform_core"
 branch_labels = None
 depends_on = None
 
@@ -345,6 +345,12 @@ def main() -> int:
             path="infra/alembic/versions/0001_bootstrap_marker.py",
             hashes=ArtifactHashes(
                 sha256=hash_file(versions_dir / "0001_bootstrap_marker.py")
+            ),
+        ),
+        Artifact(
+            path="infra/alembic/versions/0002_platform_core.py",
+            hashes=ArtifactHashes(
+                sha256=hash_file(versions_dir / "0002_platform_core.py")
             ),
         ),
     ]

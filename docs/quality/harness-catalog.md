@@ -99,7 +99,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `pytest tests/domain/test_frontier_computation.py -v` (intended) |
+| **Command** | `uv run python scripts/run_frontier_harness.py --mode determinism` |
 | **What it runs** | Imports fixed hierarchy, textual blockers, and configured policy gates; computes deterministic full-solve frontier; compares canonical DecisionRecord envelope hash, snapshot/graph/policy/pipeline/engine identifiers, and ranking trace to golden data |
 | **Artifact** | `evidence/domain/frontier-computation.json` |
 | **Pass criteria** | DecisionRecord envelope hash matches golden data exactly. Replaying the identified normalized snapshot, source revision set, graph revision, policy bundle, ranking pipeline, and engine version yields identical output. No item missing or ordering discrepancy. |
@@ -153,7 +153,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `pytest tests/property/test_frontier_determinism.py --hypothesis-seed=0` (intended) |
+| **Command** | `uv run python scripts/run_frontier_harness.py --mode stability` |
 | **What it runs** | Hypothesis generates random valid hierarchies + textual blockers + configured policy gates; verifies DecisionRecord hash is identical on replay |
 | **Inputs** | 10,000 random valid frontier inputs |
 | **Artifact** | `evidence/property/frontier-determinism.json` |
@@ -175,7 +175,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `pytest tests/property/test_readiness_monotonicity.py --hypothesis-seed=0` (intended) |
+| **Command** | `uv run python scripts/run_frontier_harness.py --mode monotonicity` |
 | **What it runs** | Generates random edge mutations; verifies closing valid blocker never shrinks readiness and adding open blocker never grows frontier |
 | **Inputs** | 10,000 random edge mutation sequences |
 | **Artifact** | `evidence/property/readiness-monotonicity.json` |
@@ -197,7 +197,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `pytest tests/property/test_input_ordering.py --hypothesis-seed=0` (intended) |
+| **Command** | `uv run python scripts/run_frontier_harness.py --mode ordering` |
 | **What it runs** | Generates random input sequences; shuffles processing order; verifies identical output |
 | **Inputs** | 10,000 random shuffled sequences |
 | **Artifact** | `evidence/property/input-ordering.json` |
@@ -212,7 +212,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `pytest tests/metamorphic/test_frontier_replay.py` (intended) |
+| **Command** | `uv run python scripts/run_frontier_harness.py --mode replay` |
 | **What it runs** | Re-runs DecisionRecord computation on identical snapshot twice; verifies bit-for-bit identical hash |
 | **Inputs** | 500 identical snapshot pairs |
 | **Artifact** | `evidence/metamorphic/frontier-replay.json` |
@@ -223,7 +223,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `pytest tests/metamorphic/test_frontier_monotonicity.py` (intended) |
+| **Command** | `uv run python scripts/run_frontier_harness.py --mode frontier-monotonicity` |
 | **What it runs** | Adds an open blocker edge; verifies frontier set does not grow; blocked item removed from ready set |
 | **Inputs** | 500 dependency graph mutations |
 | **Artifact** | `evidence/metamorphic/frontier-monotonicity.json` |
@@ -234,7 +234,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `pytest tests/metamorphic/test_readiness_monotonicity.py` (intended) |
+| **Command** | `uv run python scripts/run_frontier_harness.py --mode readiness-monotonicity` |
 | **What it runs** | Closes a valid blocker; verifies readiness does not shrink unless policy or source changes |
 | **Inputs** | 500 blocker-close scenarios |
 | **Artifact** | `evidence/metamorphic/readiness-monotonicity.json` |
@@ -347,7 +347,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `pytest tests/integration/test_durable_queue.py -v` |
+| **Command** | `DATABASE_URL=postgresql+psycopg://work_frontier:work_frontier@localhost:54329/work_frontier uv run python scripts/run_platform_harness.py --mode queue` |
 | **What it runs** | Atomic `FOR UPDATE SKIP LOCKED` claims, lease-owner CAS, tenant-fair selection, retry scheduling/backoff, poison-message quarantine, dead-letter/replay, and transactional-outbox handoff against real PostgreSQL |
 | **Environment** | Docker Compose: postgres:16 |
 | **Artifact** | `evidence/integration/durable-queue.json` |
@@ -369,7 +369,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `pytest tests/integration/test_worker.py -v` |
+| **Command** | `DATABASE_URL=postgresql+psycopg://work_frontier:work_frontier@localhost:54329/work_frontier uv run python scripts/run_platform_harness.py --mode worker` |
 | **What it runs** | Worker picks up jobs, executes, handles retries and failures against real queue |
 | **Environment** | Docker Compose: full stack with worker |
 | **Artifact** | `evidence/integration/worker.json` |
@@ -380,7 +380,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `pytest tests/integration/test_scheduler.py -v` |
+| **Command** | `DATABASE_URL=postgresql+psycopg://work_frontier:work_frontier@localhost:54329/work_frontier uv run python scripts/run_platform_harness.py --mode scheduler` |
 | **What it runs** | Schedule creation, trigger execution, overlap prevention against real Postgres |
 | **Environment** | Docker Compose: full stack with scheduler |
 | **Artifact** | `evidence/integration/scheduler.json` |
@@ -503,7 +503,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `pytest tests/ops/test_event_durability.py -v` |
+| **Command** | `DATABASE_URL=postgresql+psycopg://work_frontier:work_frontier@localhost:54329/work_frontier uv run python scripts/run_platform_harness.py --mode durability` |
 | **What it runs** | Enqueues inbox deliveries, simulates crashes at every internal consistency boundary, verifies atomic snapshot/DecisionRecord/projection/audit/outbox commit and measures acknowledged-event loss |
 | **Artifact** | `evidence/ops/event-durability.json` |
 | **Pass criteria** | Event durability ≥ 99.99%. Zero acknowledged-event loss. No partial internal commit or orphaned external-write intent; unacknowledged events may be lost only before durable inbox persistence and are tracked. |
@@ -614,7 +614,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `pytest tests/security/test_idor.py -v` (intended) |
+| **Command** | `DATABASE_URL=postgresql+psycopg://work_frontier:work_frontier@localhost:54329/work_frontier uv run python scripts/run_platform_harness.py --mode rls` |
 | **What it runs** | Matrix: every (endpoint, object_id, user_role) triple; verifies items scoped to authorized context |
 | **Artifact** | `evidence/security/idor.json` |
 | **Pass criteria** | No unauthorized access to objects outside user's scope. |
@@ -714,7 +714,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `pytest tests/security/test_evidence_tampering.py -v` (intended) |
+| **Command** | `DATABASE_URL=postgresql+psycopg://work_frontier:work_frontier@localhost:54329/work_frontier uv run python scripts/run_platform_harness.py --mode evidence` |
 | **What it runs** | Attempts mutation of existing EvidenceRecords; verifies append-only enforcement |
 | **Artifact** | `evidence/security/evidence-tampering.json` |
 | **Pass criteria** | Old evidence records cannot be modified or deleted. Mutation attempts rejected. |
@@ -724,7 +724,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `pytest tests/security/test_audit_integrity.py -v` (intended) |
+| **Command** | `DATABASE_URL=postgresql+psycopg://work_frontier:work_frontier@localhost:54329/work_frontier MINIO_ENDPOINT_URL=http://localhost:9002 MINIO_ROOT_USER=work-frontier MINIO_ROOT_PASSWORD=work-frontier-minio uv run python scripts/run_platform_harness.py --mode audit` |
 | **What it runs** | Attempts payload, actor, timestamp, ordering, envelope, and full-segment rewrite tampering; verifies per-workspace chain validation and required external-anchor/WORM policy for privileged-DB threat profiles |
 | **Artifact** | `evidence/security/audit-integrity.json` |
 | **Pass criteria** | Canonical envelope/payload hash mismatch is detected. Entry overwrite/reorder fails. Privileged-DB threat profile cannot claim tamper resistance unless signed anchor or WORM evidence validates. |

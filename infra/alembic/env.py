@@ -3,16 +3,25 @@
 from __future__ import annotations
 
 import os
+import sys
 from logging.config import fileConfig
+from pathlib import Path
 from typing import Final
 
 from alembic import context
-from sqlalchemy import MetaData, engine_from_config, pool
+from sqlalchemy import engine_from_config, pool
 
 CONFIG = context.config
 DATABASE_URL_ENVIRONMENT: Final = "DATABASE_URL"
 DATABASE_URL_MISSING: Final = "DATABASE_URL must be set"
-TARGET_METADATA = MetaData()
+ROOT: Final = Path(__file__).resolve().parents[2]
+BACKEND_SRC: Final = ROOT / "backend" / "src"
+if str(BACKEND_SRC) not in sys.path:
+    sys.path.insert(0, str(BACKEND_SRC))
+
+from work_frontier.platform.persistence.schema import (  # noqa: E402
+    metadata as TARGET_METADATA,
+)
 
 if CONFIG.config_file_name is not None:
     fileConfig(CONFIG.config_file_name)

@@ -24,7 +24,21 @@
     "WF-HAR-DOMAIN-03",
     "WF-HAR-DOMAIN-04",
     "WF-HAR-PROPERTY-02",
-    "WF-HAR-META-05"
+    "WF-HAR-META-05",
+    "WF-HAR-DOMAIN-01",
+    "WF-HAR-PROPERTY-01",
+    "WF-HAR-PROPERTY-03",
+    "WF-HAR-PROPERTY-05",
+    "WF-HAR-META-01",
+    "WF-HAR-META-02",
+    "WF-HAR-META-03",
+    "WF-HAR-INTEG-03",
+    "WF-HAR-INTEG-05",
+    "WF-HAR-INTEG-06",
+    "WF-HAR-OPS-03",
+    "WF-HAR-SEC-04",
+    "WF-HAR-SEC-14",
+    "WF-HAR-SEC-15"
   ],
   "deferred_harnesses": [],
   "pre_ga_harnesses": [
@@ -41,7 +55,21 @@
     "WF-HAR-DOMAIN-03",
     "WF-HAR-DOMAIN-04",
     "WF-HAR-PROPERTY-02",
-    "WF-HAR-META-05"
+    "WF-HAR-META-05",
+    "WF-HAR-DOMAIN-01",
+    "WF-HAR-PROPERTY-01",
+    "WF-HAR-PROPERTY-03",
+    "WF-HAR-PROPERTY-05",
+    "WF-HAR-META-01",
+    "WF-HAR-META-02",
+    "WF-HAR-META-03",
+    "WF-HAR-INTEG-03",
+    "WF-HAR-INTEG-05",
+    "WF-HAR-INTEG-06",
+    "WF-HAR-OPS-03",
+    "WF-HAR-SEC-04",
+    "WF-HAR-SEC-14",
+    "WF-HAR-SEC-15"
   ],
   "prerequisites": {
     "WF-HAR-PREFLIGHT-01": [],
@@ -83,6 +111,52 @@
     ],
     "WF-HAR-DOMAIN-04": [
       "WF-HAR-DOMAIN-05"
+    ],
+    "WF-HAR-DOMAIN-01": [
+      "WF-HAR-DOMAIN-03",
+      "WF-HAR-DOMAIN-04"
+    ],
+    "WF-HAR-PROPERTY-01": [
+      "WF-HAR-DOMAIN-01"
+    ],
+    "WF-HAR-PROPERTY-03": [
+      "WF-HAR-DOMAIN-01"
+    ],
+    "WF-HAR-PROPERTY-05": [
+      "WF-HAR-DOMAIN-01"
+    ],
+    "WF-HAR-META-01": [
+      "WF-HAR-PROPERTY-01"
+    ],
+    "WF-HAR-META-02": [
+      "WF-HAR-PROPERTY-03"
+    ],
+    "WF-HAR-META-03": [
+      "WF-HAR-PROPERTY-03"
+    ],
+    "WF-HAR-INTEG-03": [
+      "WF-HAR-SEC-04",
+      "WF-HAR-SEC-15"
+    ],
+    "WF-HAR-INTEG-05": [
+      "WF-HAR-INTEG-03"
+    ],
+    "WF-HAR-INTEG-06": [
+      "WF-HAR-INTEG-03"
+    ],
+    "WF-HAR-OPS-03": [
+      "WF-HAR-INTEG-05",
+      "WF-HAR-INTEG-06"
+    ],
+    "WF-HAR-SEC-04": [
+      "WF-HAR-INTEG-01"
+    ],
+    "WF-HAR-SEC-14": [
+      "WF-HAR-INTEG-01",
+      "WF-HAR-INTEG-02"
+    ],
+    "WF-HAR-SEC-15": [
+      "WF-HAR-SEC-14"
     ]
   }
 }
