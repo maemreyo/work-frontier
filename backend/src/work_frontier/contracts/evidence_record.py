@@ -17,12 +17,13 @@ from pydantic import (
     field_validator,
     model_validator,
 )
+from pydantic import JsonValue as PydanticJsonValue
 
 JsonValue = str | int | float | bool | None | dict[str, object] | list[object]
 
 _SHA256_PATTERN = re.compile(r"^[a-f0-9]{64}$")
 
-EVIDENCE_SEMANTIC_RULES: Final[dict[str, object]] = {
+EVIDENCE_SEMANTIC_RULES: Final[dict[str, PydanticJsonValue]] = {
     "version": "1.0.0",
     "posix_relative_paths": [
         "invocation.working_directory",

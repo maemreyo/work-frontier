@@ -817,7 +817,7 @@ def recertify_foundation(  # noqa: PLR0915 - certification lifecycle spans 8 har
     _ = temporary_report.write_text(
         f"{json.dumps(report, indent=2)}\n", encoding="utf-8"
     )
-    temporary_report.replace(out_path)
+    _ = temporary_report.replace(out_path)
 
     if not certified:
         raise CertificationError(

@@ -303,7 +303,7 @@ def _write_receipt(*, check_mode: bool, exit_code: int) -> None:
     _ = temporary.write_text(
         f"{json.dumps(receipt, indent=2, sort_keys=True)}\n", encoding="utf-8"
     )
-    temporary.replace(path)
+    _ = temporary.replace(path)
 
 
 def main(arguments: list[str]) -> int:

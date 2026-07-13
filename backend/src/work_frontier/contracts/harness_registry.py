@@ -222,7 +222,8 @@ def _validate_foundation_closure(data: dict[str, Any], all_ids: set[str]) -> Non
     if not isinstance(raw, list) or not raw:
         msg = "foundation_closure missing from registry"
         raise HarnessRegistryError(msg)
-    closure = [str(item) for item in raw]
+    closure_items = cast("list[object]", raw)
+    closure = [str(item) for item in closure_items]
     if len(closure) != len(set(closure)):
         msg = "foundation_closure contains duplicates"
         raise HarnessRegistryError(msg)
@@ -258,12 +259,18 @@ def validate_registry(data: dict[str, Any]) -> None:
             msg = f"{harness_id}: prerequisites must be an explicit array"
             raise HarnessRegistryError(msg)
         if prereqs_raw is not None:
-            if not isinstance(prereqs_raw, list) or not all(
-                isinstance(item, str) for item in prereqs_raw
-            ):
+            if not isinstance(prereqs_raw, list):
                 msg = f"{harness_id}: prerequisites must contain only strings"
                 raise HarnessRegistryError(msg)
-            _validate_prerequisites(cast("list[str]", prereqs_raw), harness_id, seen)
+            prereq_items = cast("list[object]", prereqs_raw)
+            if not all(isinstance(item, str) for item in prereq_items):
+                msg = f"{harness_id}: prerequisites must contain only strings"
+                raise HarnessRegistryError(msg)
+            _validate_prerequisites(
+                cast("list[str]", prereq_items),
+                harness_id,
+                seen,
+            )
 
         release_stage = harness.get("release_stage")
         if schema_version == "1.2.0" and release_stage not in RELEASE_STAGES:
@@ -291,7 +298,8 @@ def foundation_closure(registry: dict[str, Any]) -> list[str]:
     if not isinstance(raw, list) or not raw:
         msg = "foundation_closure missing from registry"
         raise HarnessRegistryError(msg)
-    return [str(item) for item in raw]
+    closure_items = cast("list[object]", raw)
+    return [str(item) for item in closure_items]
 
 
 def get_prerequisites(registry: dict[str, Any], harness_id: str) -> list[str]:
@@ -299,10 +307,14 @@ def get_prerequisites(registry: dict[str, Any], harness_id: str) -> list[str]:
     raw = harness.get("prerequisites")
     if raw is None and registry.get("schema_version") == "1.0.0":
         return []
-    if not isinstance(raw, list) or not all(isinstance(item, str) for item in raw):
+    if not isinstance(raw, list):
         msg = f"{harness_id}: prerequisites are missing or invalid"
         raise HarnessRegistryError(msg)
-    return cast("list[str]", raw)
+    prereq_items = cast("list[object]", raw)
+    if not all(isinstance(item, str) for item in prereq_items):
+        msg = f"{harness_id}: prerequisites are missing or invalid"
+        raise HarnessRegistryError(msg)
+    return cast("list[str]", prereq_items)
 
 
 def get_release_stage(registry: dict[str, Any], harness_id: str) -> str:
