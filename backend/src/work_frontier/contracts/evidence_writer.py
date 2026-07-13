@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import importlib.metadata
+import os
 import shutil
 import subprocess
 import sys
@@ -369,7 +370,16 @@ def write_evidence(
         raise ValueError(msg)
 
     if evidence_root is None:
-        evidence_root = repo_root / ".omo" / "evidence" / "static"
+        # When run under the harness runner, WF_HARNESS_ARTIFACT points to the
+        # run-scoped artifact path. Redirect output there so the runner's
+        # declared-artifact check finds it at the expected location.
+        artifact_env = os.environ.get("WF_HARNESS_ARTIFACT")
+        if artifact_env:
+            artifact_path = Path(artifact_env)
+            evidence_root = artifact_path.parent
+            output_filename = artifact_path.name
+        else:
+            evidence_root = repo_root / ".omo" / "evidence" / "static"
 
     evidence_root.mkdir(parents=True, exist_ok=True)
 

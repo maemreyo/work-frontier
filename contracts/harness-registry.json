@@ -164,7 +164,7 @@
     {
       "id": "WF-HAR-STATIC-05",
       "name": "Secret Detection",
-      "command": "gitleaks detect --source . --report-format json --report-path .omo/evidence/static/secrets.json",
+      "command": "gitleaks detect --source . --report-format json --report-path \"${WF_HARNESS_ARTIFACT:-.omo/evidence/static/secrets.json}\"",
       "artifact": ".omo/evidence/static/secrets.json",
       "blocks_release": true,
       "what_it_runs": "Scans entire repo history for committed secrets",

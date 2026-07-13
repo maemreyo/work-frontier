@@ -85,7 +85,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `gitleaks detect --source . --report-format json --report-path .omo/evidence/static/secrets.json` |
+| **Command** | `gitleaks detect --source . --report-format json --report-path "${WF_HARNESS_ARTIFACT:-.omo/evidence/static/secrets.json}"` |
 | **What it runs** | Scans entire repo history for committed secrets |
 | **Artifact** | `.omo/evidence/static/secrets.json` |
 | **Pass criteria** | Zero findings |
