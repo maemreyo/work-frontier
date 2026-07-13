@@ -1,0 +1,98 @@
+{
+  "issues": [
+    {
+      "body": "Generated report summarizing five Epic branches.",
+      "labels": [],
+      "number": 539,
+      "state": "open",
+      "title": "Work Frontier Program Report",
+      "updated_at": "2026-07-12T00:00:00Z"
+    },
+    {
+      "body": "<!-- omc-program:E1; issue:460 -->\n## Parent\n#539\n## Execution checklist\n- [ ] complete\n## Blocked by\n#999999",
+      "labels": [
+        "ready-for-agent"
+      ],
+      "number": 460,
+      "state": "open",
+      "title": "Epic E1",
+      "updated_at": "2026-07-12T00:00:00Z"
+    },
+    {
+      "body": "<!-- omc-program:E2; issue:475 -->\n## Parent\n#539",
+      "labels": [],
+      "number": 475,
+      "state": "open",
+      "title": "Epic E2",
+      "updated_at": "2026-07-12T00:00:00Z"
+    },
+    {
+      "body": "<!-- omc-program:E3; issue:488 -->\n## Parent\n#539",
+      "labels": [],
+      "number": 488,
+      "state": "open",
+      "title": "Epic E3",
+      "updated_at": "2026-07-12T00:00:00Z"
+    },
+    {
+      "body": "<!-- omc-program:E4; issue:504 -->\n## Parent\n#539",
+      "labels": [],
+      "number": 504,
+      "state": "open",
+      "title": "Epic E4",
+      "updated_at": "2026-07-12T00:00:00Z"
+    },
+    {
+      "body": "<!-- omc-program:E5; issue:522 -->\n## Parent\n#539",
+      "labels": [],
+      "number": 522,
+      "state": "open",
+      "title": "Epic E5",
+      "updated_at": "2026-07-12T00:00:00Z"
+    },
+    {
+      "body": "<!-- omc-program:E1; issue:474 -->\n## Parent\n#460",
+      "labels": [
+        "ready-for-agent"
+      ],
+      "number": 474,
+      "state": "open",
+      "title": "Terminal E1",
+      "updated_at": "2026-07-12T00:00:00Z"
+    },
+    {
+      "body": "<!-- omc-program:E2; issue:487 -->\n## Parent\n#475",
+      "labels": [],
+      "number": 487,
+      "state": "open",
+      "title": "Terminal E2",
+      "updated_at": "2026-07-12T00:00:00Z"
+    },
+    {
+      "body": "<!-- omc-program:E3; issue:503 -->\n## Parent\n#488",
+      "labels": [],
+      "number": 503,
+      "state": "open",
+      "title": "Terminal E3",
+      "updated_at": "2026-07-12T00:00:00Z"
+    },
+    {
+      "body": "<!-- omc-program:E4; issue:521 -->\n## Parent\n#504",
+      "labels": [],
+      "number": 521,
+      "state": "open",
+      "title": "Terminal E4",
+      "updated_at": "2026-07-12T00:00:00Z"
+    },
+    {
+      "body": "<!-- omc-program:E5; issue:538 -->\n## Parent\n#522",
+      "labels": [],
+      "number": 538,
+      "state": "open",
+      "title": "Terminal E5",
+      "updated_at": "2026-07-12T00:00:00Z"
+    }
+  ],
+  "observed_at": "2026-07-12T00:00:00Z",
+  "repository": "oh-my-class/oh-my-class"
+}

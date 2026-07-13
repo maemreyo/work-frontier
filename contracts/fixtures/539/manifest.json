@@ -1,0 +1,7 @@
+{
+  "expected_file": "expected.json",
+  "issues_sha256": "5edaabbe6dca614c94303fac693c35dc881052c02c4099958a93413dea24b256",
+  "observed_at": "2026-07-12T00:00:00Z",
+  "schema_version": "1.0.0",
+  "source": "docs/reference/oh-my-class/verified-facts.md"
+}

@@ -186,7 +186,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `pytest tests/property/test_projection_convergence.py --hypothesis-seed=0` (intended) |
+| **Command** | `uv run python scripts/run_wave3_harness.py --mode convergence` |
 | **What it runs** | Generates random partial updates; computes incremental projection; compares to full-solve |
 | **Inputs** | 10,000 random update sequences |
 | **Artifact** | `evidence/property/projection-convergence.json` |
@@ -245,7 +245,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `pytest tests/metamorphic/test_projection_parity.py` (intended) |
+| **Command** | `uv run python scripts/run_wave3_harness.py --mode parity` |
 | **What it runs** | Full solve vs. incremental on same data; verifies item ordering agrees |
 | **Inputs** | 500 data snapshots × full vs. incremental |
 | **Artifact** | `evidence/metamorphic/projection-parity.json` |
@@ -503,7 +503,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `DATABASE_URL=postgresql+psycopg://work_frontier:work_frontier@localhost:54329/work_frontier uv run python scripts/run_platform_harness.py --mode durability` |
+| **Command** | `DATABASE_URL=postgresql+psycopg://work_frontier:work_frontier@localhost:54329/work_frontier uv run python scripts/run_wave3_harness.py --mode decision-atomicity` |
 | **What it runs** | Enqueues inbox deliveries, simulates crashes at every internal consistency boundary, verifies atomic snapshot/DecisionRecord/projection/audit/outbox commit and measures acknowledged-event loss |
 | **Artifact** | `evidence/ops/event-durability.json` |
 | **Pass criteria** | Event durability ≥ 99.99%. Zero acknowledged-event loss. No partial internal commit or orphaned external-write intent; unacknowledged events may be lost only before durable inbox persistence and are tracked. |
@@ -562,7 +562,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `pytest tests/crosscut/test_github_sandbox.py -v` |
+| **Command** | `uv run python scripts/run_wave3_harness.py --mode github-sandbox` |
 | **What it runs** | Real repo creation, webhook delivery, OAuth flow, rate limiting against GitHub sandbox |
 | **Environment** | GitHub sandbox org with test credentials |
 | **Artifact** | `evidence/crosscut/github-sandbox.json` |
@@ -573,7 +573,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `pytest tests/crosscut/test_539_replay.py -v` (intended) |
+| **Command** | `uv run python scripts/run_wave3_harness.py --mode 539-replay` |
 | **What it runs** | Imports program markers + textual blockers + configured policy gates (policy gates are not body edges) from #539; computes deterministic frontier; processes close/reopen (updates source state and frontier); verifies generated managed projection parity and canonical DecisionRecord hash (see [verification-strategy.md](../quality/verification-strategy.md#issue-539-replay-wf-har-539-replay)) |
 | **Artifact** | `evidence/crosscut/539-replay.json` |
 | **Pass criteria** | DecisionRecord hash matches golden-file. Close/reopen updates source state and frontier correctly. Managed projection agrees with full solve. Content hashes of imported data and computed DecisionRecords recorded. |
@@ -664,7 +664,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `pytest tests/security/test_permission_escalation.py -v` (intended) |
+| **Command** | `uv run python scripts/run_wave3_harness.py --mode authorization` |
 | **What it runs** | Matrix test over all endpoints; lower roles cannot perform higher-role actions |
 | **Artifact** | `evidence/security/permission-escalation.json` |
 | **Pass criteria** | No privilege escalation. Role boundaries enforced at every endpoint. |
@@ -704,7 +704,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `pytest tests/security/test_credential_exposure.py -v` (intended) |
+| **Command** | `uv run python scripts/run_wave3_harness.py --mode credential-exposure` |
 | **What it runs** | Scans all output paths for tracker credentials: logs, API responses, state dumps |
 | **Artifact** | `evidence/security/credential-exposure.json` |
 | **Pass criteria** | No tracker credentials in logs, API responses, or state dumps. |

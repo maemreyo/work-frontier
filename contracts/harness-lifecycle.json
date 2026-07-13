@@ -38,7 +38,13 @@
     "WF-HAR-OPS-03",
     "WF-HAR-SEC-04",
     "WF-HAR-SEC-14",
-    "WF-HAR-SEC-15"
+    "WF-HAR-SEC-15",
+    "WF-HAR-PROPERTY-04",
+    "WF-HAR-META-04",
+    "WF-HAR-GITHUB-SANDBOX-01",
+    "WF-HAR-539-REPLAY-01",
+    "WF-HAR-SEC-09",
+    "WF-HAR-SEC-13"
   ],
   "deferred_harnesses": [],
   "pre_ga_harnesses": [
@@ -69,7 +75,13 @@
     "WF-HAR-OPS-03",
     "WF-HAR-SEC-04",
     "WF-HAR-SEC-14",
-    "WF-HAR-SEC-15"
+    "WF-HAR-SEC-15",
+    "WF-HAR-PROPERTY-04",
+    "WF-HAR-META-04",
+    "WF-HAR-GITHUB-SANDBOX-01",
+    "WF-HAR-539-REPLAY-01",
+    "WF-HAR-SEC-09",
+    "WF-HAR-SEC-13"
   ],
   "prerequisites": {
     "WF-HAR-PREFLIGHT-01": [],
@@ -157,6 +169,25 @@
     ],
     "WF-HAR-SEC-15": [
       "WF-HAR-SEC-14"
+    ],
+    "WF-HAR-PROPERTY-04": [
+      "WF-HAR-OPS-03"
+    ],
+    "WF-HAR-META-04": [
+      "WF-HAR-PROPERTY-04"
+    ],
+    "WF-HAR-SEC-09": [
+      "WF-HAR-INTEG-01"
+    ],
+    "WF-HAR-SEC-13": [
+      "WF-HAR-SEC-09"
+    ],
+    "WF-HAR-GITHUB-SANDBOX-01": [
+      "WF-HAR-SEC-13"
+    ],
+    "WF-HAR-539-REPLAY-01": [
+      "WF-HAR-META-04",
+      "WF-HAR-GITHUB-SANDBOX-01"
     ]
   }
 }

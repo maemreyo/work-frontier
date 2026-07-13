@@ -275,7 +275,7 @@ Large todos may use the execution slices listed below, but the parent checkbox r
       QA scenarios: happy—enqueue/process/complete; failure—kill after claim and recover without duplicate effects. Evidence `.omo/evidence/task-13-full-product-implementation/`.
       Commit: Y | `feat(queue): implement durable background processing`
 
-- [x] 14. Persist DecisionRecord sets atomically and build current projections
+- [ ] 14. Persist DecisionRecord sets atomically and build current projections
       What to do / Must NOT do: Adapt identified normalized DB snapshot into pure engine; in one transaction append complete DecisionRecord set, update latest pointers/current projections carrying `derived_from_decision_id`, append payload-safe audit event, emit outbox intent, and advance source cursor with fencing. Never update an existing DecisionRecord, expose a mixed-cycle frontier, or store computed truth without derivation identity.
       Parallelization: Wave 2 | Blocked by: 10-13 | Blocks: 19,21,24
       References: `docs/domain/decision-record.md`; `docs/product/overview.md:79-91,122-147`; `docs/architecture/ARCHITECTURE.md:404-461`

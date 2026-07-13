@@ -113,10 +113,12 @@ source_item_versions = _workspace_entity(
     "source_version_id",
     append_only=True,
     extra_columns=(
+        sa.Column("connection_id", sa.String(_ID_LENGTH), nullable=False),
         sa.Column("item_id", sa.String(_ID_LENGTH), nullable=False),
         sa.Column("source_id", sa.String(_ID_LENGTH), nullable=False),
         sa.Column("revision", sa.String(_ID_LENGTH), nullable=False),
         sa.Column("payload", _JSON, nullable=False),
+        sa.Column("payload_hash", sa.String(_HASH_LENGTH), nullable=False),
         sa.ForeignKeyConstraint(
             ["tenant_id", "workspace_id", "item_id"],
             ["work_items.tenant_id", "work_items.workspace_id", "work_items.item_id"],
@@ -182,6 +184,7 @@ decision_records = _workspace_entity(
     "decision_id",
     append_only=True,
     extra_columns=(
+        sa.Column("cycle_id", sa.String(_ID_LENGTH), nullable=False),
         sa.Column("item_id", sa.String(_ID_LENGTH), nullable=False),
         sa.Column("payload", _JSON, nullable=False),
         sa.Column("payload_hash", sa.String(_HASH_LENGTH), nullable=False),
@@ -197,7 +200,11 @@ current_projections = _workspace_entity(
     "current_projections",
     "item_id",
     extra_columns=(
+        sa.Column("cycle_id", sa.String(_ID_LENGTH), nullable=False),
         sa.Column("derived_from_decision_id", sa.String(_ID_LENGTH), nullable=False),
+        sa.Column("source_snapshot_hash", sa.String(_HASH_LENGTH), nullable=False),
+        sa.Column("graph_revision", sa.String(_ID_LENGTH), nullable=False),
+        sa.Column("policy_bundle_hash", sa.String(_HASH_LENGTH), nullable=False),
         sa.Column("payload", _JSON, nullable=False),
         sa.ForeignKeyConstraint(
             ["tenant_id", "workspace_id", "derived_from_decision_id"],
@@ -406,6 +413,125 @@ scheduler_leases = _workspace_entity(
         sa.Column("lease_owner", sa.String(128), nullable=False),
         sa.Column("lease_expires_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("version", sa.Integer(), nullable=False, server_default="1"),
+    ),
+)
+
+decision_cycles = _workspace_entity(
+    "decision_cycles",
+    "cycle_id",
+    append_only=True,
+    extra_columns=(
+        sa.Column("snapshot_id", sa.String(_ID_LENGTH), nullable=False),
+        sa.Column("snapshot_hash", sa.String(_HASH_LENGTH), nullable=False),
+        sa.Column("graph_revision", sa.String(_ID_LENGTH), nullable=False),
+        sa.Column("policy_bundle_hash", sa.String(_HASH_LENGTH), nullable=False),
+        sa.Column("source_revision", sa.String(256), nullable=False),
+        sa.Column("decision_set_hash", sa.String(_HASH_LENGTH), nullable=False),
+        sa.Column("recommended_item_id", sa.String(_ID_LENGTH)),
+    ),
+)
+
+workspace_frontiers = sa.Table(
+    "workspace_frontiers",
+    metadata,
+    *_scope_columns(),
+    sa.Column("active_cycle_id", sa.String(_ID_LENGTH), nullable=False),
+    sa.Column("version", sa.Integer(), nullable=False),
+    _workspace_fk("fk_workspace_frontiers_workspace"),
+    sa.PrimaryKeyConstraint("tenant_id", "workspace_id"),
+    info={"workspace_scoped": True},
+)
+
+source_cursors = _workspace_entity(
+    "source_cursors",
+    "connection_id",
+    extra_columns=(sa.Column("revision", sa.String(256), nullable=False),),
+)
+
+local_identities = _workspace_entity(
+    "local_identities",
+    "actor_id",
+    extra_columns=(
+        sa.Column("username", sa.String(256), nullable=False),
+        sa.Column("password_salt_b64", sa.Text(), nullable=False),
+        sa.Column("password_verifier_b64", sa.Text(), nullable=False),
+        sa.Column("mfa_credential_id", sa.String(_ID_LENGTH)),
+        sa.Column("role_revision", sa.Integer(), nullable=False),
+        sa.Column("enabled", sa.Boolean(), nullable=False, server_default=sa.true()),
+    ),
+    constraints=(
+        sa.UniqueConstraint(
+            "tenant_id",
+            "workspace_id",
+            "username",
+            name="uq_local_identity_username_scope",
+        ),
+    ),
+)
+
+local_identities = _workspace_entity(
+    "local_identities",
+    "actor_id",
+    extra_columns=(
+        sa.Column("username", sa.String(256), nullable=False),
+        sa.Column("password_salt_b64", sa.Text(), nullable=False),
+        sa.Column("password_verifier_b64", sa.Text(), nullable=False),
+        sa.Column("mfa_credential_id", sa.String(_ID_LENGTH)),
+        sa.Column("role_revision", sa.Integer(), nullable=False),
+        sa.Column("enabled", sa.Boolean(), nullable=False, server_default=sa.true()),
+    ),
+    constraints=(
+        sa.UniqueConstraint(
+            "tenant_id",
+            "workspace_id",
+            "username",
+            name="uq_local_identity_username_scope",
+        ),
+    ),
+)
+
+sessions = _workspace_entity(
+    "sessions",
+    "session_id",
+    extra_columns=(
+        sa.Column("actor_id", sa.String(_ID_LENGTH), nullable=False),
+        sa.Column("token_hash", sa.String(_HASH_LENGTH), nullable=False),
+        sa.Column("scope", _JSON, nullable=False),
+        sa.Column("issued_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("revoked_at", sa.DateTime(timezone=True)),
+        sa.Column("role_revision", sa.Integer(), nullable=False),
+    ),
+    constraints=(
+        sa.UniqueConstraint(
+            "tenant_id",
+            "workspace_id",
+            "token_hash",
+            name="uq_session_token_hash_scope",
+        ),
+    ),
+)
+
+role_grants = _workspace_entity(
+    "role_grants",
+    "grant_id",
+    extra_columns=(
+        sa.Column("actor_id", sa.String(_ID_LENGTH), nullable=False),
+        sa.Column("role", sa.String(64), nullable=False),
+        sa.Column("scope", _JSON, nullable=False),
+        sa.Column("revision", sa.Integer(), nullable=False),
+    ),
+)
+
+credential_envelopes = _workspace_entity(
+    "credential_envelopes",
+    "credential_id",
+    extra_columns=(
+        sa.Column("key_id", sa.String(_ID_LENGTH), nullable=False),
+        sa.Column("nonce_b64", sa.Text(), nullable=False),
+        sa.Column("ciphertext_b64", sa.Text(), nullable=False),
+        sa.Column("associated_data_b64", sa.Text(), nullable=False),
+        sa.Column("fingerprint", sa.String(_HASH_LENGTH), nullable=False),
     ),
 )
 

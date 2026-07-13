@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Certify one clean committed revision for completed plan items P0 through 13."""
+"""Certify one clean committed revision for completed plan items P0 through 19."""
 
 from __future__ import annotations
 
@@ -25,6 +25,12 @@ ITEMS: Final = (
     "11",
     "12",
     "13",
+    "14",
+    "15",
+    "16",
+    "17",
+    "18",
+    "19",
 )
 HARNESS_IDS: Final = (
     "WF-HAR-DOMAIN-02",
@@ -47,6 +53,12 @@ HARNESS_IDS: Final = (
     "WF-HAR-INTEG-05",
     "WF-HAR-INTEG-06",
     "WF-HAR-OPS-03",
+    "WF-HAR-SEC-09",
+    "WF-HAR-SEC-13",
+    "WF-HAR-PROPERTY-04",
+    "WF-HAR-META-04",
+    "WF-HAR-GITHUB-SANDBOX-01",
+    "WF-HAR-539-REPLAY-01",
 )
 PLATFORM_ENV: Final = {
     "DATABASE_URL": (
@@ -56,6 +68,10 @@ PLATFORM_ENV: Final = {
     "MINIO_ROOT_USER": "work-frontier",
     "MINIO_ROOT_PASSWORD": "work-frontier-minio",
 }
+_SANDBOX_ENV: Final = (
+    "WF_GITHUB_SANDBOX_REPOSITORY",
+    "WF_GITHUB_SANDBOX_TOKEN",
+)
 
 
 def _run(
@@ -64,6 +80,7 @@ def _run(
     extra_env: dict[str, str] | None = None,
 ) -> subprocess.CompletedProcess[str]:
     env = os.environ.copy()
+    env.update(PLATFORM_ENV)
     if extra_env:
         env.update(extra_env)
     result = subprocess.run(
@@ -83,11 +100,22 @@ def _capture(*args: str) -> str:
     return _run(*args, capture=True).stdout.strip()
 
 
+def _require_sandbox() -> None:
+    missing = [name for name in _SANDBOX_ENV if not os.environ.get(name)]
+    if missing:
+        msg = "exact certification requires GitHub sandbox environment: " + ", ".join(
+            missing
+        )
+        raise SystemExit(msg)
+
+
 def main() -> int:
-    """Run static, infrastructure, and registry harnesses against one commit."""
+    """Run static, data-service, Wave-1/2, and GitHub tracer harnesses."""
     status = _capture("git", "status", "--porcelain", "--untracked-files=all")
     if status:
-        raise SystemExit("working tree must be clean before certification:\n" + status)
+        msg = "working tree must be clean before certification:\n" + status
+        raise SystemExit(msg)
+    _require_sandbox()
 
     plan = PLAN.read_text(encoding="utf-8")
     missing = [item for item in ITEMS if f"- [x] {item}." not in plan]
@@ -99,16 +127,11 @@ def main() -> int:
     _ = _run("make", "check")
     _ = _run("make", "infra-up")
     try:
-        _ = _run("make", "migration-smoke", extra_env=PLATFORM_ENV)
-        _ = _run("make", "storage-smoke", extra_env=PLATFORM_ENV)
-        _ = _run("make", "recertify-foundation", extra_env=PLATFORM_ENV)
+        _ = _run("make", "migration-smoke")
+        _ = _run("make", "storage-smoke")
+        _ = _run("make", "recertify-foundation")
         for harness_id in HARNESS_IDS:
-            _ = _run(
-                "make",
-                "harness",
-                f"ID={harness_id}",
-                extra_env=PLATFORM_ENV,
-            )
+            _ = _run("make", "harness", f"ID={harness_id}")
     finally:
         _ = subprocess.run(
             ["make", "infra-down"],
@@ -124,9 +147,10 @@ def main() -> int:
         "--untracked-files=all",
     )
     if post_status:
-        raise SystemExit("certification changed tracked source files:\n" + post_status)
+        msg = "certification changed tracked source files:\n" + post_status
+        raise SystemExit(msg)
 
-    print(f"plan P0-13 certified against exact subject {subject_sha}")
+    print(f"plan P0-19 certified against exact subject {subject_sha}")
     return 0
 
 

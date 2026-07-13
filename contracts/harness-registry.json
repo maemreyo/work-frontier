@@ -178,16 +178,19 @@
     {
       "id": "WF-HAR-DOMAIN-01",
       "name": "DecisionRecord Determinism",
-      "command": "pytest tests/domain/test_frontier_computation.py -v",
+      "command": "uv run python scripts/run_frontier_harness.py --mode determinism",
       "artifact": "evidence/domain/frontier-computation.json",
       "blocks_release": true,
       "what_it_runs": "Imports fixed hierarchy, textual blockers, and configured policy gates; computes deterministic full-solve frontier; compares canonical DecisionRecord envelope hash, snapshot/graph/policy/pipeline/engine identifiers, and ranking trace to golden data",
       "pass_criteria": "DecisionRecord envelope hash matches golden data exactly. Replaying the identified normalized snapshot, source revision set, graph revision, policy bundle, ranking pipeline, and engine version yields identical output. No item missing or ordering discrepancy.",
       "applicability": "standard",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-DOMAIN-03",
+        "WF-HAR-DOMAIN-04"
+      ]
     },
     {
       "id": "WF-HAR-DOMAIN-02",
@@ -256,16 +259,18 @@
     {
       "id": "WF-HAR-PROPERTY-01",
       "name": "DecisionRecord Stability",
-      "command": "pytest tests/property/test_frontier_determinism.py --hypothesis-seed=0",
+      "command": "uv run python scripts/run_frontier_harness.py --mode stability",
       "artifact": "evidence/property/frontier-determinism.json",
       "blocks_release": true,
       "what_it_runs": "Hypothesis generates random valid hierarchies + textual blockers + configured policy gates; verifies DecisionRecord hash is identical on replay",
       "pass_criteria": "10,000 inputs, zero cases where replay produces different DecisionRecord hash.",
       "applicability": "standard",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-DOMAIN-01"
+      ]
     },
     {
       "id": "WF-HAR-PROPERTY-02",
@@ -286,100 +291,114 @@
     {
       "id": "WF-HAR-PROPERTY-03",
       "name": "Readiness Monotonicity",
-      "command": "pytest tests/property/test_readiness_monotonicity.py --hypothesis-seed=0",
+      "command": "uv run python scripts/run_frontier_harness.py --mode monotonicity",
       "artifact": "evidence/property/readiness-monotonicity.json",
       "blocks_release": true,
       "what_it_runs": "Generates random edge mutations; verifies closing valid blocker never shrinks readiness and adding open blocker never grows frontier",
       "pass_criteria": "No case where closing a valid blocker shrinks readiness or adding an open blocker increases frontier.",
       "applicability": "standard",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-DOMAIN-01"
+      ]
     },
     {
       "id": "WF-HAR-PROPERTY-04",
       "name": "Projection Convergence",
-      "command": "pytest tests/property/test_projection_convergence.py --hypothesis-seed=0",
+      "command": "uv run python scripts/run_wave3_harness.py --mode convergence",
       "artifact": "evidence/property/projection-convergence.json",
       "blocks_release": true,
       "what_it_runs": "Generates random partial updates; computes incremental projection; compares to full-solve",
       "pass_criteria": "Incremental projection converges to full-solve result for every input. No items lost or reordered.",
       "applicability": "standard",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-OPS-03"
+      ]
     },
     {
       "id": "WF-HAR-PROPERTY-05",
       "name": "Input Ordering Invariance",
-      "command": "pytest tests/property/test_input_ordering.py --hypothesis-seed=0",
+      "command": "uv run python scripts/run_frontier_harness.py --mode ordering",
       "artifact": "evidence/property/input-ordering.json",
       "blocks_release": true,
       "what_it_runs": "Generates random input sequences; shuffles processing order; verifies identical output",
       "pass_criteria": "Output identical regardless of input processing order. No ordering-dependent behavior.",
       "applicability": "standard",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-DOMAIN-01"
+      ]
     },
     {
       "id": "WF-HAR-META-01",
       "name": "DecisionRecord Determinism (Replay)",
-      "command": "pytest tests/metamorphic/test_frontier_replay.py",
+      "command": "uv run python scripts/run_frontier_harness.py --mode replay",
       "artifact": "evidence/metamorphic/frontier-replay.json",
       "blocks_release": true,
       "what_it_runs": "Re-runs DecisionRecord computation on identical snapshot twice; verifies bit-for-bit identical hash",
       "pass_criteria": "DecisionRecord hash identical across all 500 replay pairs",
       "applicability": "standard",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-PROPERTY-01"
+      ]
     },
     {
       "id": "WF-HAR-META-02",
       "name": "Frontier Monotonicity",
-      "command": "pytest tests/metamorphic/test_frontier_monotonicity.py",
+      "command": "uv run python scripts/run_frontier_harness.py --mode frontier-monotonicity",
       "artifact": "evidence/metamorphic/frontier-monotonicity.json",
       "blocks_release": true,
       "what_it_runs": "Adds an open blocker edge; verifies frontier set does not grow; blocked item removed from ready set",
       "pass_criteria": "Adding an open blocker never increases the frontier set",
       "applicability": "standard",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-PROPERTY-03"
+      ]
     },
     {
       "id": "WF-HAR-META-03",
       "name": "Readiness Monotonicity",
-      "command": "pytest tests/metamorphic/test_readiness_monotonicity.py",
+      "command": "uv run python scripts/run_frontier_harness.py --mode readiness-monotonicity",
       "artifact": "evidence/metamorphic/readiness-monotonicity.json",
       "blocks_release": true,
       "what_it_runs": "Closes a valid blocker; verifies readiness does not shrink unless policy or source changes",
       "pass_criteria": "Closing a valid blocker never shrinks readiness unless policy or source changes",
       "applicability": "standard",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-PROPERTY-03"
+      ]
     },
     {
       "id": "WF-HAR-META-04",
       "name": "Projection Parity",
-      "command": "pytest tests/metamorphic/test_projection_parity.py",
+      "command": "uv run python scripts/run_wave3_harness.py --mode parity",
       "artifact": "evidence/metamorphic/projection-parity.json",
       "blocks_release": true,
       "what_it_runs": "Full solve vs. incremental on same data; verifies item ordering agrees",
       "pass_criteria": "Item ordering agrees between full and incremental. No item reachable in one but not the other.",
       "applicability": "standard",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-PROPERTY-04"
+      ]
     },
     {
       "id": "WF-HAR-META-05",
@@ -504,16 +523,19 @@
     {
       "id": "WF-HAR-INTEG-03",
       "name": "Durable Queue Integration",
-      "command": "pytest tests/integration/test_durable_queue.py -v",
+      "command": "DATABASE_URL=postgresql+psycopg://work_frontier:work_frontier@localhost:54329/work_frontier uv run python scripts/run_platform_harness.py --mode queue",
       "artifact": "evidence/integration/durable-queue.json",
       "blocks_release": true,
       "what_it_runs": "Atomic `FOR UPDATE SKIP LOCKED` claims, lease-owner CAS, tenant-fair selection, retry scheduling/backoff, poison-message quarantine, dead-letter/replay, and transactional-outbox handoff against real PostgreSQL",
       "pass_criteria": "No duplicate ownership; stale worker cannot complete after lease loss; retry backs off correctly; dead letter/replay is auditable; outbox intent cannot exist without its internal state transaction.",
       "applicability": "standard",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-SEC-04",
+        "WF-HAR-SEC-15"
+      ]
     },
     {
       "id": "WF-HAR-INTEG-04",
@@ -532,30 +554,34 @@
     {
       "id": "WF-HAR-INTEG-05",
       "name": "Worker Integration",
-      "command": "pytest tests/integration/test_worker.py -v",
+      "command": "DATABASE_URL=postgresql+psycopg://work_frontier:work_frontier@localhost:54329/work_frontier uv run python scripts/run_platform_harness.py --mode worker",
       "artifact": "evidence/integration/worker.json",
       "blocks_release": true,
       "what_it_runs": "Worker picks up jobs, executes, handles retries and failures against real queue",
       "pass_criteria": "Jobs execute. Failures retry. Dead letters captured. No orphaned jobs.",
       "applicability": "standard",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-INTEG-03"
+      ]
     },
     {
       "id": "WF-HAR-INTEG-06",
       "name": "Scheduler Integration",
-      "command": "pytest tests/integration/test_scheduler.py -v",
+      "command": "DATABASE_URL=postgresql+psycopg://work_frontier:work_frontier@localhost:54329/work_frontier uv run python scripts/run_platform_harness.py --mode scheduler",
       "artifact": "evidence/integration/scheduler.json",
       "blocks_release": true,
       "what_it_runs": "Schedule creation, trigger execution, overlap prevention against real Postgres",
       "pass_criteria": "Schedules trigger on time. Overlapping executions prevented. State persisted.",
       "applicability": "standard",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-INTEG-03"
+      ]
     },
     {
       "id": "WF-HAR-PRODUCT-01",
@@ -700,16 +726,19 @@
     {
       "id": "WF-HAR-OPS-03",
       "name": "Event Durability Test",
-      "command": "pytest tests/ops/test_event_durability.py -v",
+      "command": "DATABASE_URL=postgresql+psycopg://work_frontier:work_frontier@localhost:54329/work_frontier uv run python scripts/run_wave3_harness.py --mode decision-atomicity",
       "artifact": "evidence/ops/event-durability.json",
       "blocks_release": true,
       "what_it_runs": "Enqueues inbox deliveries, simulates crashes at every internal consistency boundary, verifies atomic snapshot/DecisionRecord/projection/audit/outbox commit and measures acknowledged-event loss",
       "pass_criteria": "Event durability \u2265 99.99%. Zero acknowledged-event loss. No partial internal commit or orphaned external-write intent; unacknowledged events may be lost only before durable inbox persistence and are tracked.",
       "applicability": "standard",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-INTEG-05",
+        "WF-HAR-INTEG-06"
+      ]
     },
     {
       "id": "WF-HAR-OPS-04",
@@ -770,30 +799,35 @@
     {
       "id": "WF-HAR-GITHUB-SANDBOX-01",
       "name": "GitHub Sandbox Integration",
-      "command": "pytest tests/crosscut/test_github_sandbox.py -v",
+      "command": "uv run python scripts/run_wave3_harness.py --mode github-sandbox",
       "artifact": "evidence/crosscut/github-sandbox.json",
       "blocks_release": true,
       "what_it_runs": "Real repo creation, webhook delivery, OAuth flow, rate limiting against GitHub sandbox",
       "pass_criteria": "All GitHub operations succeed against real API. Sandbox resets clean between runs.",
       "applicability": "standard",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-SEC-13"
+      ]
     },
     {
       "id": "WF-HAR-539-REPLAY-01",
       "name": "Issue #539 Regression",
-      "command": "pytest tests/crosscut/test_539_replay.py -v",
+      "command": "uv run python scripts/run_wave3_harness.py --mode 539-replay",
       "artifact": "evidence/crosscut/539-replay.json",
       "blocks_release": true,
       "what_it_runs": "Imports program markers + textual blockers + configured policy gates (policy gates are not body edges) from #539; computes deterministic frontier; processes close/reopen (updates source state and frontier); verifies generated managed projection parity and canonical DecisionRecord hash (see [verification-strategy.md](../quality/verification-strategy.md#issue-539-replay-wf-har-539-replay))",
       "pass_criteria": "DecisionRecord hash matches golden-file. Close/reopen updates source state and frontier correctly. Managed projection agrees with full solve. Content hashes of imported data and computed DecisionRecords recorded.",
       "applicability": "standard",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-META-04",
+        "WF-HAR-GITHUB-SANDBOX-01"
+      ]
     },
     {
       "id": "WF-HAR-SEC-01",
@@ -840,16 +874,18 @@
     {
       "id": "WF-HAR-SEC-04",
       "name": "IDOR Prevention",
-      "command": "pytest tests/security/test_idor.py -v",
+      "command": "DATABASE_URL=postgresql+psycopg://work_frontier:work_frontier@localhost:54329/work_frontier uv run python scripts/run_platform_harness.py --mode rls",
       "artifact": "evidence/security/idor.json",
       "blocks_release": true,
       "what_it_runs": "Matrix: every (endpoint, object_id, user_role) triple; verifies items scoped to authorized context",
       "pass_criteria": "No unauthorized access to objects outside user's scope.",
       "applicability": "standard",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-INTEG-01"
+      ]
     },
     {
       "id": "WF-HAR-SEC-05",
@@ -910,16 +946,18 @@
     {
       "id": "WF-HAR-SEC-09",
       "name": "Permission Escalation",
-      "command": "pytest tests/security/test_permission_escalation.py -v",
+      "command": "uv run python scripts/run_wave3_harness.py --mode authorization",
       "artifact": "evidence/security/permission-escalation.json",
       "blocks_release": true,
       "what_it_runs": "Matrix test over all endpoints; lower roles cannot perform higher-role actions",
       "pass_criteria": "No privilege escalation. Role boundaries enforced at every endpoint.",
       "applicability": "standard",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-INTEG-01"
+      ]
     },
     {
       "id": "WF-HAR-SEC-10",
@@ -966,44 +1004,51 @@
     {
       "id": "WF-HAR-SEC-13",
       "name": "TrackerConnection Credential Exposure",
-      "command": "pytest tests/security/test_credential_exposure.py -v",
+      "command": "uv run python scripts/run_wave3_harness.py --mode credential-exposure",
       "artifact": "evidence/security/credential-exposure.json",
       "blocks_release": true,
       "what_it_runs": "Scans all output paths for tracker credentials: logs, API responses, state dumps",
       "pass_criteria": "No tracker credentials in logs, API responses, or state dumps.",
       "applicability": "standard",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-SEC-09"
+      ]
     },
     {
       "id": "WF-HAR-SEC-14",
       "name": "Evidence Record Tampering",
-      "command": "pytest tests/security/test_evidence_tampering.py -v",
+      "command": "DATABASE_URL=postgresql+psycopg://work_frontier:work_frontier@localhost:54329/work_frontier uv run python scripts/run_platform_harness.py --mode evidence",
       "artifact": "evidence/security/evidence-tampering.json",
       "blocks_release": true,
       "what_it_runs": "Attempts mutation of existing EvidenceRecords; verifies append-only enforcement",
       "pass_criteria": "Old evidence records cannot be modified or deleted. Mutation attempts rejected.",
       "applicability": "standard",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-INTEG-01",
+        "WF-HAR-INTEG-02"
+      ]
     },
     {
       "id": "WF-HAR-SEC-15",
       "name": "Audit Log Integrity",
-      "command": "pytest tests/security/test_audit_integrity.py -v",
+      "command": "DATABASE_URL=postgresql+psycopg://work_frontier:work_frontier@localhost:54329/work_frontier MINIO_ENDPOINT_URL=http://localhost:9002 MINIO_ROOT_USER=work-frontier MINIO_ROOT_PASSWORD=work-frontier-minio uv run python scripts/run_platform_harness.py --mode audit",
       "artifact": "evidence/security/audit-integrity.json",
       "blocks_release": true,
       "what_it_runs": "Attempts payload, actor, timestamp, ordering, envelope, and full-segment rewrite tampering; verifies per-workspace chain validation and required external-anchor/WORM policy for privileged-DB threat profiles",
       "pass_criteria": "Canonical envelope/payload hash mismatch is detected. Entry overwrite/reorder fails. Privileged-DB threat profile cannot claim tamper resistance unless signed anchor or WORM evidence validates.",
       "applicability": "standard",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-SEC-14"
+      ]
     },
     {
       "id": "WF-HAR-A11Y-01",
