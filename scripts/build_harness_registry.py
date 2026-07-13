@@ -162,7 +162,7 @@ def derive_prerequisites(
             for j in range(i):
                 candidate = sorted_harnesses[j]
                 clayer = candidate.get("_layer_order")
-                if clayer is not None:
+                if clayer is not None and candidate.get("status") == "implemented":
                     prereqs.append(str(candidate["id"]))
         harness["prerequisites"] = prereqs
 
