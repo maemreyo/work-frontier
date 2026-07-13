@@ -17,7 +17,8 @@ class WorkspaceScope:
     def __post_init__(self) -> None:
         """Reject absent or blank scope dimensions."""
         if not self.tenant_id.strip() or not self.workspace_id.strip():
-            raise ValueError("tenant_id and workspace_id are required")
+            msg = "tenant_id and workspace_id are required"
+            raise ValueError(msg)
 
 
 @dataclass(frozen=True, slots=True)
@@ -30,7 +31,8 @@ class ScopedResourceId:
     def __post_init__(self) -> None:
         """Reject blank resource identities."""
         if not self.resource_id.strip():
-            raise ValueError("resource_id is required")
+            msg = "resource_id is required"
+            raise ValueError(msg)
 
 
 def workspace_predicate(

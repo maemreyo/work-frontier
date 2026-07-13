@@ -2,15 +2,19 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from work_frontier.platform.persistence.scope import (
     ScopedResourceId,
     workspace_predicate,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
+
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 
 class ScopedRepository:
@@ -29,7 +33,8 @@ class ScopedRepository:
     ) -> None:
         """Bind the repository to one session and scoped table."""
         if id_column not in table.c:
-            raise ValueError(f"unknown ID column: {id_column}")
+            msg = f"unknown ID column: {id_column}"
+            raise ValueError(msg)
         self._session = session
         self._table = table
         self._id_column = id_column

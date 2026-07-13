@@ -36,11 +36,44 @@ class QueuePolicy:
     def __post_init__(self) -> None:
         """Require positive bounded queue policy values."""
         if self.lease_duration <= timedelta(0):
-            raise ValueError("lease_duration must be positive")
+            msg = "lease_duration must be positive"
+            raise ValueError(msg)
         if self.base_retry_seconds < 1:
-            raise ValueError("base_retry_seconds must be positive")
+            msg = "base_retry_seconds must be positive"
+            raise ValueError(msg)
         if self.max_retry_seconds < self.base_retry_seconds:
-            raise ValueError("max_retry_seconds must cover the base delay")
+            msg = "max_retry_seconds must cover the base delay"
+            raise ValueError(msg)
+
+
+@dataclass(frozen=True, slots=True)
+class JobSubmission:
+    """Validated immutable input used to create one pending queue job."""
+
+    tenant_id: str
+    workspace_id: str
+    job_id: str
+    job_type: str
+    idempotency_key: str
+    payload: tuple[tuple[str, object], ...]
+    max_attempts: int
+
+    def __post_init__(self) -> None:
+        """Validate scope, identity, retry policy, and payload ordering."""
+        identities = (
+            self.tenant_id,
+            self.workspace_id,
+            self.job_id,
+            self.job_type,
+            self.idempotency_key,
+        )
+        if any(not value.strip() for value in identities):
+            msg = "job scope and identities are required"
+            raise ValueError(msg)
+        if self.max_attempts < 1:
+            msg = "max_attempts must be positive"
+            raise ValueError(msg)
+        object.__setattr__(self, "payload", tuple(sorted(self.payload)))
 
 
 @dataclass(frozen=True, slots=True)
@@ -68,39 +101,21 @@ class WorkspaceJob:
     attempt_history: tuple[str, ...] = ()
 
     @classmethod
-    def pending(
-        cls,
-        *,
-        tenant_id: str,
-        workspace_id: str,
-        job_id: str,
-        job_type: str,
-        idempotency_key: str,
-        payload: tuple[tuple[str, object], ...],
-        max_attempts: int,
-        now: datetime,
-    ) -> WorkspaceJob:
-        """Create one durable pending job."""
-        if any(
-            not value.strip()
-            for value in (tenant_id, workspace_id, job_id, job_type, idempotency_key)
-        ):
-            raise ValueError("job scope and identities are required")
-        if max_attempts < 1:
-            raise ValueError("max_attempts must be positive")
+    def pending(cls, submission: JobSubmission, now: datetime) -> WorkspaceJob:
+        """Create one durable pending job from validated submission data."""
         if now.tzinfo is None or now.utcoffset() is None:
-            raise ValueError("job timestamps must be timezone-aware")
-        ordered_payload = tuple(sorted(payload))
+            msg = "job timestamps must be timezone-aware"
+            raise ValueError(msg)
         return cls(
-            tenant_id=tenant_id,
-            workspace_id=workspace_id,
-            job_id=job_id,
-            job_type=job_type,
-            idempotency_key=idempotency_key,
-            payload=ordered_payload,
+            tenant_id=submission.tenant_id,
+            workspace_id=submission.workspace_id,
+            job_id=submission.job_id,
+            job_type=submission.job_type,
+            idempotency_key=submission.idempotency_key,
+            payload=submission.payload,
             state=JobState.PENDING,
             attempts=0,
-            max_attempts=max_attempts,
+            max_attempts=submission.max_attempts,
             next_attempt_at=now,
             created_at=now,
         )
@@ -130,7 +145,8 @@ class DurableQueue:
         if existing_id is not None:
             return self._jobs[existing_id]
         if job.job_id in self._jobs:
-            raise ValueError("job_id already exists")
+            msg = "job_id already exists"
+            raise ValueError(msg)
         self._jobs[job.job_id] = job
         self._idempotency[key] = job.job_id
         return job
@@ -138,7 +154,8 @@ class DurableQueue:
     def claim_next(self, *, worker_id: str, now: datetime) -> WorkspaceJob | None:
         """Claim one eligible job using tenant-fair deterministic ordering."""
         if not worker_id.strip():
-            raise ValueError("worker_id is required")
+            msg = "worker_id is required"
+            raise ValueError(msg)
         eligible = [
             job
             for job in self._jobs.values()
@@ -220,7 +237,8 @@ class DurableQueue:
     ) -> WorkspaceJob:
         """Schedule a bounded retry or quarantine an exhausted poison job."""
         if not reason.strip():
-            raise ValueError("failure reason is required")
+            msg = "failure reason is required"
+            raise ValueError(msg)
         current = self._owned_claim(job_id, worker_id, now)
         attempts = current.attempts + 1
         history = (
@@ -302,18 +320,22 @@ class DurableQueue:
         """Create an auditable new job from one quarantined original."""
         original = self._jobs[job_id]
         if original.state is not JobState.DEAD_LETTER:
-            raise ValueError("only dead-letter jobs can be replayed")
+            msg = "only dead-letter jobs can be replayed"
+            raise ValueError(msg)
         if not authorized_by.strip():
-            raise ValueError("controlled replay requires an authorizing actor")
+            msg = "controlled replay requires an authorizing actor"
+            raise ValueError(msg)
         replay = WorkspaceJob.pending(
-            tenant_id=original.tenant_id,
-            workspace_id=original.workspace_id,
-            job_id=replay_job_id,
-            job_type=original.job_type,
-            idempotency_key=f"replay:{replay_job_id}:{original.idempotency_key}",
-            payload=original.payload,
-            max_attempts=original.max_attempts,
-            now=now,
+            JobSubmission(
+                tenant_id=original.tenant_id,
+                workspace_id=original.workspace_id,
+                job_id=replay_job_id,
+                job_type=original.job_type,
+                idempotency_key=(f"replay:{replay_job_id}:{original.idempotency_key}"),
+                payload=original.payload,
+                max_attempts=original.max_attempts,
+            ),
+            now,
         )
         replay = replace(
             replay,
@@ -334,7 +356,8 @@ class DurableQueue:
             or current.lease_expires_at is None
             or current.lease_expires_at < now
         ):
-            raise ValueError("worker does not own a live job lease")
+            msg = "worker does not own a live job lease"
+            raise ValueError(msg)
         return current
 
 
@@ -342,6 +365,7 @@ class SchedulerFence:
     """Reference exclusive scheduler ownership matching an advisory-lock contract."""
 
     def __init__(self) -> None:
+        """Initialize an empty in-memory scheduler-fence registry."""
         self._owners: dict[str, str] = {}
 
     def acquire(self, schedule_key: str, owner: str) -> bool:
@@ -355,7 +379,8 @@ class SchedulerFence:
     def release(self, schedule_key: str, owner: str) -> None:
         """Release only the caller's own fence."""
         if self._owners.get(schedule_key) != owner:
-            raise ValueError("scheduler does not own the fence")
+            msg = "scheduler does not own the fence"
+            raise ValueError(msg)
         del self._owners[schedule_key]
 
 
@@ -366,7 +391,8 @@ def retry_delay_seconds(
 ) -> int:
     """Return deterministic bounded exponential backoff with hash-derived jitter."""
     if attempt < 1:
-        raise ValueError("attempt must be positive")
+        msg = "attempt must be positive"
+        raise ValueError(msg)
     exponential = min(
         policy.max_retry_seconds,
         policy.base_retry_seconds * (2 ** (attempt - 1)),

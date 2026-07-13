@@ -5,8 +5,10 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass, replace
-from datetime import datetime
-from typing import Final
+from typing import TYPE_CHECKING, Final
+
+if TYPE_CHECKING:
+    from datetime import datetime
 
 GENESIS_CHECKSUM: Final = "0" * 64
 
@@ -42,12 +44,15 @@ class AuditEvent:
             self.correlation_id,
         )
         if any(not value.strip() for value in required):
-            raise ValueError("audit event identities must not be blank")
+            msg = "audit event identities must not be blank"
+            raise ValueError(msg)
         if self.created_at.tzinfo is None or self.created_at.utcoffset() is None:
-            raise ValueError("audit event timestamp must be timezone-aware")
+            msg = "audit event timestamp must be timezone-aware"
+            raise ValueError(msg)
         ordered = tuple(sorted(self.payload))
         if len(ordered) != len({key for key, _ in ordered}):
-            raise ValueError("audit payload keys must be unique")
+            msg = "audit payload keys must be unique"
+            raise ValueError(msg)
         object.__setattr__(self, "payload", ordered)
 
 
@@ -80,7 +85,8 @@ class AuditSegment:
     def open(cls, tenant_id: str, workspace_id: str, segment_id: str) -> AuditSegment:
         """Create an empty open segment with the zero genesis hash."""
         if not tenant_id.strip() or not workspace_id.strip() or not segment_id.strip():
-            raise ValueError("audit segment scope and identity are required")
+            msg = "audit segment scope and identity are required"
+            raise ValueError(msg)
         return cls(
             tenant_id=tenant_id,
             workspace_id=workspace_id,
@@ -93,7 +99,8 @@ class AuditSegment:
     def close(self) -> AuditSegment:
         """Close the segment against further append operations."""
         if not self.entries:
-            raise ValueError("empty audit segments cannot be closed")
+            msg = "empty audit segments cannot be closed"
+            raise ValueError(msg)
         return replace(self, closed=True)
 
 
@@ -110,7 +117,8 @@ class SignedAnchor:
     def sign_for_test(cls, segment: AuditSegment, signer: str) -> SignedAnchor:
         """Create a deterministic test anchor; production uses a signing port."""
         if not segment.closed or not signer.strip():
-            raise ValueError("only closed segments with a signer can be anchored")
+            msg = "only closed segments with a signer can be anchored"
+            raise ValueError(msg)
         signature = _sha256(f"{segment.segment_id}:{segment.final_checksum}:{signer}")
         return cls(segment.segment_id, segment.final_checksum, signer, signature)
 
@@ -151,9 +159,11 @@ class DeletionProof:
 def append_event(segment: AuditSegment, event: AuditEvent) -> AuditSegment:
     """Append one event and return a new immutable segment value."""
     if segment.closed:
-        raise ValueError("closed audit segments are immutable")
+        msg = "closed audit segments are immutable"
+        raise ValueError(msg)
     if any(entry.event.event_id == event.event_id for entry in segment.entries):
-        raise ValueError("event_id must be unique within a segment")
+        msg = "event_id must be unique within a segment"
+        raise ValueError(msg)
     seq = len(segment.entries) + 1
     payload_hash = _sha256(_canonical_json(dict(event.payload)))
     previous_checksum = segment.final_checksum
@@ -188,6 +198,42 @@ def append_event(segment: AuditSegment, event: AuditEvent) -> AuditSegment:
     )
 
 
+def _entry_failure(
+    segment: AuditSegment,
+    entry: AuditEntry,
+    expected_seq: int,
+    previous_checksum: str,
+    event_ids: set[str],
+) -> tuple[str | None, str]:
+    """Return the first integrity failure and expected checksum for one entry."""
+    payload_hash = _sha256(_canonical_json(dict(entry.event.payload)))
+    envelope = {
+        "actor": entry.event.actor,
+        "causation_id": entry.event.causation_id,
+        "correlation_id": entry.event.correlation_id,
+        "created_at": entry.event.created_at.isoformat(),
+        "event_id": entry.event.event_id,
+        "event_type": entry.event.event_type,
+        "segment_id": segment.segment_id,
+        "seq": entry.seq,
+        "subject_id": entry.event.subject_id,
+        "tenant_id": segment.tenant_id,
+        "workspace_id": segment.workspace_id,
+    }
+    checksum = _sha256(previous_checksum + _canonical_json(envelope) + payload_hash)
+    if entry.seq != expected_seq:
+        return "sequence_mismatch", checksum
+    if entry.event.event_id in event_ids:
+        return "duplicate_event_id", checksum
+    if entry.previous_checksum != previous_checksum:
+        return "previous_checksum_mismatch", checksum
+    if entry.payload_hash != payload_hash:
+        return "payload_hash_mismatch", checksum
+    if entry.checksum != checksum:
+        return "checksum_mismatch", checksum
+    return None, checksum
+
+
 def verify_segment(
     segment: AuditSegment,
     *,
@@ -197,41 +243,28 @@ def verify_segment(
     """Verify payload, envelope, actor, timestamp, sequence, and anchor integrity."""
     previous = GENESIS_CHECKSUM
     event_ids: set[str] = set()
+    failure: str | None = None
     for expected_seq, entry in enumerate(segment.entries, start=1):
-        if entry.seq != expected_seq:
-            return VerificationResult(False, "sequence_mismatch")
-        if entry.event.event_id in event_ids:
-            return VerificationResult(False, "duplicate_event_id")
+        failure, checksum = _entry_failure(
+            segment,
+            entry,
+            expected_seq,
+            previous,
+            event_ids,
+        )
+        if failure is not None:
+            break
         event_ids.add(entry.event.event_id)
-        if entry.previous_checksum != previous:
-            return VerificationResult(False, "previous_checksum_mismatch")
-        payload_hash = _sha256(_canonical_json(dict(entry.event.payload)))
-        if entry.payload_hash != payload_hash:
-            return VerificationResult(False, "payload_hash_mismatch")
-        envelope = {
-            "actor": entry.event.actor,
-            "causation_id": entry.event.causation_id,
-            "correlation_id": entry.event.correlation_id,
-            "created_at": entry.event.created_at.isoformat(),
-            "event_id": entry.event.event_id,
-            "event_type": entry.event.event_type,
-            "segment_id": segment.segment_id,
-            "seq": entry.seq,
-            "subject_id": entry.event.subject_id,
-            "tenant_id": segment.tenant_id,
-            "workspace_id": segment.workspace_id,
-        }
-        checksum = _sha256(previous + _canonical_json(envelope) + payload_hash)
-        if entry.checksum != checksum:
-            return VerificationResult(False, "checksum_mismatch")
         previous = checksum
-    if previous != segment.final_checksum:
-        return VerificationResult(False, "final_checksum_mismatch")
-    if require_external_anchor and (anchor is None or not anchor.verifies(segment)):
-        return VerificationResult(False, "external_anchor_required")
-    if anchor is not None and not anchor.verifies(segment):
-        return VerificationResult(False, "invalid_external_anchor")
-    return VerificationResult(True)
+
+    anchor_valid = anchor is not None and anchor.verifies(segment)
+    if failure is None and previous != segment.final_checksum:
+        failure = "final_checksum_mismatch"
+    elif failure is None and require_external_anchor and not anchor_valid:
+        failure = "external_anchor_required"
+    elif failure is None and anchor is not None and not anchor_valid:
+        failure = "invalid_external_anchor"
+    return VerificationResult(valid=failure is None, failure=failure)
 
 
 def purge_segment(
@@ -244,11 +277,14 @@ def purge_segment(
 ) -> DeletionProof:
     """Authorize only whole, closed, externally anchored segment deletion."""
     if not segment.closed:
-        raise ValueError("only closed audit segments can be purged")
+        msg = "only closed audit segments can be purged"
+        raise ValueError(msg)
     if purged_at.tzinfo is None or purged_at.utcoffset() is None:
-        raise ValueError("purged_at must be timezone-aware")
+        msg = "purged_at must be timezone-aware"
+        raise ValueError(msg)
     if not policy_id.strip() or not authorized_by.strip():
-        raise ValueError("purge policy and actor are required")
+        msg = "purge policy and actor are required"
+        raise ValueError(msg)
     verification = verify_segment(
         segment,
         anchor=anchor,

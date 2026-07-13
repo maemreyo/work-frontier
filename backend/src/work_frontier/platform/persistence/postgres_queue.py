@@ -4,13 +4,16 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass
-from datetime import datetime, timedelta
-from typing import Final
+from typing import TYPE_CHECKING, Final
 
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from work_frontier.platform.persistence.scope import WorkspaceScope
+if TYPE_CHECKING:
+    from datetime import datetime, timedelta
+
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    from work_frontier.platform.persistence.scope import WorkspaceScope
 
 CLAIM_SQL: Final = text(
     """
@@ -51,6 +54,28 @@ class ClaimedJob:
     attempts: int
 
 
+@dataclass(frozen=True, slots=True)
+class JobEnqueueRequest:
+    """Workspace-local durable queue insertion request."""
+
+    job_id: str
+    job_type: str
+    idempotency_key: str
+    payload_json: str
+    max_attempts: int
+    now: datetime
+
+
+@dataclass(frozen=True, slots=True)
+class SchedulerFenceRequest:
+    """Scheduler lease acquisition or renewal request."""
+
+    schedule_key: str
+    owner: str
+    now: datetime
+    lease_duration: timedelta
+
+
 async def persist_inbox_before_ack(
     session: AsyncSession,
     scope: WorkspaceScope,
@@ -86,13 +111,7 @@ async def persist_inbox_before_ack(
 async def enqueue_job(
     session: AsyncSession,
     scope: WorkspaceScope,
-    *,
-    job_id: str,
-    job_type: str,
-    idempotency_key: str,
-    payload_json: str,
-    max_attempts: int,
-    now: datetime,
+    request: JobEnqueueRequest,
 ) -> bool:
     """Insert one workspace-scoped job exactly once by idempotency key."""
     result = await session.execute(
@@ -113,12 +132,12 @@ async def enqueue_job(
         {
             "tenant_id": scope.tenant_id,
             "workspace_id": scope.workspace_id,
-            "job_id": job_id,
-            "job_type": job_type,
-            "idempotency_key": idempotency_key,
-            "payload": payload_json,
-            "max_attempts": max_attempts,
-            "now": now,
+            "job_id": request.job_id,
+            "job_type": request.job_type,
+            "idempotency_key": request.idempotency_key,
+            "payload": request.payload_json,
+            "max_attempts": request.max_attempts,
+            "now": request.now,
         },
     )
     return result.scalar_one_or_none() is not None
@@ -222,7 +241,8 @@ async def complete_job(
 def retry_delay_seconds(idempotency_key: str, attempt: int) -> int:
     """Return bounded deterministic exponential backoff plus stable jitter."""
     if attempt < 1:
-        raise ValueError("attempt must be positive")
+        msg = "attempt must be positive"
+        raise ValueError(msg)
     base = min(3_600, 5 * (2 ** (attempt - 1)))
     jitter = int.from_bytes(
         hashlib.sha256(f"{idempotency_key}:{attempt}".encode()).digest()[:4],
@@ -234,11 +254,7 @@ def retry_delay_seconds(idempotency_key: str, attempt: int) -> int:
 async def acquire_scheduler_fence(
     session: AsyncSession,
     scope: WorkspaceScope,
-    *,
-    schedule_key: str,
-    owner: str,
-    now: datetime,
-    lease_duration: timedelta,
+    request: SchedulerFenceRequest,
 ) -> bool:
     """Acquire or renew one scheduler key while rejecting overlapping owners."""
     result = await session.execute(
@@ -263,10 +279,10 @@ async def acquire_scheduler_fence(
         {
             "tenant_id": scope.tenant_id,
             "workspace_id": scope.workspace_id,
-            "schedule_key": schedule_key,
-            "owner": owner,
-            "lease_expires_at": now + lease_duration,
-            "now": now,
+            "schedule_key": request.schedule_key,
+            "owner": request.owner,
+            "lease_expires_at": request.now + request.lease_duration,
+            "now": request.now,
         },
     )
     return result.scalar_one_or_none() is not None

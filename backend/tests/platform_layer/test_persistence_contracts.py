@@ -26,9 +26,9 @@ def test_all_workspace_tables_have_tenant_and_workspace_columns() -> None:
 
 
 def test_scoped_resource_rejects_blank_scope() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="tenant_id and workspace_id are required"):
         _ = WorkspaceScope(tenant_id="", workspace_id="ws")
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="resource_id is required"):
         _ = ScopedResourceId(scope=WorkspaceScope("t", "ws"), resource_id="")
 
 

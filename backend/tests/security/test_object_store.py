@@ -1,11 +1,14 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
 from io import BytesIO
+from typing import TYPE_CHECKING, cast
 
 import pytest
 
 from work_frontier.platform.object_store import ContentAddressedEvidenceStore
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
 
 
 class MissingError(Exception):
@@ -20,35 +23,39 @@ class FakeS3:
     def __init__(self) -> None:
         self.objects: dict[tuple[str, str], tuple[bytes, dict[str, str]]] = {}
 
-    def head_object(self, *, Bucket: str, Key: str) -> dict[str, object]:
-        key = (Bucket, Key)
+    def head_object(self, **kwargs: object) -> dict[str, object]:
+        bucket = cast("str", kwargs["Bucket"])
+        object_key = cast("str", kwargs["Key"])
+        key = (bucket, object_key)
         if key not in self.objects:
             raise MissingError
         content, metadata = self.objects[key]
         return {"Metadata": metadata, "ContentLength": len(content)}
 
-    def put_object(
-        self,
-        *,
-        Bucket: str,
-        Key: str,
-        Body: bytes,
-        Metadata: Mapping[str, str],
-        ContentType: str,
-    ) -> dict[str, object]:
-        key = (Bucket, Key)
+    def put_object(self, **kwargs: object) -> dict[str, object]:
+        bucket = cast("str", kwargs["Bucket"])
+        object_key = cast("str", kwargs["Key"])
+        body = cast("bytes", kwargs["Body"])
+        metadata = cast("Mapping[str, str]", kwargs["Metadata"])
+        content_type = cast("str", kwargs["ContentType"])
+        key = (bucket, object_key)
         if key in self.objects:
-            raise AssertionError("content-addressed key must not be overwritten")
-        assert ContentType == "application/octet-stream"
-        self.objects[key] = (Body, dict(Metadata))
+            msg = "content-addressed key must not be overwritten"
+            raise AssertionError(msg)
+        assert content_type == "application/octet-stream"
+        self.objects[key] = (body, dict(metadata))
         return {}
 
-    def get_object(self, *, Bucket: str, Key: str) -> dict[str, object]:
-        content, _ = self.objects[(Bucket, Key)]
+    def get_object(self, **kwargs: object) -> dict[str, object]:
+        bucket = cast("str", kwargs["Bucket"])
+        object_key = cast("str", kwargs["Key"])
+        content, _ = self.objects[(bucket, object_key)]
         return {"Body": BytesIO(content)}
 
-    def delete_object(self, *, Bucket: str, Key: str) -> dict[str, object]:
-        del self.objects[(Bucket, Key)]
+    def delete_object(self, **kwargs: object) -> dict[str, object]:
+        bucket = cast("str", kwargs["Bucket"])
+        object_key = cast("str", kwargs["Key"])
+        del self.objects[(bucket, object_key)]
         return {}
 
 

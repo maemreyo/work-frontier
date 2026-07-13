@@ -7,15 +7,13 @@ import argparse
 import json
 import os
 import time
-from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
+from importlib import import_module
 from pathlib import Path
-from typing import Final, Protocol, cast
+from typing import TYPE_CHECKING, Final, Protocol, cast
 
-import boto3
 from sqlalchemy import Connection, create_engine, text
-from sqlalchemy.engine import Engine
 from sqlalchemy.exc import DBAPIError
 
 from work_frontier.platform.audit import (
@@ -29,6 +27,11 @@ from work_frontier.platform.object_store import (
     ContentAddressedEvidenceStore,
     S3Client,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from sqlalchemy.engine import Engine
 
 ROOT: Final = Path(__file__).resolve().parents[1]
 DATABASE_URL_ENV: Final = "DATABASE_URL"
@@ -47,16 +50,43 @@ FALLBACK_BY_MODE: Final = {
     "durability": "evidence/ops/event-durability.json",
 }
 
+SET_APP_ROLE_SQL: Final = text("SET LOCAL ROLE work_frontier_app")
+IMMUTABLE_UPDATE_SQL: Final = {
+    ("evidence_records", "evidence_id"): text(
+        "UPDATE evidence_records SET evidence_id = evidence_id WHERE evidence_id = :key"
+    ),
+    ("audit_events", "event_id"): text(
+        "UPDATE audit_events SET event_id = event_id WHERE event_id = :key"
+    ),
+}
+COUNT_SQL: Final = {
+    "webhook_inbox": text("SELECT count(*) FROM webhook_inbox"),
+    "normalized_snapshots": text("SELECT count(*) FROM normalized_snapshots"),
+    "work_items": text("SELECT count(*) FROM work_items"),
+    "decision_records": text("SELECT count(*) FROM decision_records"),
+    "current_projections": text("SELECT count(*) FROM current_projections"),
+    "audit_segments": text("SELECT count(*) FROM audit_segments"),
+    "audit_events": text("SELECT count(*) FROM audit_events"),
+    "transactional_outbox": text("SELECT count(*) FROM transactional_outbox"),
+}
+
+
+def _require(condition: bool, message: str) -> None:
+    """Fail one harness assertion with an explicit diagnostic."""
+    if not condition:
+        raise RuntimeError(message)
+
 
 def _database_url() -> str:
     value = os.environ.get(DATABASE_URL_ENV)
     if value is None:
-        raise RuntimeError(f"{DATABASE_URL_ENV} must be set")
+        msg = f"{DATABASE_URL_ENV} must be set"
+        raise RuntimeError(msg)
     return value
 
 
 def _set_scope(connection: Connection, workspace_id: str) -> None:
-    _ = connection.execute(text(f"SET LOCAL ROLE {APP_ROLE}"))
+    _ = connection.execute(SET_APP_ROLE_SQL)
     _ = connection.execute(
         text("SELECT set_config('work_frontier.tenant_id', :value, true)"),
         {"value": TENANT},
@@ -141,9 +171,14 @@ def _run_rls(engine: Engine) -> dict[str, object]:
             _set_scope(connection, WORKSPACE_A)
             _ = connection.execute(
                 text(
-                    "INSERT INTO work_items "
-                    "(tenant_id, workspace_id, item_id, title, lifecycle, version, payload) "
-                    "VALUES (:tenant, :workspace, 'cross', 'cross', 'planned', 1, '{}'::jsonb)"
+                    """
+                    INSERT INTO work_items
+                      (tenant_id, workspace_id, item_id, title, lifecycle,
+                       version, payload)
+                    VALUES
+                      (:tenant, :workspace, 'cross', 'cross', 'planned',
+                       1, '{}'::jsonb)
+                    """
                 ),
                 {"tenant": TENANT, "workspace": WORKSPACE_B},
             )
@@ -151,7 +186,7 @@ def _run_rls(engine: Engine) -> dict[str, object]:
         rejected = True
 
     with engine.begin() as connection:
-        _ = connection.execute(text(f"SET LOCAL ROLE {APP_ROLE}"))
+        _ = connection.execute(SET_APP_ROLE_SQL)
         absent_context_count = cast(
             "int",
             connection.execute(text("SELECT count(*) FROM work_items")).scalar_one(),
@@ -164,11 +199,11 @@ def _run_rls(engine: Engine) -> dict[str, object]:
                 {"role": APP_ROLE},
             ).scalar_one(),
         )
-    assert visible == ("item-a",)
-    assert cross_scope is None
-    assert rejected
-    assert absent_context_count == 0
-    assert not bypass
+    _require(visible == ("item-a",), "workspace A must see only item-a")
+    _require(cross_scope is None, "cross-workspace read must be denied")
+    _require(rejected, "cross-workspace insert must be rejected")
+    _require(absent_context_count == 0, "missing scope must expose no rows")
+    _require(not bypass, "application role must not have BYPASSRLS")
     return {
         "visible_in_workspace_a": list(visible),
         "cross_scope_read_denied": True,
@@ -206,9 +241,14 @@ def _insert_audit(engine: Engine) -> tuple[AuditSegment, SignedAnchor]:
         _set_scope(connection, WORKSPACE_A)
         _ = connection.execute(
             text(
-                "INSERT INTO audit_segments "
-                "(tenant_id, workspace_id, segment_id, state, final_checksum, external_anchor) "
-                "VALUES (:tenant, :workspace, :segment, 'closed', :checksum, CAST(:anchor AS jsonb))"
+                """
+                INSERT INTO audit_segments
+                  (tenant_id, workspace_id, segment_id, state,
+                   final_checksum, external_anchor)
+                VALUES
+                  (:tenant, :workspace, :segment, 'closed', :checksum,
+                   CAST(:anchor AS jsonb))
+                """
             ),
             {
                 "tenant": TENANT,
@@ -220,13 +260,17 @@ def _insert_audit(engine: Engine) -> tuple[AuditSegment, SignedAnchor]:
         )
         _ = connection.execute(
             text(
-                "INSERT INTO audit_events "
-                "(tenant_id, workspace_id, segment_id, seq, event_id, event_type, "
-                " actor, subject_id, causation_id, correlation_id, payload, "
-                " payload_hash, previous_checksum, checksum, created_at) "
-                "VALUES (:tenant, :workspace, :segment, :seq, :event_id, :event_type, "
-                " :actor, :subject_id, :causation_id, :correlation_id, CAST(:payload AS jsonb), "
-                " :payload_hash, :previous_checksum, :checksum, :created_at)"
+                """
+                INSERT INTO audit_events
+                  (tenant_id, workspace_id, segment_id, seq, event_id,
+                   event_type, actor, subject_id, causation_id, correlation_id,
+                   payload, payload_hash, previous_checksum, checksum, created_at)
+                VALUES
+                  (:tenant, :workspace, :segment, :seq, :event_id, :event_type,
+                   :actor, :subject_id, :causation_id, :correlation_id,
+                   CAST(:payload AS jsonb), :payload_hash, :previous_checksum,
+                   :checksum, :created_at)
+                """
             ),
             {
                 "tenant": TENANT,
@@ -253,12 +297,8 @@ def _mutation_rejected(engine: Engine, table: str, key_column: str, key: str) ->
     try:
         with engine.begin() as connection:
             _set_scope(connection, WORKSPACE_A)
-            _ = connection.execute(
-                text(
-                    f'UPDATE "{table}" SET "{key_column}" = "{key_column}" WHERE "{key_column}" = :key'
-                ),
-                {"key": key},
-            )
+            statement = IMMUTABLE_UPDATE_SQL[(table, key_column)]
+            _ = connection.execute(statement, {"key": key})
     except DBAPIError:
         return True
     return False
@@ -272,10 +312,14 @@ def _run_evidence(engine: Engine) -> dict[str, object]:
         _set_scope(connection, WORKSPACE_A)
         _ = connection.execute(
             text(
-                "INSERT INTO evidence_records "
-                "(tenant_id, workspace_id, evidence_id, gate_id, item_id, revision, payload, payload_hash) "
-                "VALUES (:tenant, :workspace, 'evidence-1', 'gate-1', 'item-a', "
-                "'revision-1', '{}'::jsonb, :hash)"
+                """
+                INSERT INTO evidence_records
+                  (tenant_id, workspace_id, evidence_id, gate_id, item_id,
+                   revision, payload, payload_hash)
+                VALUES
+                  (:tenant, :workspace, 'evidence-1', 'gate-1', 'item-a',
+                   'revision-1', '{}'::jsonb, :hash)
+                """
             ),
             {"tenant": TENANT, "workspace": WORKSPACE_A, "hash": "a" * 64},
         )
@@ -285,18 +329,32 @@ def _run_evidence(engine: Engine) -> dict[str, object]:
         "evidence_id",
         "evidence-1",
     )
-    assert rejected
+    _require(rejected, "evidence rows must reject updates")
     return {"evidence_update_rejected": rejected}
+
+
+class Boto3Module(Protocol):
+    """Dynamic boto3 module surface used without importing untyped stubs."""
+
+    def client(self, service_name: str, **kwargs: object) -> object:
+        """Create one service client."""
+        ...
 
 
 class HarnessS3Client(S3Client, Protocol):
     """S3 operations needed only by the executable integration harness."""
 
-    def list_buckets(self) -> dict[str, object]: ...
+    def list_buckets(self) -> dict[str, object]:
+        """List buckets visible to the harness client."""
+        ...
 
-    def create_bucket(self, *, Bucket: str) -> dict[str, object]: ...
+    def create_bucket(self, **kwargs: object) -> dict[str, object]:
+        """Create one harness bucket."""
+        ...
 
-    def delete_object(self, *, Bucket: str, Key: str) -> dict[str, object]: ...
+    def delete_object(self, **kwargs: object) -> dict[str, object]:
+        """Delete one temporary harness object."""
+        ...
 
 
 def _ensure_bucket(client: HarnessS3Client, bucket: str) -> None:
@@ -318,15 +376,19 @@ def _run_audit(engine: Engine) -> dict[str, object]:
     access_key = os.environ.get("MINIO_ROOT_USER")
     secret_key = os.environ.get("MINIO_ROOT_PASSWORD")
     if not endpoint or not access_key or not secret_key:
-        raise RuntimeError("MinIO environment is required for audit harness")
-    raw_client = boto3.client(
-        "s3",
-        endpoint_url=endpoint,
-        aws_access_key_id=access_key,
-        aws_secret_access_key=secret_key,
-        region_name="us-east-1",
+        msg = "MinIO environment is required for audit harness"
+        raise RuntimeError(msg)
+    boto3_module = cast("Boto3Module", cast("object", import_module("boto3")))
+    client = cast(
+        "HarnessS3Client",
+        boto3_module.client(
+            "s3",
+            endpoint_url=endpoint,
+            aws_access_key_id=access_key,
+            aws_secret_access_key=secret_key,
+            region_name="us-east-1",
+        ),
     )
-    client = cast("HarnessS3Client", cast("object", raw_client))
     bucket = "work-frontier-item-12"
     _ensure_bucket(client, bucket)
     store = ContentAddressedEvidenceStore(client, bucket)
@@ -337,9 +399,9 @@ def _run_audit(engine: Engine) -> dict[str, object]:
     )
     roundtrip = store.get(reference)
     _ = client.delete_object(Bucket=bucket, Key=reference.key)
-    assert chain.valid
-    assert rejected
-    assert roundtrip == b"immutable-evidence"
+    _require(chain.valid, "audit chain and external anchor must verify")
+    _require(rejected, "audit rows must reject updates")
+    _require(roundtrip == b"immutable-evidence", "object roundtrip mismatch")
     return {
         "chain_valid": chain.valid,
         "external_anchor_valid": anchor.verifies(segment),
@@ -355,11 +417,15 @@ def _insert_job(engine: Engine, *, job_id: str = "job-1") -> None:
         _set_scope(connection, WORKSPACE_A)
         _ = connection.execute(
             text(
-                "INSERT INTO job_queue "
-                "(tenant_id, workspace_id, job_id, job_type, state, idempotency_key, "
-                " payload, attempts, max_attempts, next_attempt_at, attempt_history, created_at) "
-                "VALUES (:tenant, :workspace, :job, 'sync', 'pending', :key, '{}'::jsonb, "
-                "0, 3, :now, '[]'::jsonb, :now)"
+                """
+                INSERT INTO job_queue
+                  (tenant_id, workspace_id, job_id, job_type, state,
+                   idempotency_key, payload, attempts, max_attempts,
+                   next_attempt_at, attempt_history, created_at)
+                VALUES
+                  (:tenant, :workspace, :job, 'sync', 'pending', :key,
+                   '{}'::jsonb, 0, 3, :now, '[]'::jsonb, :now)
+                """
             ),
             {
                 "tenant": TENANT,
@@ -417,7 +483,7 @@ def _run_queue(engine: Engine) -> dict[str, object]:
     with ThreadPoolExecutor(max_workers=2) as pool:
         claims = tuple(pool.map(claim, ("worker-a", "worker-b")))
     winners = tuple(claim for claim in claims if claim is not None)
-    assert winners == ("job-1",)
+    _require(winners == ("job-1",), "exactly one worker must claim job-1")
     return {"claim_results": list(claims), "unique_owner_count": len(winners)}
 
 
@@ -425,7 +491,7 @@ def _run_worker(engine: Engine) -> dict[str, object]:
     _reset(engine)
     _insert_job(engine)
     claimed = _claim_once(_database_url(), "worker-a")
-    assert claimed == "job-1"
+    _require(claimed == "job-1", "worker-a must initially claim job-1")
     future = datetime.now(UTC) + timedelta(minutes=1)
     with engine.begin() as connection:
         _set_scope(connection, WORKSPACE_A)
@@ -440,14 +506,15 @@ def _run_worker(engine: Engine) -> dict[str, object]:
         _ = connection.execute(
             text(
                 "UPDATE job_queue SET state = 'pending', lease_owner = NULL, "
-                "lease_expires_at = NULL, heartbeat_at = NULL, attempts = attempts + 1, "
-                "next_attempt_at = :now WHERE job_id = 'job-1'"
+                "lease_expires_at = NULL, heartbeat_at = NULL, "
+                "attempts = attempts + 1, next_attempt_at = :now "
+                "WHERE job_id = 'job-1'"
             ),
             {"now": future},
         )
     recovered = _claim_once(_database_url(), "worker-b")
-    assert stale_complete == 0
-    assert recovered == "job-1"
+    _require(stale_complete == 0, "stale worker must not complete the job")
+    _require(recovered == "job-1", "worker-b must recover the expired job")
     return {"stale_completion_rows": stale_complete, "recovered_owner": "worker-b"}
 
 
@@ -485,7 +552,10 @@ def _run_scheduler(engine: Engine) -> dict[str, object]:
     first = acquire("scheduler-a", now)
     overlap = acquire("scheduler-b", now + timedelta(seconds=1))
     takeover = acquire("scheduler-b", now + timedelta(seconds=31))
-    assert (first, overlap, takeover) == (1, 0, 1)
+    _require(
+        (first, overlap, takeover) == (1, 0, 1),
+        "scheduler fence must reject overlap and allow expired takeover",
+    )
     return {"first": first, "overlap": overlap, "expired_takeover": takeover}
 
 
@@ -514,31 +584,56 @@ def _run_durability(engine: Engine) -> dict[str, object]:
             )
             _ = connection.execute(
                 text(
-                    "INSERT INTO work_items (tenant_id,workspace_id,item_id,title,lifecycle,version,payload) VALUES (:t,:w,'i','I','planned',1,'{}'::jsonb)"
+                    """
+                    INSERT INTO work_items
+                      (tenant_id, workspace_id, item_id, title, lifecycle,
+                       version, payload)
+                    VALUES (:t, :w, 'i', 'I', 'planned', 1, '{}'::jsonb)
+                    """
                 ),
                 {"t": TENANT, "w": WORKSPACE_A},
             )
             _ = connection.execute(
                 text(
-                    "INSERT INTO normalized_snapshots (tenant_id,workspace_id,snapshot_id,content_hash,source_revision_set,graph_revision,profile_version,payload) VALUES (:t,:w,'s',:h,'{}'::jsonb,'g','p','{}'::jsonb)"
+                    """
+                    INSERT INTO normalized_snapshots
+                      (tenant_id, workspace_id, snapshot_id, content_hash,
+                       source_revision_set, graph_revision, profile_version, payload)
+                    VALUES
+                      (:t, :w, 's', :h, '{}'::jsonb, 'g', 'p', '{}'::jsonb)
+                    """
                 ),
                 {"t": TENANT, "w": WORKSPACE_A, "h": "b" * 64},
             )
             _ = connection.execute(
                 text(
-                    "INSERT INTO decision_records (tenant_id,workspace_id,decision_id,item_id,payload,payload_hash) VALUES (:t,:w,'r','i','{}'::jsonb,:h)"
+                    """
+                    INSERT INTO decision_records
+                      (tenant_id, workspace_id, decision_id, item_id,
+                       payload, payload_hash)
+                    VALUES (:t, :w, 'r', 'i', '{}'::jsonb, :h)
+                    """
                 ),
                 {"t": TENANT, "w": WORKSPACE_A, "h": "c" * 64},
             )
             _ = connection.execute(
                 text(
-                    "INSERT INTO current_projections (tenant_id,workspace_id,item_id,derived_from_decision_id,payload) VALUES (:t,:w,'i','r','{}'::jsonb)"
+                    """
+                    INSERT INTO current_projections
+                      (tenant_id, workspace_id, item_id,
+                       derived_from_decision_id, payload)
+                    VALUES (:t, :w, 'i', 'r', '{}'::jsonb)
+                    """
                 ),
                 {"t": TENANT, "w": WORKSPACE_A},
             )
             _ = connection.execute(
                 text(
-                    "INSERT INTO audit_segments (tenant_id,workspace_id,segment_id,state) VALUES (:t,:w,'seg','open')"
+                    """
+                    INSERT INTO audit_segments
+                      (tenant_id, workspace_id, segment_id, state)
+                    VALUES (:t, :w, 'seg', 'open')
+                    """
                 ),
                 {"t": TENANT, "w": WORKSPACE_A},
             )
@@ -562,11 +657,17 @@ def _run_durability(engine: Engine) -> dict[str, object]:
             )
             _ = connection.execute(
                 text(
-                    "INSERT INTO transactional_outbox (tenant_id,workspace_id,outbox_id,idempotency_key,state,payload) VALUES (:t,:w,'o','key','pending','{}'::jsonb)"
+                    """
+                    INSERT INTO transactional_outbox
+                      (tenant_id, workspace_id, outbox_id, idempotency_key,
+                       state, payload)
+                    VALUES (:t, :w, 'o', 'key', 'pending', '{}'::jsonb)
+                    """
                 ),
                 {"t": TENANT, "w": WORKSPACE_A},
             )
-            raise RuntimeError("crash injection")
+            msg = "crash injection"
+            raise RuntimeError(msg)
     except RuntimeError:
         pass
     counts: dict[str, int] = {}
@@ -575,15 +676,16 @@ def _run_durability(engine: Engine) -> dict[str, object]:
         for table in tables:
             counts[table] = cast(
                 "int",
-                connection.execute(
-                    text(f'SELECT count(*) FROM "{table}"')
-                ).scalar_one(),
+                connection.execute(COUNT_SQL[table]).scalar_one(),
             )
-    assert all(value == 0 for value in counts.values())
+    _require(
+        all(value == 0 for value in counts.values()),
+        "crash injection must roll back every internal table",
+    )
     return {"rollback_counts": counts, "atomic": True}
 
 
-def _write_receipt(mode: str, passed: bool, detail: object) -> None:
+def _write_receipt(mode: str, *, passed: bool, detail: object) -> None:
     configured = os.environ.get("WF_HARNESS_ARTIFACT")
     artifact = Path(configured) if configured else ROOT / FALLBACK_BY_MODE[mode]
     artifact.parent.mkdir(parents=True, exist_ok=True)
@@ -621,11 +723,15 @@ def main() -> int:
     try:
         detail = functions[mode](engine)
     except Exception as exc:
-        _write_receipt(mode, False, {"error": f"{type(exc).__name__}: {exc}"})
+        _write_receipt(
+            mode,
+            passed=False,
+            detail={"error": f"{type(exc).__name__}: {exc}"},
+        )
         raise
     finally:
         engine.dispose()
-    _write_receipt(mode, True, detail)
+    _write_receipt(mode, passed=True, detail=detail)
     print(json.dumps({"mode": mode, "passed": True, "detail": detail}, sort_keys=True))
     return 0
 

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 
 from work_frontier.domain.frontier import (
@@ -32,18 +32,25 @@ def envelope() -> EngineEnvelope:
     )
 
 
+@dataclass(frozen=True, slots=True)
+class ItemOptions:
+    """Optional item attributes used by focused frontier tests."""
+
+    priority: int = 0
+    work_class: WorkClass = WorkClass.IMPLEMENTATION
+    fan_out: int = 0
+    age_seconds: int = 0
+    blockers_complete: bool = True
+    entry_gates_pass: bool = True
+    authority_safe: bool = True
+    lifecycle: str = "planned"
+
+
 def item(
     item_id: str,
-    *,
-    priority: int = 0,
-    work_class: WorkClass = WorkClass.IMPLEMENTATION,
-    fan_out: int = 0,
-    age_seconds: int = 0,
-    blockers_complete: bool = True,
-    entry_gates_pass: bool = True,
-    authority_safe: bool = True,
-    lifecycle: str = "planned",
+    options: ItemOptions | None = None,
 ) -> FrontierItemInput:
+    selected = options or ItemOptions()
     return FrontierItemInput(
         item_id=item_id,
         program_id=None,
@@ -51,15 +58,15 @@ def item(
         description=None,
         work_type="feature",
         labels=(),
-        lifecycle=lifecycle,
+        lifecycle=selected.lifecycle,
         completion="incomplete",
-        program_priority=priority,
-        work_class=work_class,
-        downstream_unlock_count=fan_out,
-        age_seconds=age_seconds,
-        hard_blockers_complete=blockers_complete,
-        entry_gates_pass=entry_gates_pass,
-        authority_safe=authority_safe,
+        program_priority=selected.priority,
+        work_class=selected.work_class,
+        downstream_unlock_count=selected.fan_out,
+        age_seconds=selected.age_seconds,
+        hard_blockers_complete=selected.blockers_complete,
+        entry_gates_pass=selected.entry_gates_pass,
+        authority_safe=selected.authority_safe,
         field_authority=(("title", "authoritative"),),
         gate_states=(),
         incomplete_hard_blockers=(),
@@ -84,8 +91,8 @@ def test_frontier_is_deterministic_and_recommended_next_is_top_ranked() -> None:
     snapshot = FrontierSnapshot(
         envelope=envelope(),
         items=(
-            item("item-b", priority=1, fan_out=4),
-            item("item-a", priority=2, fan_out=1),
+            item("item-b", ItemOptions(priority=1, fan_out=4)),
+            item("item-a", ItemOptions(priority=2, fan_out=1)),
         ),
         pipeline=pipeline(),
     )
@@ -111,7 +118,7 @@ def test_unsafe_authority_is_localized_to_one_item() -> None:
     result = solve_frontier(
         FrontierSnapshot(
             envelope(),
-            (item("safe"), item("unsafe", authority_safe=False)),
+            (item("safe"), item("unsafe", ItemOptions(authority_safe=False))),
             pipeline(),
         )
     )
@@ -129,7 +136,7 @@ def test_adding_open_blocker_never_grows_frontier() -> None:
     mutated = solve_frontier(
         FrontierSnapshot(
             envelope(),
-            (item("a"), item("b", blockers_complete=False)),
+            (item("a"), item("b", ItemOptions(blockers_complete=False))),
             pipeline(),
         )
     )
@@ -150,8 +157,8 @@ def test_golden_decision_record_set_hash_is_stable() -> None:
         FrontierSnapshot(
             envelope(),
             (
-                item("item-b", priority=1, fan_out=4),
-                item("item-a", priority=2, fan_out=1),
+                item("item-b", ItemOptions(priority=1, fan_out=4)),
+                item("item-a", ItemOptions(priority=2, fan_out=1)),
             ),
             pipeline(),
         )

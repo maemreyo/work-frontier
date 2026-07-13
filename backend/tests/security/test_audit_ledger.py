@@ -79,13 +79,23 @@ def test_segment_purge_is_whole_segment_only_and_emits_deletion_proof() -> None:
 
 
 def test_open_or_unanchored_segment_cannot_be_purged() -> None:
-    segment = append_event(
+    open_segment = append_event(
         AuditSegment.open("tenant", "workspace", "segment-1"),
         event("e1", (("value", 1),)),
     )
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="only closed audit segments"):
         _ = purge_segment(
-            segment,
+            open_segment,
+            anchor=None,
+            policy_id="retention",
+            authorized_by="admin",
+            purged_at=datetime(2027, 7, 14, tzinfo=UTC),
+        )
+
+    closed_segment = open_segment.close()
+    with pytest.raises(ValueError, match="external_anchor_required"):
+        _ = purge_segment(
+            closed_segment,
             anchor=None,
             policy_id="retention",
             authorized_by="admin",

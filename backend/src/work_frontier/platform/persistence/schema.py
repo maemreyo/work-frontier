@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
-from typing import Final
+from typing import TYPE_CHECKING, Final
 
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.sql.schema import SchemaItem
+
+if TYPE_CHECKING:
+    from sqlalchemy.sql.schema import SchemaItem
 
 metadata = sa.MetaData()
 _JSON = sa.JSON().with_variant(JSONB(), "postgresql")

@@ -6,10 +6,12 @@ import hashlib
 import json
 import re
 from dataclasses import dataclass
-from datetime import datetime
 from enum import StrEnum
 from functools import cached_property
-from typing import Final
+from typing import TYPE_CHECKING, Final
+
+if TYPE_CHECKING:
+    from datetime import datetime
 
 _HASH_PATTERN: Final = re.compile(r"^[0-9a-f]{64}$")
 _READY_LIFECYCLES: Final = frozenset({"planned", "active"})
@@ -72,23 +74,28 @@ class EngineEnvelope:
             self.correlation_id,
         )
         if any(not value.strip() for value in required):
-            raise ValueError("engine envelope identities must not be blank")
+            msg = "engine envelope identities must not be blank"
+            raise ValueError(msg)
         if self.computed_at.tzinfo is None or self.computed_at.utcoffset() is None:
-            raise ValueError("computed_at must be timezone-aware")
+            msg = "computed_at must be timezone-aware"
+            raise ValueError(msg)
         for value in (
             self.normalized_snapshot_hash,
             self.policy_bundle_hash,
             self.ranking_pipeline_hash,
         ):
             if _HASH_PATTERN.fullmatch(value) is None:
-                raise ValueError("engine envelope hashes must be lowercase SHA-256")
+                msg = "engine envelope hashes must be lowercase SHA-256"
+                raise ValueError(msg)
         revisions = tuple(sorted(self.source_revision_set))
         if not revisions or len(revisions) != len(set(revisions)):
-            raise ValueError("source_revision_set must be non-empty and unique")
+            msg = "source_revision_set must be non-empty and unique"
+            raise ValueError(msg)
         if any(
             not source.strip() or not revision.strip() for source, revision in revisions
         ):
-            raise ValueError("source revisions must contain non-blank identities")
+            msg = "source revisions must contain non-blank identities"
+            raise ValueError(msg)
         object.__setattr__(self, "source_revision_set", revisions)
 
     def canonical(self) -> dict[str, object]:
@@ -119,11 +126,14 @@ class RankingPipeline:
     def __post_init__(self) -> None:
         """Require a unique total-order pipeline with stable ID last."""
         if not self.comparators:
-            raise ValueError("ranking pipeline must not be empty")
+            msg = "ranking pipeline must not be empty"
+            raise ValueError(msg)
         if len(self.comparators) != len(set(self.comparators)):
-            raise ValueError("ranking comparators must be unique")
+            msg = "ranking comparators must be unique"
+            raise ValueError(msg)
         if self.comparators[-1] is not Comparator.STABLE_ID:
-            raise ValueError("stable_id must be the final comparator")
+            msg = "stable_id must be the final comparator"
+            raise ValueError(msg)
 
 
 @dataclass(frozen=True, slots=True)
@@ -158,11 +168,14 @@ class FrontierItemInput:
             or not self.title.strip()
             or not self.work_type.strip()
         ):
-            raise ValueError("item identity, title, and work_type are required")
+            msg = "item identity, title, and work_type are required"
+            raise ValueError(msg)
         if self.program_priority < 0:
-            raise ValueError("program_priority must be non-negative")
+            msg = "program_priority must be non-negative"
+            raise ValueError(msg)
         if self.downstream_unlock_count < 0 or self.age_seconds < 0:
-            raise ValueError("fan-out and age must be non-negative")
+            msg = "fan-out and age must be non-negative"
+            raise ValueError(msg)
         object.__setattr__(self, "labels", tuple(sorted(set(self.labels))))
         object.__setattr__(self, "field_authority", tuple(sorted(self.field_authority)))
         object.__setattr__(self, "gate_states", tuple(sorted(self.gate_states)))
@@ -196,7 +209,8 @@ class FrontierSnapshot:
         ordered = tuple(sorted(self.items, key=lambda item: item.item_id))
         ids = tuple(item.item_id for item in ordered)
         if len(ids) != len(set(ids)):
-            raise ValueError("frontier item IDs must be unique")
+            msg = "frontier item IDs must be unique"
+            raise ValueError(msg)
         object.__setattr__(self, "items", ordered)
 
 
@@ -328,7 +342,11 @@ class DecisionRecordSet:
 
 
 def solve_frontier(snapshot: FrontierSnapshot) -> DecisionRecordSet:
-    """Solve readiness and ranking without clock, I/O, randomness, global state, or AI."""
+    """Solve readiness and ranking without hidden or nondeterministic inputs.
+
+    It performs no clock reads, I/O, randomness, global-state access,
+    or AI calls.
+    """
     ready_items: list[FrontierItemInput] = []
     reasons_by_item: dict[str, tuple[str, ...]] = {}
     for item in snapshot.items:

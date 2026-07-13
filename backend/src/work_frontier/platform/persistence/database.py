@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from typing import TYPE_CHECKING
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import (
@@ -13,7 +13,10 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-from work_frontier.platform.persistence.scope import WorkspaceScope
+if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator
+
+    from work_frontier.platform.persistence.scope import WorkspaceScope
 
 APP_DATABASE_ROLE = "work_frontier_app"
 
@@ -21,7 +24,8 @@ APP_DATABASE_ROLE = "work_frontier_app"
 def create_engine(database_url: str) -> AsyncEngine:
     """Create the production async engine without implicit workspace state."""
     if not database_url.startswith("postgresql+"):
-        raise ValueError("Work Frontier persistence requires PostgreSQL")
+        msg = "Work Frontier persistence requires PostgreSQL"
+        raise ValueError(msg)
     return create_async_engine(database_url, pool_pre_ping=True)
 
 

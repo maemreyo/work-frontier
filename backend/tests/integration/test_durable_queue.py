@@ -7,6 +7,7 @@ import pytest
 from work_frontier.platform.queue import (
     DurableQueue,
     JobState,
+    JobSubmission,
     QueuePolicy,
     SchedulerFence,
     WorkspaceJob,
@@ -18,14 +19,16 @@ NOW = datetime(2026, 7, 13, tzinfo=UTC)
 
 def job(job_id: str, tenant: str = "t1", workspace: str = "w1") -> WorkspaceJob:
     return WorkspaceJob.pending(
-        tenant_id=tenant,
-        workspace_id=workspace,
-        job_id=job_id,
-        job_type="sync",
-        idempotency_key=f"key-{job_id}",
-        payload=(("job", job_id),),
-        max_attempts=3,
-        now=NOW,
+        JobSubmission(
+            tenant_id=tenant,
+            workspace_id=workspace,
+            job_id=job_id,
+            job_type="sync",
+            idempotency_key=f"key-{job_id}",
+            payload=(("job", job_id),),
+            max_attempts=3,
+        ),
+        NOW,
     )
 
 
@@ -53,7 +56,7 @@ def test_lease_losing_worker_cannot_complete() -> None:
         now=NOW + timedelta(seconds=7),
     )
     assert claimed_again is not None
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="worker does not own a live job lease"):
         _ = queue.complete(
             job_id="a",
             worker_id="worker-1",

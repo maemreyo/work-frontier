@@ -92,7 +92,8 @@ def main() -> int:
     plan = PLAN.read_text(encoding="utf-8")
     missing = [item for item in ITEMS if f"- [x] {item}." not in plan]
     if missing:
-        raise SystemExit(f"plan items are not marked complete: {missing}")
+        msg = f"plan items are not marked complete: {missing}"
+        raise SystemExit(msg)
 
     subject_sha = _capture("git", "rev-parse", "HEAD")
     _ = _run("make", "check")
