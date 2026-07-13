@@ -13,6 +13,7 @@ class DomainErrorCode(StrEnum):
     INVALID_SCOPE = "invalid_scope"
     INVALID_ENTITY = "invalid_entity"
     INVALID_EDGE = "invalid_edge"
+    CONTAINMENT_CYCLE = "containment_cycle"
     DERIVED_WITHOUT_DECISION = "derived_without_decision"
     INVALID_PROVENANCE = "invalid_provenance"
     INVALID_FRESHNESS_POLICY = "invalid_freshness_policy"

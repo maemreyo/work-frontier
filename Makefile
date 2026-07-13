@@ -32,6 +32,7 @@ generate-contracts: ## Regenerate JSON Schema and frontend Zod contracts
 	uv run python scripts/generate_contracts.py
 
 check-contracts: ## Fail when generated contract artifacts drift
+	node --test scripts/zod_record_constraints.test.mjs
 	uv run python scripts/generate_contracts.py --check
 
 generate-harness-registry: ## Regenerate the machine-readable harness registry

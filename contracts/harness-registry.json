@@ -208,16 +208,18 @@
     {
       "id": "WF-HAR-DOMAIN-03",
       "name": "Dependency Chain Resolution",
-      "command": "pytest tests/domain/test_dependency_chains.py -v",
+      "command": "uv run python scripts/run_domain_graph_harness.py --mode dependency",
       "artifact": "evidence/domain/dependency-chains.json",
       "blocks_release": true,
       "what_it_runs": "Exhaustive typed graph shapes; verifies containment-cycle rejection and dependency-SCC isolation with AttentionItems",
       "pass_criteria": "Acyclic chains resolve correctly. Containment cycles are rejected. Cyclic dependency SCCs are isolated fail-closed with their paths reported, while unaffected components remain evaluable.",
       "applicability": "standard",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-INTEG-02"
+      ]
     },
     {
       "id": "WF-HAR-DOMAIN-04",
@@ -266,16 +268,18 @@
     {
       "id": "WF-HAR-PROPERTY-02",
       "name": "Dependency Acyclicity",
-      "command": "pytest tests/property/test_dependency_acyclicity.py --hypothesis-seed=0",
+      "command": "uv run python scripts/run_domain_graph_harness.py --mode property",
       "artifact": "evidence/property/dependency-acyclicity.json",
       "blocks_release": true,
       "what_it_runs": "Generates random dependency graphs with intentional cycle injection; verifies SCC-based DAG check",
       "pass_criteria": "Acyclic graphs accepted. All cyclic graphs detected via SCC and rejected with cycle path reported.",
       "applicability": "standard",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-DOMAIN-03"
+      ]
     },
     {
       "id": "WF-HAR-PROPERTY-03",
@@ -378,16 +382,18 @@
     {
       "id": "WF-HAR-META-05",
       "name": "Invalid Component Isolation",
-      "command": "pytest tests/metamorphic/test_invalid_component_isolation.py",
+      "command": "uv run python scripts/run_domain_graph_harness.py --mode isolation",
       "artifact": "evidence/metamorphic/invalid-component-isolation.json",
       "blocks_release": true,
       "what_it_runs": "Injects invalid component into valid graph; verifies valid components unaffected",
       "pass_criteria": "Valid components unaffected. Invalid component rejected with localized error. No corruption of neighbors.",
       "applicability": "standard",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-PROPERTY-02"
+      ]
     },
     {
       "id": "WF-HAR-CONTRACT-01",

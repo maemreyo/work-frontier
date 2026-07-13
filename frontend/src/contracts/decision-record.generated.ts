@@ -2,7 +2,29 @@
 // Source: contracts/generated/decision-record.schema.json
 import { z } from "zod"
 
-export const DecisionRecordSchema = z.object({ "causation_id": z.string().min(1), "computed_at": z.string().datetime({ offset: true }), "correlation_id": z.string().min(1), "decision_id": z.string().min(1), "engine_version": z.string().min(1), "graph_revision": z.string().min(1), "item_id": z.string().min(1), "normalization_profile_version": z.string().min(1), "normalized_snapshot_hash": z.string().regex(new RegExp("^[0-9a-f]{64}$")).min(64).max(64), "normalized_snapshot_id": z.string().min(1), "policy_bundle_hash": z.string().regex(new RegExp("^[0-9a-f]{64}$")).min(64).max(64), "policy_bundle_id": z.string().min(1), "program_id": z.union([z.string().min(1), z.null()]), "ranking_pipeline_hash": z.string().regex(new RegExp("^[0-9a-f]{64}$")).min(64).max(64), "ranking_position": z.number().int().gte(1), "ready": z.boolean(), "schema_version": z.string().min(1).default("1.0.0"), "source_revision_set": z.record(z.string(), z.string().min(1)), "workspace_id": z.string().min(1) }).strict().meta({"description":"Immutable cross-language DecisionRecord reproducibility envelope."})
+export const DecisionRecordSchemaBase = z.object({ "causation_id": z.string().min(1), "computed_at": z.string().datetime({ offset: true }), "correlation_id": z.string().min(1), "decision_id": z.string().min(1), "engine_version": z.string().min(1), "graph_revision": z.string().min(1), "item_id": z.string().min(1), "normalization_profile_version": z.string().min(1), "normalized_snapshot_hash": z.string().regex(new RegExp("^[0-9a-f]{64}$")).min(64).max(64), "normalized_snapshot_id": z.string().min(1), "policy_bundle_hash": z.string().regex(new RegExp("^[0-9a-f]{64}$")).min(64).max(64), "policy_bundle_id": z.string().min(1), "program_id": z.union([z.string().min(1), z.null()]), "ranking_pipeline_hash": z.string().regex(new RegExp("^[0-9a-f]{64}$")).min(64).max(64), "ranking_position": z.number().int().gte(1), "ready": z.boolean(), "schema_version": z.string().min(1).default("1.0.0"), "source_revision_set": z.record(z.string(), z.string().min(1)), "workspace_id": z.string().min(1) }).strict().meta({"description":"Immutable cross-language DecisionRecord reproducibility envelope."})
 
+
+export const DecisionRecordSchema = DecisionRecordSchemaBase.superRefine((value, ctx) => {
+  const record0 = value["source_revision_set"]
+  if (record0 != null) {
+    if (Object.keys(record0).length < 1) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["source_revision_set"],
+        message: "source_revision_set must contain at least 1 property",
+      })
+    }
+    for (const key of Object.keys(record0)) {
+      if (key.length < 1) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["source_revision_set", key],
+          message: "source_revision_set keys must contain at least 1 character",
+        })
+      }
+    }
+  }
+})
 
 export type DecisionRecord = z.infer<typeof DecisionRecordSchema>

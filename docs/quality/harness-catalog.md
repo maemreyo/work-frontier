@@ -119,7 +119,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `pytest tests/domain/test_dependency_chains.py -v` (intended) |
+| **Command** | `uv run python scripts/run_domain_graph_harness.py --mode dependency` |
 | **What it runs** | Exhaustive typed graph shapes; verifies containment-cycle rejection and dependency-SCC isolation with AttentionItems |
 | **Artifact** | `evidence/domain/dependency-chains.json` |
 | **Pass criteria** | Acyclic chains resolve correctly. Containment cycles are rejected. Cyclic dependency SCCs are isolated fail-closed with their paths reported, while unaffected components remain evaluable. |
@@ -164,7 +164,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `pytest tests/property/test_dependency_acyclicity.py --hypothesis-seed=0` (intended) |
+| **Command** | `uv run python scripts/run_domain_graph_harness.py --mode property` |
 | **What it runs** | Generates random dependency graphs with intentional cycle injection; verifies SCC-based DAG check |
 | **Inputs** | 10,000 random graphs (mix of acyclic and cyclic) |
 | **Artifact** | `evidence/property/dependency-acyclicity.json` |
@@ -256,7 +256,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `pytest tests/metamorphic/test_invalid_component_isolation.py` (intended) |
+| **Command** | `uv run python scripts/run_domain_graph_harness.py --mode isolation` |
 | **What it runs** | Injects invalid component into valid graph; verifies valid components unaffected |
 | **Inputs** | 500 injection scenarios across valid graphs |
 | **Artifact** | `evidence/metamorphic/invalid-component-isolation.json` |
