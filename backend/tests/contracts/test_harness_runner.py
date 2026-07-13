@@ -66,7 +66,11 @@ def _make_clean_clone() -> Path:
 
 
 def _make_minimal_registry(path: Path) -> None:
-    """Write a minimal one-harness registry that always passes."""
+    """Write a minimal one-harness registry that always passes.
+
+    The harness writes to $WF_HARNESS_ARTIFACT (the run-scoped path)
+    rather than a hard-coded global location.
+    """
     registry = {
         "schema_version": "1.0.0",
         "harness_count": 1,
@@ -78,8 +82,8 @@ def _make_minimal_registry(path: Path) -> None:
                 "id": "WF-HAR-TEST-01",
                 "name": "test",
                 "command": (
-                    "mkdir -p .omo/evidence/static && "
-                    "echo test > .omo/evidence/static/test-output.txt"
+                    'mkdir -p "$(dirname "$WF_HARNESS_ARTIFACT")" && '
+                    'echo test > "$WF_HARNESS_ARTIFACT"'
                 ),
                 "artifact": ".omo/evidence/static/test-output.txt",
                 "artifact_mode": "declared_file",
@@ -321,7 +325,10 @@ def test_recertify_foundation_records_subject_tree_sha_and_requires_tree_match()
 
 
 def _make_registry_with_local_artifact(path: Path) -> None:
-    """Write a registry whose artifact is a local file (not remote)."""
+    """Write a registry whose artifact is a local file (not remote).
+
+    The harness writes to $WF_HARNESS_ARTIFACT (the run-scoped path).
+    """
     registry = {
         "schema_version": "1.0.0",
         "harness_count": 1,
@@ -333,8 +340,8 @@ def _make_registry_with_local_artifact(path: Path) -> None:
                 "id": "WF-HAR-TEST-02",
                 "name": "test-local",
                 "command": (
-                    "mkdir -p .omo/evidence/static && "
-                    "echo hello > .omo/evidence/static/test-output.txt"
+                    'mkdir -p "$(dirname "$WF_HARNESS_ARTIFACT")" && '
+                    'echo hello > "$WF_HARNESS_ARTIFACT"'
                 ),
                 "artifact": ".omo/evidence/static/test-output.txt",
                 "artifact_mode": "declared_file",
@@ -350,29 +357,40 @@ def _make_registry_with_local_artifact(path: Path) -> None:
     _ = path.write_text(json.dumps(registry))
 
 
-def test_recertify_deletes_stale_artifact_before_harness() -> None:
-    """A pre-existing stale artifact is deleted before the harness runs.
+def test_recertify_ignores_stale_global_artifact() -> None:
+    """A stale artifact at the legacy global path does not affect certification.
 
-    Without this guard a stale file from a previous run could be hashed
-    by the runner and attributed to the current HEAD, fabricating a pass.
+    The legacy global path fallback has been eliminated: harness artifacts
+    must be produced at the run-scoped path ($WF_HARNESS_ARTIFACT), not
+    at the old global location. A stale file at the old path is simply
+    ignored.
     """
     clone = _make_clean_clone()
     registry_path = Path(tempfile.mkstemp(suffix=".json")[1])
     try:
         _make_registry_with_local_artifact(registry_path)
 
+        # Preseed a stale artifact at the legacy global path
         stale_dir = clone / ".omo" / "evidence" / "static"
         stale_dir.mkdir(parents=True, exist_ok=True)
         stale_file = stale_dir / "test-output.txt"
         _ = stale_file.write_text("stale content from previous run")
 
+        # Recert succeeds — the stale global artifact is ignored
         report = recertify_foundation(
             repo_root=clone,
             registry_path=registry_path,
         )
         assert report["certified"] is True
-        fresh_content = stale_file.read_text()
-        assert fresh_content != "stale content from previous run"
+
+        # The stale file at the global path is left untouched
+        assert stale_file.read_text() == "stale content from previous run"
+
+        # The harness wrote its artifact to the run-scoped path
+        ev_root = clone / report["evidence_root"]
+        artifact_path = ev_root / "artifacts" / "WF-HAR-TEST-02" / "test-output.txt"
+        assert artifact_path.is_file()
+        fresh_content = artifact_path.read_text()
         assert "hello" in fresh_content
     finally:
         shutil.rmtree(clone, ignore_errors=True)
@@ -388,7 +406,8 @@ def _make_two_harness_registry(path: Path) -> None:
     """Write a registry with two harnesses that share an artifact path.
 
     The second harness overwrites the artifact produced by the first,
-    testing the post-closure revalidation guard.
+    testing the post-closure revalidation guard.  Both harnesses write
+    to their own $WF_HARNESS_ARTIFACT (run-scoped).
     """
     registry = {
         "schema_version": "1.0.0",
@@ -401,8 +420,8 @@ def _make_two_harness_registry(path: Path) -> None:
                 "id": "WF-HAR-TAMPER-01",
                 "name": "producer",
                 "command": (
-                    "mkdir -p .omo/evidence/static && "
-                    "echo 'first content' > .omo/evidence/static/shared-output.txt"
+                    'mkdir -p "$(dirname "$WF_HARNESS_ARTIFACT")" && '
+                    "echo 'first content' > \"$WF_HARNESS_ARTIFACT\""
                 ),
                 "artifact": ".omo/evidence/static/shared-output.txt",
                 "artifact_mode": "declared_file",
@@ -416,8 +435,8 @@ def _make_two_harness_registry(path: Path) -> None:
                 "id": "WF-HAR-TAMPER-02",
                 "name": "tamperer",
                 "command": (
-                    "mkdir -p .omo/evidence/static && "
-                    "echo 'tampered content' > .omo/evidence/static/shared-output.txt"
+                    'mkdir -p "$(dirname "$WF_HARNESS_ARTIFACT")" && '
+                    "echo 'tampered content' > \"$WF_HARNESS_ARTIFACT\""
                 ),
                 "artifact": ".omo/evidence/static/shared-output.txt",
                 "artifact_mode": "declared_file",
@@ -483,8 +502,8 @@ def test_recertify_rejects_unexpected_evidence_record_on_disk() -> None:
                     "id": "WF-HAR-EXTRA-01",
                     "name": "writes-extra-record",
                     "command": (
-                        "mkdir -p .omo/evidence/static && "
-                        "echo output > .omo/evidence/static/extra-output.txt && "
+                        'mkdir -p "$(dirname "$WF_HARNESS_ARTIFACT")" && '
+                        'echo output > "$WF_HARNESS_ARTIFACT" && '
                         "echo '{}' > \"$WF_EVIDENCE_ROOT/WF-HAR-EXTRA-FAKE.json\""
                     ),
                     "artifact": ".omo/evidence/static/extra-output.txt",
@@ -500,7 +519,7 @@ def test_recertify_rejects_unexpected_evidence_record_on_disk() -> None:
         }
         _ = registry_path.write_text(json.dumps(registry))
 
-        with pytest.raises(CertificationError, match="unexpected records"):
+        with pytest.raises(CertificationError, match="unexpected"):
             _ = recertify_foundation(repo_root=clone, registry_path=registry_path)
     finally:
         shutil.rmtree(clone, ignore_errors=True)
@@ -518,8 +537,8 @@ def _make_two_harness_evidence_tamper_registry(path: Path) -> None:
     # .omo/evidence/runs/<sha>/<run_id>/. Both harnesses share the same
     # evidence_root within a single recertify_foundation call.
     delete_command = (
-        "mkdir -p .omo/evidence/static && "
-        "echo tamper > .omo/evidence/static/tamperer.json && "
+        'mkdir -p "$(dirname "$WF_HARNESS_ARTIFACT")" && '
+        'echo tamper > "$WF_HARNESS_ARTIFACT" && '
         "EVIDENCE_FILE=$(find .omo/evidence/runs -name "
         "'WF-HAR-TAMPER-EV-01.json' -type f 2>/dev/null | head -1) && "
         '[ -n "$EVIDENCE_FILE" ] && rm -f "$EVIDENCE_FILE" || true'
@@ -535,8 +554,8 @@ def _make_two_harness_evidence_tamper_registry(path: Path) -> None:
                 "id": "WF-HAR-TAMPER-EV-01",
                 "name": "producer",
                 "command": (
-                    "mkdir -p .omo/evidence/static && "
-                    "echo producer > .omo/evidence/static/producer.json"
+                    'mkdir -p "$(dirname "$WF_HARNESS_ARTIFACT")" && '
+                    'echo producer > "$WF_HARNESS_ARTIFACT"'
                 ),
                 "artifact": ".omo/evidence/static/producer.json",
                 "artifact_mode": "declared_file",
@@ -593,8 +612,8 @@ def _make_two_harness_evidence_status_tamper_registry(path: Path) -> None:
     (status changed) and revalidation must catch the tamper.
     """
     sed_command = (
-        "mkdir -p .omo/evidence/static && "
-        "echo tamper > .omo/evidence/static/tamperer.json && "
+        'mkdir -p "$(dirname "$WF_HARNESS_ARTIFACT")" && '
+        'echo tamper > "$WF_HARNESS_ARTIFACT" && '
         'python -c "import json,pathlib; '
         "p=next(pathlib.Path('.').rglob('WF-HAR-TAMPER-ST-01.json')); "
         "d=json.loads(p.read_text()); "
@@ -613,8 +632,8 @@ def _make_two_harness_evidence_status_tamper_registry(path: Path) -> None:
                 "id": "WF-HAR-TAMPER-ST-01",
                 "name": "producer",
                 "command": (
-                    "mkdir -p .omo/evidence/static && "
-                    "echo producer > .omo/evidence/static/producer.json"
+                    'mkdir -p "$(dirname "$WF_HARNESS_ARTIFACT")" && '
+                    'echo producer > "$WF_HARNESS_ARTIFACT"'
                 ),
                 "artifact": ".omo/evidence/static/producer.json",
                 "artifact_mode": "declared_file",
@@ -920,3 +939,383 @@ def test_validate_rejects_applicability_mismatch(
         repo_root=root,
     )
     assert any("applicability" in f for f in failures)
+
+
+# ---------------------------------------------------------------------------
+# Stale global artifact fallback elimination — command=true must NOT certify
+# a pre-existing artifact at the legacy global path.
+# ---------------------------------------------------------------------------
+
+
+def test_recertify_rejects_stale_global_artifact_with_command_true() -> None:
+    """command=true with a stale global artifact must NOT fabricate a pass.
+
+    Previously, when the run-scoped artifact was missing, the runner fell back
+    to root/declared_artifact (the legacy global path). A stale global file
+    combined with command=true would produce a false pass. This test proves
+    the fallback is eliminated: the artifact must be produced under the
+    run-scoped directory or the harness fails.
+    """
+    clone = _make_clean_clone()
+    registry_path = Path(tempfile.mkstemp(suffix=".json")[1])
+    try:
+        registry = {
+            "schema_version": "1.0.0",
+            "harness_count": 1,
+            "catalog_harness_count": 1,
+            "standard_blocker_count": 1,
+            "standard_blockers": ["WF-HAR-STALE-01"],
+            "harnesses": [
+                {
+                    "id": "WF-HAR-STALE-01",
+                    "name": "stale-global-fallback",
+                    "command": "true",
+                    "artifact": ".omo/evidence/static/stale-output.txt",
+                    "artifact_mode": "declared_file",
+                    "blocks_release": True,
+                    "what_it_runs": "produces no artifact (true does nothing)",
+                    "pass_criteria": "must produce artifact",
+                    "applicability": "standard",
+                    "status": "implemented",
+                }
+            ],
+            "foundation_closure": ["WF-HAR-STALE-01"],
+        }
+        _ = registry_path.write_text(json.dumps(registry))
+
+        # Preseed the GLOBAL artifact path (legacy location).
+        # The run-scoped directory under evidence_root/artifacts/ does not
+        # have this file. Command=true will NOT produce it.
+        global_dir = clone / ".omo" / "evidence" / "static"
+        global_dir.mkdir(parents=True, exist_ok=True)
+        stale_file = global_dir / "stale-output.txt"
+        _ = stale_file.write_text("stale global artifact")
+
+        # The certification must fail because the harness command is
+        # 'true' (produces no artifact) and the global fallback is gone.
+        with pytest.raises(
+            CertificationError, match=r"missing_declared_artifact|artifact missing|fail"
+        ):
+            _ = recertify_foundation(repo_root=clone, registry_path=registry_path)
+
+        # The stale global artifact must still exist (unused)
+        assert stale_file.is_file()
+    finally:
+        shutil.rmtree(clone, ignore_errors=True)
+        registry_path.unlink(missing_ok=True)
+
+
+# ---------------------------------------------------------------------------
+# Standalone run_harness invocations get unique run-scoped evidence roots
+# ---------------------------------------------------------------------------
+
+
+def test_standalone_run_harness_gets_unique_evidence_root() -> None:
+    """Standalone run_harness without evidence_root must generate a
+    unique run-scoped root.
+
+    Two consecutive calls must produce evidence in different directories.
+    Previously both calls would default to .omo/evidence/static.
+    """
+    clone = _make_clean_clone()
+    registry_path = Path(tempfile.mkstemp(suffix=".json")[1])
+    try:
+        registry = {
+            "schema_version": "1.0.0",
+            "harness_count": 1,
+            "catalog_harness_count": 1,
+            "standard_blocker_count": 0,
+            "standard_blockers": [],
+            "harnesses": [
+                {
+                    "id": "WF-HAR-UNIQUE-01",
+                    "name": "unique-root",
+                    "command": (
+                        'mkdir -p "$(dirname "$WF_HARNESS_ARTIFACT")" && '
+                        'echo hello > "$WF_HARNESS_ARTIFACT"'
+                    ),
+                    "artifact": "output.txt",
+                    "artifact_mode": "declared_file",
+                    "blocks_release": False,
+                    "what_it_runs": "echo",
+                    "pass_criteria": "exit 0",
+                    "applicability": "standard",
+                    "status": "implemented",
+                }
+            ],
+            "foundation_closure": ["WF-HAR-UNIQUE-01"],
+        }
+        _ = registry_path.write_text(json.dumps(registry))
+
+        hr = _import_harness_runner(clone)
+
+        # First call — should use a run-scoped evidence root
+        record1 = hr.run_harness(
+            "WF-HAR-UNIQUE-01",
+            repo_root=clone,
+            registry_path=registry_path,
+        )
+
+        # Second call — must use a DIFFERENT evidence root
+        record2 = hr.run_harness(
+            "WF-HAR-UNIQUE-01",
+            repo_root=clone,
+            registry_path=registry_path,
+        )
+
+        # Run IDs must differ, proving different unique evidence roots
+        assert record1.run_id != record2.run_id, "run IDs should differ"
+
+        # The evidence root directory name MUST equal record.run_id, proving
+        # the resolve-once invariant: when run_harness receives neither
+        # run_id nor evidence_root, it resolves one ID and uses it for
+        # both the directory path and the record field.
+        ev_root1 = clone / ".omo" / "evidence" / "runs" / record1.run_id
+        ev_root2 = clone / ".omo" / "evidence" / "runs" / record2.run_id
+        assert ev_root1.is_dir(), f"evidence root {ev_root1} should exist"
+        assert ev_root2.is_dir(), f"evidence root {ev_root2} should exist"
+        assert ev_root1 != ev_root2
+        assert ev_root1.name == record1.run_id
+        assert ev_root2.name == record2.run_id
+    finally:
+        shutil.rmtree(clone, ignore_errors=True)
+        registry_path.unlink(missing_ok=True)
+
+
+# ---------------------------------------------------------------------------
+# Recursive manifest coverage — expected sidecars/artifacts must be covered;
+# unexpected nested files must be rejected.
+# ---------------------------------------------------------------------------
+
+
+def test_recertify_rejects_unexpected_nested_file_in_evidence_root() -> None:
+    """An unexpected nested file under the evidence root causes certification failure.
+
+    The manifest must recursively scan the evidence root, and any file
+    not matching expected evidence records, stdout/stderr sidecars, or
+    declared artifacts triggers a rejection.  A harness that writes a
+    subdirectory file is caught by the recursive scanner.
+    """
+    clone = _make_clean_clone()
+    registry_path = Path(tempfile.mkstemp(suffix=".json")[1])
+    try:
+        registry = {
+            "schema_version": "1.0.0",
+            "harness_count": 1,
+            "catalog_harness_count": 1,
+            "standard_blocker_count": 1,
+            "standard_blockers": ["WF-HAR-NESTED-01"],
+            "harnesses": [
+                {
+                    "id": "WF-HAR-NESTED-01",
+                    "name": "nested-writer",
+                    "command": (
+                        'mkdir -p "$(dirname "$WF_HARNESS_ARTIFACT")" && '
+                        'echo legit > "$WF_HARNESS_ARTIFACT" && '
+                        'mkdir -p "$WF_EVIDENCE_ROOT/unexpected/deep" && '
+                        'echo sneaky > "$WF_EVIDENCE_ROOT/unexpected/deep/sneaky.txt"'
+                    ),
+                    "artifact": "nested-output.txt",
+                    "artifact_mode": "declared_file",
+                    "blocks_release": True,
+                    "what_it_runs": "writes artifact and an unexpected nested file",
+                    "pass_criteria": "closure rejects nested file",
+                    "applicability": "standard",
+                    "status": "implemented",
+                }
+            ],
+            "foundation_closure": ["WF-HAR-NESTED-01"],
+        }
+        _ = registry_path.write_text(json.dumps(registry))
+
+        with pytest.raises(CertificationError, match="unexpected"):
+            _ = recertify_foundation(
+                repo_root=clone,
+                registry_path=registry_path,
+            )
+    finally:
+        shutil.rmtree(clone, ignore_errors=True)
+        registry_path.unlink(missing_ok=True)
+
+
+def test_recertify_manifest_covers_sidecar_and_artifact_files() -> None:
+    """The evidence manifest must record hashes for sidecar files and artifacts.
+
+    The manifest uses recursive scanning and should include stdout/stderr
+    sidecars and artifact files in addition to the evidence JSON record.
+    """
+    clone = _make_clean_clone()
+    registry_path = Path(tempfile.mkstemp(suffix=".json")[1])
+    try:
+        _make_minimal_registry(registry_path)
+
+        report = recertify_foundation(
+            repo_root=clone,
+            registry_path=registry_path,
+        )
+        assert report["certified"] is True
+
+        # The manifest should contain entries for the evidence JSON record,
+        # stdout/stderr sidecars, and the artifact copy.
+        manifest = report.get("evidence_manifest", {})
+        # Evidence JSON for the closure member
+        assert "WF-HAR-TEST-01.json" in manifest, (
+            "manifest must contain the harness evidence JSON"
+        )
+        # Stdout sidecar
+        assert "WF-HAR-TEST-01.stdout.txt" in manifest, (
+            "manifest must contain stdout sidecar"
+        )
+        # Stderr sidecar (empty but still written)
+        assert "WF-HAR-TEST-01.stderr.txt" in manifest, (
+            "manifest must contain stderr sidecar"
+        )
+        # Artifact under artifacts/<harness_id>/
+        artifact_keys = [
+            k for k in manifest if k.startswith("artifacts/WF-HAR-TEST-01/")
+        ]
+        assert artifact_keys, (
+            "manifest must contain artifact under artifacts/<harness_id>/"
+        )
+        total_expected = 4  # evidence JSON + stdout + stderr + artifact
+        assert len(manifest) == total_expected, (
+            f"expected {total_expected} files in manifest, got {len(manifest)}: "
+            f"{sorted(manifest)}"
+        )
+
+        # On a fresh clone, rerun and verify same number of entries
+        clone2 = _make_clean_clone()
+        _make_minimal_registry(registry_path)
+        report2 = recertify_foundation(
+            repo_root=clone2,
+            registry_path=registry_path,
+        )
+        manifest2 = report2.get("evidence_manifest", {})
+        assert len(manifest2) == total_expected
+        shutil.rmtree(clone2, ignore_errors=True)
+    finally:
+        shutil.rmtree(clone, ignore_errors=True)
+        registry_path.unlink(missing_ok=True)
+
+
+# ---------------------------------------------------------------------------
+# Prerequisite enforcement in recertify_foundation
+# ---------------------------------------------------------------------------
+
+
+def _make_prereq_registry(path: Path, *, first_fails: bool = False) -> None:
+    """Write a two-harness registry where the second depends on the first.
+
+    When *first_fails* is True the first harness command exits nonzero.
+    The second harness writes a sentinel file to prove whether it executed.
+    """
+    first_command = (
+        'mkdir -p "$(dirname "$WF_HARNESS_ARTIFACT")" && '
+        'echo first > "$WF_HARNESS_ARTIFACT"'
+    )
+    if first_fails:
+        first_command = (
+            'mkdir -p "$(dirname "$WF_HARNESS_ARTIFACT")" && '
+            'echo first > "$WF_HARNESS_ARTIFACT" && exit 1'
+        )
+    second_command = (
+        'mkdir -p "$(dirname "$WF_HARNESS_ARTIFACT")" && '
+        'echo second > "$WF_HARNESS_ARTIFACT" && '
+        'echo "EXECUTED" > "$(dirname "$WF_HARNESS_ARTIFACT")/sentinel.txt"'
+    )
+    registry: dict[str, object] = {
+        "schema_version": "1.0.0",
+        "harness_count": 2,
+        "catalog_harness_count": 2,
+        "standard_blocker_count": 2,
+        "standard_blockers": ["WF-HAR-PREREQ-A-01", "WF-HAR-PREREQ-B-01"],
+        "harnesses": [
+            {
+                "id": "WF-HAR-PREREQ-A-01",
+                "name": "prereq-a",
+                "command": first_command,
+                "artifact": "output-a.txt",
+                "artifact_mode": "declared_file",
+                "blocks_release": True,
+                "what_it_runs": "first harness",
+                "pass_criteria": "exit 0",
+                "applicability": "standard",
+                "status": "implemented",
+                "prerequisites": [],
+            },
+            {
+                "id": "WF-HAR-PREREQ-B-01",
+                "name": "prereq-b",
+                "command": second_command,
+                "artifact": "output-b.txt",
+                "artifact_mode": "declared_file",
+                "blocks_release": True,
+                "what_it_runs": "second harness",
+                "pass_criteria": "exit 0",
+                "applicability": "standard",
+                "status": "implemented",
+                "prerequisites": ["WF-HAR-PREREQ-A-01"],
+            },
+        ],
+        "foundation_closure": ["WF-HAR-PREREQ-A-01", "WF-HAR-PREREQ-B-01"],
+    }
+    _ = path.write_text(json.dumps(registry))
+
+
+def test_recertify_prerequisite_failure_prevents_dependent_execution() -> None:
+    """When a prerequisite fails, the dependent harness is not executed.
+
+    The dependent harness writes a sentinel file; its absence after
+    recertification proves the command was skipped.
+    """
+    clone = _make_clean_clone()
+    registry_path = Path(tempfile.mkstemp(suffix=".json")[1])
+    try:
+        _make_prereq_registry(registry_path, first_fails=True)
+
+        with pytest.raises(CertificationError, match=r"prerequisite.*not satisfied"):
+            _ = recertify_foundation(
+                repo_root=clone,
+                registry_path=registry_path,
+            )
+
+        # The sentinel file must NOT exist (second harness was skipped).
+        # Sentinel is under evidence_root/artifacts/<harness_id>/sentinel.txt.
+        sentinel_root = clone / ".omo" / "evidence" / "runs"
+        matching = sorted(sentinel_root.rglob("**/sentinel.txt"))
+        assert not matching, (
+            f"dependent harness should not have executed, "
+            f"but sentinel found: {matching}"
+        )
+
+        # The first harness's evidence root should exist under runs/
+        first_records = list(
+            (clone / ".omo" / "evidence" / "runs").rglob("WF-HAR-PREREQ-A-01.json")
+        )
+        assert first_records, "first harness evidence should have been written"
+    finally:
+        shutil.rmtree(clone, ignore_errors=True)
+        registry_path.unlink(missing_ok=True)
+
+
+def test_recertify_prerequisite_pass_allows_dependent_execution() -> None:
+    """When the prerequisite passes, the dependent harness executes."""
+    clone = _make_clean_clone()
+    registry_path = Path(tempfile.mkstemp(suffix=".json")[1])
+    try:
+        _make_prereq_registry(registry_path, first_fails=False)
+
+        report = recertify_foundation(
+            repo_root=clone,
+            registry_path=registry_path,
+        )
+        assert report["certified"] is True
+
+        # The sentinel must exist (dependent harness ran).
+        # Sentinel is under evidence_root/artifacts/<harness_id>/sentinel.txt.
+        sentinel_root = clone / ".omo" / "evidence" / "runs"
+        matching = sorted(sentinel_root.rglob("**/sentinel.txt"))
+        assert matching, "dependent harness should have executed"
+    finally:
+        shutil.rmtree(clone, ignore_errors=True)
+        registry_path.unlink(missing_ok=True)

@@ -1,36 +1,902 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Work Frontier — System Diagram</title>
 <style>
-:root{--paper:#f4f6f5;--panel:#fff;--ink:#1c2b2e;--muted:#65767a;--line:#c9d3d0;--accent:#35618c}
-*{box-sizing:border-box} body{margin:0;font-family:ui-sans-serif,system-ui;background:var(--paper);color:var(--ink)}
-header{padding:16px 22px;background:var(--panel);border-bottom:1px solid var(--line);display:flex;gap:16px;align-items:center;flex-wrap:wrap}
-h1{font-size:18px;margin:0} .meta{font-family:ui-monospace,monospace;font-size:12px;color:var(--muted)}
-main{display:grid;grid-template-columns:280px 1fr;min-height:calc(100vh - 70px)} aside{background:var(--panel);border-right:1px solid var(--line);padding:14px}
-input{width:100%;padding:9px;border:1px solid var(--line);border-radius:5px} #list button{display:block;width:100%;text-align:left;margin:5px 0;padding:8px;border:1px solid transparent;background:transparent;border-radius:4px;cursor:pointer}
-#list button:hover,#list button.active{background:#eaf1f7;border-color:#7c9cb5} section{padding:24px;overflow:auto}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px;margin-bottom:14px;box-shadow:0 2px 8px rgba(0,0,0,.04)}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px} .edge{font-family:ui-monospace,monospace;font-size:12px}
-a{color:var(--accent)} @media(max-width:760px){main{grid-template-columns:1fr} aside{border-right:0;border-bottom:1px solid var(--line)}}
+  :root {
+    --paper: #F4F6F5;
+    --paper-line: #DEE5E2;
+    --panel: #FFFFFF;
+    --ink: #1C2B2E;
+    --ink-soft: #57676A;
+    --ink-faint: #8B9A9C;
+    --blueprint: #35618C;
+    --blueprint-dim: #7C9CB5;
+    --blueprint-fill: #EAF1F7;
+    --signal: #A1462F;
+    --signal-fill: #F5E6E1;
+    --ok: #4F7864;
+    --ok-fill: #E7EEE9;
+    --border: #C9D3D0;
+    --font-mono: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Consolas, monospace;
+    --font-sans: ui-sans-serif, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    overflow: hidden;
+  }
+  body {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ---------- header ---------- */
+  header {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 12px 20px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    flex-wrap: wrap;
+  }
+  .brand { display: flex; flex-direction: column; gap: 2px; min-width: 180px; }
+  .brand-name {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: 0.02em;
+  }
+  .brand-name::before { content: "▚ "; color: var(--blueprint); }
+  .brand-meta { font-size: 11.5px; color: var(--ink-faint); font-family: var(--font-mono); }
+  nav.tabs { display: flex; gap: 2px; margin-left: auto; flex-wrap: wrap; }
+  nav.tabs button {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--ink-soft);
+    padding: 7px 12px;
+    cursor: pointer;
+    border-radius: 3px;
+  }
+  nav.tabs button:hover { color: var(--ink); background: var(--paper); }
+  nav.tabs button.active {
+    color: var(--blueprint);
+    border-color: var(--blueprint-dim);
+    background: var(--blueprint-fill);
+    font-weight: 600;
+  }
+
+  /* ---------- layout ---------- */
+  .layout { flex: 1; display: flex; min-height: 0; }
+  aside.sidebar {
+    width: 230px; flex-shrink: 0;
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    min-height: 0;
+  }
+  .search-box { padding: 10px; border-bottom: 1px solid var(--border); }
+  .search-box input {
+    width: 100%; padding: 6px 8px;
+    font-family: var(--font-mono); font-size: 12.5px;
+    border: 1px solid var(--border); border-radius: 3px;
+    background: var(--paper); color: var(--ink);
+  }
+  .search-box input:focus { outline: none; border-color: var(--blueprint); }
+  .module-list { flex: 1; overflow-y: auto; padding: 6px; }
+  .module-item {
+    font-family: var(--font-mono); font-size: 12px;
+    padding: 6px 8px; margin-bottom: 2px; border-radius: 3px;
+    cursor: pointer; color: var(--ink-soft);
+    border: 1px solid transparent;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .module-item:hover { background: var(--paper); color: var(--ink); }
+  .module-item.selected { background: var(--blueprint-fill); border-color: var(--blueprint-dim); color: var(--blueprint); }
+  .module-item.dimmed { opacity: 0.35; }
+
+  main.canvas-wrap {
+    flex: 1; position: relative; min-width: 0;
+    background-image:
+      linear-gradient(var(--paper-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--paper-line) 1px, transparent 1px);
+    background-size: 28px 28px;
+    overflow: hidden;
+  }
+  svg.canvas { width: 100%; height: 100%; cursor: grab; }
+  svg.canvas.dragging { cursor: grabbing; }
+
+  .zoom-controls {
+    position: absolute; bottom: 14px; right: 14px;
+    display: flex; flex-direction: column; gap: 4px;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 4px;
+    overflow: hidden;
+  }
+  .zoom-controls button {
+    width: 30px; height: 30px; border: none; background: var(--panel);
+    color: var(--ink-soft); font-size: 15px; cursor: pointer; font-family: var(--font-mono);
+    border-bottom: 1px solid var(--border);
+  }
+  .zoom-controls button:last-child { border-bottom: none; }
+  .zoom-controls button:hover { background: var(--paper); color: var(--ink); }
+
+  .legend {
+    position: absolute; bottom: 14px; left: 14px;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 4px;
+    padding: 8px 12px; font-size: 11px; color: var(--ink-soft); font-family: var(--font-mono);
+    display: flex; gap: 14px; align-items: center;
+  }
+  .legend-item { display: flex; align-items: center; gap: 5px; }
+  .legend-line { width: 20px; height: 0; border-top: 2px solid var(--blueprint); }
+  .legend-line.async { border-top: 2px dashed var(--blueprint); }
+  .legend-line.unconfirmed { border-top: 2px dotted var(--ink-faint); opacity: 0.8; }
+  .legend-swatch { width: 10px; height: 10px; border-radius: 2px; }
+
+  .empty-state {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    color: var(--ink-faint); font-family: var(--font-mono); font-size: 13px; text-align: center;
+  }
+
+  /* ---------- detail panel ---------- */
+  aside.detail {
+    width: 300px; flex-shrink: 0;
+    background: var(--panel);
+    border-left: 1px solid var(--border);
+    padding: 16px; overflow-y: auto;
+  }
+  .detail-hint { color: var(--ink-faint); font-size: 12.5px; line-height: 1.5; }
+  .detail-title { font-family: var(--font-mono); font-weight: 700; font-size: 14px; margin-bottom: 2px; }
+  .detail-path { font-family: var(--font-mono); font-size: 11px; color: var(--ink-faint); margin-bottom: 12px; }
+  .detail-section { margin-bottom: 14px; }
+  .detail-label {
+    font-family: var(--font-mono); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--blueprint); margin-bottom: 5px; font-weight: 600;
+  }
+  .detail-body { font-size: 12.5px; line-height: 1.5; color: var(--ink); }
+  .detail-list { list-style: none; margin: 0; padding: 0; }
+  .detail-list li { font-size: 12px; padding: 4px 0; border-bottom: 1px dashed var(--paper-line); }
+  .detail-list li:last-child { border-bottom: none; }
+  .detail-list .who { font-family: var(--font-mono); color: var(--blueprint); font-weight: 600; }
+  .detail-link {
+    display: inline-block; margin-top: 6px; font-family: var(--font-mono); font-size: 11.5px;
+    color: var(--blueprint); text-decoration: none; border-bottom: 1px solid var(--blueprint-dim);
+  }
+  .detail-link:hover { color: var(--ink); border-color: var(--ink); }
+
+  /* ---------- SVG node/edge styling ---------- */
+  .node-rect { fill: var(--blueprint-fill); stroke: var(--blueprint); stroke-width: 1.4; }
+  .node-rect.external { fill: var(--paper); stroke: var(--ink-faint); stroke-dasharray: 3 2; }
+  .node-rect.unconfirmed { stroke-dasharray: 2 2; opacity: 0.75; }
+  .node-rect.selected { stroke: var(--signal); stroke-width: 2.4; }
+  .node-rect.dimmed { opacity: 0.25; }
+  .node-tick { stroke: var(--blueprint); stroke-width: 1; }
+  .node-label { font-family: var(--font-mono); font-size: 12px; font-weight: 600; fill: var(--ink); pointer-events: none; }
+  .node-sub { font-family: var(--font-mono); font-size: 9.5px; fill: var(--ink-faint); pointer-events: none; }
+  .node-group { cursor: pointer; }
+  .node-group.dimmed { opacity: 0.25; }
+  .edge-path { fill: none; stroke: var(--blueprint-dim); stroke-width: 1.4; }
+  .edge-path.async { stroke-dasharray: 5 4; }
+  /* quick-scan mode (see references/tracing-methodology.md): edges/nodes
+     not individually confirmed get a tighter dash + reduced opacity,
+     distinct from the async dash pattern above -- placed after .async in
+     the stylesheet so it wins when both classes apply to the same edge. */
+  .edge-path.unconfirmed { stroke-dasharray: 2 2; opacity: 0.6; }
+  .edge-path.highlighted { stroke: var(--signal); stroke-width: 2.2; }
+  .edge-path.dimmed { opacity: 0.15; }
+  .edge-label { font-family: var(--font-mono); font-size: 9px; fill: var(--ink-soft); }
+  .edge-label.dimmed { opacity: 0.15; }
+  marker path { fill: var(--blueprint-dim); }
+
+  /* ---------- flows tab (plain HTML, not SVG) ---------- */
+  .flows-wrap { display: flex; height: 100%; }
+  .flow-list { width: 240px; flex-shrink: 0; overflow-y: auto; border-right: 1px solid var(--border); padding: 10px; }
+  .flow-card {
+    font-family: var(--font-mono); font-size: 12px; padding: 9px 10px; margin-bottom: 6px;
+    border: 1px solid var(--border); border-radius: 4px; cursor: pointer; color: var(--ink-soft);
+    background: var(--panel);
+  }
+  .flow-card:hover { border-color: var(--blueprint-dim); color: var(--ink); }
+  .flow-card.selected { border-color: var(--blueprint); background: var(--blueprint-fill); color: var(--blueprint); font-weight: 600; }
+  .flow-detail { flex: 1; overflow-y: auto; padding: 24px 32px; }
+  .flow-detail h2 { font-family: var(--font-mono); font-size: 16px; margin: 0 0 4px 0; }
+  .flow-detail .flow-modules { font-size: 11.5px; color: var(--ink-faint); font-family: var(--font-mono); margin-bottom: 20px; }
+  .flow-step { display: flex; gap: 14px; margin-bottom: 2px; }
+  .flow-step-line { display: flex; flex-direction: column; align-items: center; width: 18px; flex-shrink: 0; }
+  .flow-step-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--blueprint); flex-shrink: 0; margin-top: 4px; }
+  .flow-step-rule { width: 1.5px; flex: 1; background: var(--paper-line); min-height: 28px; }
+  .flow-step-body { padding-bottom: 18px; }
+  .flow-step-who { font-family: var(--font-mono); font-size: 12px; }
+  .flow-step-who .arrow { color: var(--ink-faint); margin: 0 6px; }
+  .flow-step-who .from, .flow-step-who .to { color: var(--blueprint); font-weight: 600; }
+  .flow-step-label { font-size: 12.5px; color: var(--ink); margin-top: 2px; }
+  .flow-step-note { font-size: 11.5px; color: var(--ink-faint); margin-top: 2px; font-style: italic; }
+
+  /* ---------- data model / deployment (table-ish HTML) ---------- */
+  .simple-tab-wrap { height: 100%; overflow-y: auto; padding: 24px 32px; }
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
+  .info-card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 5px; padding: 14px;
+  }
+  .info-card h3 { font-family: var(--font-mono); font-size: 13px; margin: 0 0 8px 0; color: var(--blueprint); }
+  .info-card .field-list { list-style: none; margin: 0; padding: 0; font-size: 12px; color: var(--ink-soft); }
+  .info-card .field-list li { padding: 2px 0; font-family: var(--font-mono); }
+  .info-card .rel-list { margin-top: 8px; font-size: 11.5px; color: var(--ink-faint); }
+
+  ::-webkit-scrollbar { width: 9px; height: 9px; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+
+  @media (max-width: 820px) {
+    aside.sidebar { width: 160px; }
+    aside.detail { width: 240px; }
+    .flow-list { width: 170px; }
+  }
 </style>
 </head>
 <body>
-<header><h1>Work Frontier — System Anatomy</h1><div class="meta">full trace · 2026-07-12 · e54bfeca1150</div></header>
-<main><aside><input id="q" placeholder="Search modules"><div id="list"></div></aside><section>
-<div class="card"><h2>Current-state summary</h2><p>This repository currently implements a foundation verification and evidence toolchain. Product API, workers, schedulers and UI runtime are not yet present.</p></div>
-<div id="detail"></div><div class="card"><h2>Dependency edges</h2><div id="edges"></div></div>
-<div class="card"><h2>Key flows</h2><div id="flows"></div></div>
-</section></main>
-<script id="anatomy-data" type="application/json">{"project_name": "Work Frontier", "generated_at": "2026-07-12", "mode": "full trace", "source_commit": "e54bfeca1150fbc15fb6da1b603af938e2bca79", "modules": [{"slug": "foundation-preflight", "name": "Foundation Preflight", "role": "Validates the seven foundation baselines and proves negative fixtures fail with typed failure IDs.", "path": ".omo/preflight/adr-006", "doc": "modules/foundation-preflight.md"}, {"slug": "contracts", "name": "Canonical Contracts", "role": "Defines canonical DecisionRecord and EvidenceRecord schemas plus harness registry contracts.", "path": "backend/src/work_frontier/contracts", "doc": "modules/contracts.md"}, {"slug": "evidence-runtime", "name": "Evidence Runtime", "role": "Executes registered harnesses and writes reproducible evidence bound to the tested Git revision.", "path": "backend/src/work_frontier/contracts", "doc": "modules/evidence-runtime.md"}, {"slug": "architecture-enforcement", "name": "Architecture Enforcement", "role": "Statically scans Python imports and enforces the allowed dependency matrix between architectural layers.", "path": "scripts/check_import_boundaries.py", "doc": "modules/architecture-enforcement.md"}, {"slug": "contract-generation", "name": "Contract Generation", "role": "Generates JSON Schema and frontend Zod artifacts from the canonical Pydantic contract and checks drift.", "path": "scripts/generate_contracts.py", "doc": "modules/contract-generation.md"}, {"slug": "infrastructure-smoke", "name": "Infrastructure Smoke", "role": "Proves PostgreSQL migration rollback behavior and MinIO object lifecycle behavior against local containers.", "path": "scripts", "doc": "modules/infrastructure-smoke.md"}, {"slug": "frontend-foundation", "name": "Frontend Foundation", "role": "Contains TypeScript contract artifacts, evidence helper code and test/tooling configuration, but no product UI shell yet.", "path": "frontend", "doc": "modules/frontend-foundation.md"}, {"slug": "delivery-ci", "name": "Delivery and CI", "role": "Orchestrates preflight, contract drift, static checks, tests, infrastructure smokes, security scans and evidence collection.", "path": ".github/workflows/ci.yml", "doc": "modules/delivery-ci.md"}], "edges": [{"from": "foundation-preflight", "to": "contracts", "label": "validates DecisionRecord-shaped baseline documents and hash fields", "kind": "sync"}, {"from": "evidence-runtime", "to": "contracts", "label": "loads registry and evidence schemas and serializes validated records", "kind": "sync"}, {"from": "architecture-enforcement", "to": "contracts", "label": "writes EvidenceRecord-compatible results for the boundary check", "kind": "sync"}, {"from": "contract-generation", "to": "contracts", "label": "imports the canonical DecisionRecord model as the source schema", "kind": "sync"}, {"from": "infrastructure-smoke", "to": "contracts", "label": "emits structured evidence for infrastructure checks", "kind": "sync"}, {"from": "frontend-foundation", "to": "contract-generation", "label": "consumes the generated DecisionRecord Zod schema", "kind": "sync"}, {"from": "delivery-ci", "to": "foundation-preflight", "label": "runs the preflight gate before verification", "kind": "sync"}, {"from": "delivery-ci", "to": "contract-generation", "label": "checks generated contract drift", "kind": "sync"}, {"from": "delivery-ci", "to": "architecture-enforcement", "label": "runs import-boundary enforcement through the harness suite", "kind": "sync"}, {"from": "delivery-ci", "to": "evidence-runtime", "label": "executes registered harnesses and records evidence", "kind": "sync"}, {"from": "delivery-ci", "to": "infrastructure-smoke", "label": "starts services and executes database/object-store smokes", "kind": "sync"}, {"from": "delivery-ci", "to": "frontend-foundation", "label": "runs frontend quality checks", "kind": "sync"}], "context": {"actors": ["Developer", "GitHub Actions"], "external_systems": ["PostgreSQL", "MinIO"], "edges": [{"from": "Developer", "to": "Work Frontier", "label": "runs checks and harnesses"}, {"from": "GitHub Actions", "to": "Work Frontier", "label": "executes CI workflow"}, {"from": "Work Frontier", "to": "PostgreSQL", "label": "migration smoke"}, {"from": "Work Frontier", "to": "MinIO", "label": "object lifecycle smoke"}]}, "flows": [{"name": "Foundation preflight gate", "steps": [{"from": "GitHub Actions", "to": "foundation-preflight", "label": "run validator and tests"}, {"from": "foundation-preflight", "to": "contracts", "label": "apply contract-specific rules"}, {"from": "foundation-preflight", "to": "GitHub Actions", "label": "pass/fail plus evidence"}]}, {"name": "Contract generation and drift check", "steps": [{"from": "delivery-ci", "to": "contract-generation", "label": "run --check"}, {"from": "contract-generation", "to": "contracts", "label": "read Pydantic schema"}, {"from": "contract-generation", "to": "frontend-foundation", "label": "compare generated Zod artifact"}]}, {"name": "Harness evidence lifecycle", "steps": [{"from": "delivery-ci", "to": "evidence-runtime", "label": "execute blocking harnesses"}, {"from": "evidence-runtime", "to": "contracts", "label": "validate registry and evidence"}, {"from": "evidence-runtime", "to": "infrastructure-smoke", "label": "run smoke commands"}, {"from": "evidence-runtime", "to": "delivery-ci", "label": "return evidence bound to subject SHA"}]}], "data_model": {"entities": [{"name": "BootstrapMarker", "fields": ["id", "label"], "module": "infrastructure-smoke"}], "relations": []}, "deployment": {"services": [{"name": "postgres", "module": "infrastructure-smoke", "ports": ["54329:5432"], "depends_on": []}, {"name": "minio", "module": "infrastructure-smoke", "ports": ["9002:9000", "9003:9001"], "depends_on": []}]}}</script>
+
+<header>
+  <div class="brand">
+    <div class="brand-name" id="brand-name">Work Frontier</div>
+    <div class="brand-meta" id="brand-meta">generated —</div>
+  </div>
+  <nav class="tabs" id="tabs"></nav>
+</header>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="search-box">
+      <input id="search-input" type="text" placeholder="filter modules…" autocomplete="off">
+    </div>
+    <div class="module-list" id="module-list"></div>
+  </aside>
+
+  <main class="canvas-wrap" id="canvas-wrap">
+    <svg class="canvas" id="canvas"><g id="canvas-viewport"></g></svg>
+    <div class="zoom-controls">
+      <button id="zoom-in" title="Zoom in">+</button>
+      <button id="zoom-out" title="Zoom out">−</button>
+      <button id="zoom-reset" title="Fit to screen">⤢</button>
+    </div>
+    <div class="legend" id="legend"></div>
+    <div class="empty-state" id="empty-state" style="display:none"></div>
+  </main>
+
+  <aside class="detail" id="detail-panel">
+    <div class="detail-hint">Click a module, node, or entity to see its details here.</div>
+  </aside>
+</div>
+
 <script>
-const data=JSON.parse(document.getElementById('anatomy-data').textContent);
-const list=document.getElementById('list'),detail=document.getElementById('detail'),q=document.getElementById('q');
-function show(m){document.querySelectorAll('#list button').forEach(b=>b.classList.toggle('active',b.dataset.slug===m.slug));
-detail.innerHTML=`<div class="card"><h2>${m.name}</h2><p>${m.role}</p><p><b>Path:</b> <code>${m.path}</code></p><p><a href="${m.doc}">Open module document</a></p></div>`;}
-function renderList(filter=''){list.innerHTML='';data.modules.filter(m=>(m.name+' '+m.slug+' '+m.role).toLowerCase().includes(filter.toLowerCase())).forEach(m=>{const b=document.createElement('button');b.dataset.slug=m.slug;b.textContent=m.name;b.onclick=()=>show(m);list.appendChild(b)})}
-document.getElementById('edges').innerHTML=data.edges.map(e=>`<div class="edge">${e.from} → ${e.to} — ${e.label}</div>`).join('');
-document.getElementById('flows').innerHTML=data.flows.map(f=>`<h3>${f.name}</h3>`+f.steps.map(s=>`<div class="edge">${s.from} → ${s.to} — ${s.label}</div>`).join('')).join('');
-q.oninput=()=>renderList(q.value);renderList();show(data.modules[0]);
-</script></body></html>
+(function () {
+  "use strict";
+
+  // ============================================================
+  // 1. DATA — replaced with a real JSON payload before this file
+  //    is written out as system-diagram.html. See
+  //    references/output-templates.md for the schema and the
+  //    substitution procedure. This placeholder is NOT valid JS
+  //    on its own — don't try to open this template file directly.
+  // ============================================================
+  const DATA = {"project_name":"Work Frontier","generated_at":"2026-07-12","mode":"full trace","source_commit":"e54bfeca1150fbc15fb6da1b603af938e2bca79","modules":[{"slug":"foundation-preflight","name":"Foundation Preflight","role":"Validates the seven foundation baselines and proves negative fixtures fail with typed failure IDs.","path":".omo/preflight/adr-006","doc":"modules/foundation-preflight.md"},{"slug":"contracts","name":"Canonical Contracts","role":"Defines canonical DecisionRecord and EvidenceRecord schemas plus harness registry contracts with comprehensive validation.","path":"backend/src/work_frontier/contracts","doc":"modules/contracts.md"},{"slug":"evidence-runtime","name":"Evidence Runtime","role":"Executes registered harnesses and writes reproducible evidence bound to the tested Git revision with tamper detection and prerequisite-satisfaction gating.","path":"scripts/run_harness.py","doc":"modules/evidence-runtime.md"},{"slug":"architecture-enforcement","name":"Architecture Enforcement","role":"Statically scans Python imports and enforces the allowed dependency matrix between architectural layers.","path":"scripts/check_import_boundaries.py","doc":"modules/architecture-enforcement.md"},{"slug":"contract-generation","name":"Contract Generation","role":"Generates JSON Schema and frontend Zod artifacts for both DecisionRecord and EvidenceRecord from the canonical Pydantic contracts and checks drift.","path":"scripts/generate_contracts.py","doc":"modules/contract-generation.md"},{"slug":"infrastructure-smoke","name":"Infrastructure Smoke","role":"Proves PostgreSQL migration rollback behavior and MinIO object lifecycle behavior against local containers.","path":"scripts","doc":"modules/infrastructure-smoke.md"},{"slug":"frontend-foundation","name":"Frontend Foundation","role":"Contains TypeScript contract artifacts (DecisionRecord and EvidenceRecord Zod validators with semantic validation), evidence helper code and test/tooling configuration, but no product UI shell yet.","path":"frontend","doc":"modules/frontend-foundation.md"},{"slug":"delivery-ci","name":"Delivery and CI","role":"Orchestrates preflight, contract drift, static checks, tests, infrastructure smokes, security scans and evidence collection.","path":".github/workflows/ci.yml","doc":"modules/delivery-ci.md"}],"edges":[{"from":"foundation-preflight","to":"contracts","label":"validates DecisionRecord-shaped baseline documents and hash fields","kind":"sync"},{"from":"evidence-runtime","to":"contracts","label":"loads registry and evidence schemas and serializes validated records","kind":"sync"},{"from":"architecture-enforcement","to":"contracts","label":"writes EvidenceRecord-compatible results for the boundary check","kind":"sync"},{"from":"contract-generation","to":"contracts","label":"imports the canonical DecisionRecord model as the source schema","kind":"sync"},{"from":"infrastructure-smoke","to":"contracts","label":"emits structured evidence for infrastructure checks","kind":"sync"},{"from":"frontend-foundation","to":"contract-generation","label":"consumes the generated DecisionRecord Zod schema","kind":"sync"},{"from":"delivery-ci","to":"foundation-preflight","label":"runs the preflight gate before verification","kind":"sync"},{"from":"delivery-ci","to":"contract-generation","label":"checks generated contract drift","kind":"sync"},{"from":"delivery-ci","to":"architecture-enforcement","label":"runs import-boundary enforcement through the harness suite","kind":"sync"},{"from":"delivery-ci","to":"evidence-runtime","label":"executes registered harnesses and records evidence","kind":"sync"},{"from":"delivery-ci","to":"infrastructure-smoke","label":"starts services and executes database/object-store smokes","kind":"sync"},{"from":"delivery-ci","to":"frontend-foundation","label":"runs frontend quality checks","kind":"sync"}],"context":{"actors":["Developer","GitHub Actions"],"external_systems":["PostgreSQL","MinIO"],"edges":[{"from":"Developer","to":"Work Frontier","label":"runs checks and harnesses"},{"from":"GitHub Actions","to":"Work Frontier","label":"executes CI workflow"},{"from":"Work Frontier","to":"PostgreSQL","label":"migration smoke"},{"from":"Work Frontier","to":"MinIO","label":"object lifecycle smoke"}]},"flows":[{"name":"Foundation preflight gate","steps":[{"from":"GitHub Actions","to":"foundation-preflight","label":"run validator and tests"},{"from":"foundation-preflight","to":"contracts","label":"apply contract-specific rules"},{"from":"foundation-preflight","to":"GitHub Actions","label":"pass/fail plus evidence"}]},{"name":"Contract generation and drift check","steps":[{"from":"delivery-ci","to":"contract-generation","label":"run --check"},{"from":"contract-generation","to":"contracts","label":"read Pydantic schema"},{"from":"contract-generation","to":"frontend-foundation","label":"compare generated Zod artifact"}]},{"name":"Harness evidence lifecycle","steps":[{"from":"delivery-ci","to":"evidence-runtime","label":"execute blocking harnesses"},{"from":"evidence-runtime","to":"contracts","label":"validate registry and evidence"},{"from":"evidence-runtime","to":"infrastructure-smoke","label":"run smoke commands"},{"from":"evidence-runtime","to":"delivery-ci","label":"return evidence bound to subject SHA"}]}],"data_model":{"entities":[{"name":"BootstrapMarker","fields":["id","label"],"module":"infrastructure-smoke"}],"relations":[]},"deployment":{"services":[{"name":"postgres","module":"infrastructure-smoke","ports":["54329:5432"],"depends_on":[]},{"name":"minio","module":"infrastructure-smoke","ports":["9002:9000","9003:9001"],"depends_on":[]}]}};
+
+  // ============================================================
+  // 2. Graph layout (pure logic, no DOM) — layered layout with
+  //    DFS-based back-edge detection so cycles can't send layers
+  //    to infinity; back edges are still drawn, just curved.
+  // ============================================================
+  function findBackEdges(nodeIds, edges) {
+    const adj = {};
+    nodeIds.forEach(function (id) { adj[id] = []; });
+    edges.forEach(function (e) { if (adj[e.from]) adj[e.from].push(e.to); });
+    const state = {};
+    nodeIds.forEach(function (id) { state[id] = 0; });
+    const back = new Set();
+    function dfs(u) {
+      state[u] = 1;
+      (adj[u] || []).forEach(function (v) {
+        if (!(v in state)) return;
+        if (state[v] === 1) back.add(u + "->" + v);
+        else if (state[v] === 0) dfs(v);
+      });
+      state[u] = 2;
+    }
+    nodeIds.forEach(function (id) { if (state[id] === 0) dfs(id); });
+    return back;
+  }
+
+  function layoutGraph(nodes, edges, opts) {
+    opts = opts || {};
+    const nodeW = opts.nodeWidth || 176;
+    const nodeH = opts.nodeHeight || 58;
+    const xGap = opts.xGap || 100;
+    const yGap = opts.yGap || 30;
+
+    const ids = nodes.map(function (n) { return n.id; });
+    const idSet = new Set(ids);
+    const validEdges = edges.filter(function (e) {
+      return idSet.has(e.from) && idSet.has(e.to) && e.from !== e.to;
+    });
+    const backEdges = findBackEdges(ids, validEdges);
+    const forwardEdges = validEdges.filter(function (e) {
+      return !backEdges.has(e.from + "->" + e.to);
+    });
+
+    const layer = {};
+    ids.forEach(function (id) { layer[id] = 0; });
+    for (let i = 0; i < ids.length + 1; i++) {
+      let changed = false;
+      forwardEdges.forEach(function (e) {
+        if (layer[e.to] < layer[e.from] + 1) {
+          layer[e.to] = layer[e.from] + 1;
+          changed = true;
+        }
+      });
+      if (!changed) break;
+    }
+
+    const byLayer = {};
+    ids.forEach(function (id) {
+      const L = layer[id];
+      (byLayer[L] = byLayer[L] || []).push(id);
+    });
+    const layerKeys = Object.keys(byLayer).map(Number);
+    const maxLayer = layerKeys.length ? Math.max.apply(null, layerKeys) : 0;
+
+    const pos = {};
+    for (let L = 0; L <= maxLayer; L++) {
+      const group = (byLayer[L] || []).sort();
+      const totalH = group.length * nodeH + Math.max(0, group.length - 1) * yGap;
+      group.forEach(function (id, i) {
+        pos[id] = { x: L * (nodeW + xGap), y: i * (nodeH + yGap) - totalH / 2 };
+      });
+    }
+    let minY = 0, maxY = 0;
+    Object.keys(pos).forEach(function (id) {
+      minY = Math.min(minY, pos[id].y);
+      maxY = Math.max(maxY, pos[id].y + nodeH);
+    });
+    Object.keys(pos).forEach(function (id) { pos[id].y -= minY; });
+
+    return {
+      pos: pos,
+      width: (maxLayer + 1) * nodeW + maxLayer * xGap,
+      height: maxY - minY,
+      nodeW: nodeW, nodeH: nodeH,
+      backEdges: backEdges,
+    };
+  }
+
+  function edgePathD(from, to, nodeW, nodeH, isBack) {
+    const x1 = from.x + nodeW, y1 = from.y + nodeH / 2;
+    const x2 = to.x, y2 = to.y + nodeH / 2;
+    if (!isBack && x2 >= x1) {
+      const dx = Math.max(40, (x2 - x1) / 2);
+      return "M " + x1 + " " + y1 + " C " + (x1 + dx) + " " + y1 + ", " + (x2 - dx) + " " + y2 + ", " + x2 + " " + y2;
+    }
+    const midY = Math.max(from.y, to.y) + nodeH + 46;
+    return "M " + x1 + " " + y1 + " C " + (x1 + 40) + " " + midY + ", " + (x2 - 40) + " " + midY + ", " + x2 + " " + y2;
+  }
+
+  // ============================================================
+  // 3. Small DOM helpers
+  // ============================================================
+  const SVGNS = "http://www.w3.org/2000/svg";
+  function svgEl(tag, attrs) {
+    const el = document.createElementNS(SVGNS, tag);
+    for (const k in attrs) el.setAttribute(k, attrs[k]);
+    return el;
+  }
+  function el(tag, attrs, html) {
+    const e = document.createElement(tag);
+    for (const k in (attrs || {})) {
+      if (k === "class") e.className = attrs[k];
+      else e.setAttribute(k, attrs[k]);
+    }
+    if (html !== undefined) e.innerHTML = html;
+    return e;
+  }
+  function escapeHtml(s) {
+    const d = document.createElement("div");
+    d.textContent = s == null ? "" : String(s);
+    return d.innerHTML;
+  }
+  function clear(node) { while (node.firstChild) node.removeChild(node.firstChild); }
+  function wrapLabel(text, maxChars) {
+    if (!text) return [""];
+    if (text.length <= maxChars) return [text];
+    const words = text.split(" ");
+    const lines = []; let cur = "";
+    words.forEach(function (w) {
+      if ((cur + " " + w).trim().length > maxChars && cur) { lines.push(cur); cur = w; }
+      else cur = (cur + " " + w).trim();
+    });
+    if (cur) lines.push(cur);
+    return lines.slice(0, 2);
+  }
+
+  // ============================================================
+  // 4. State
+  // ============================================================
+  const state = {
+    activeTab: null,
+    selectedModule: null,
+    searchTerm: "",
+    view: { x: 40, y: 40, scale: 1 },
+  };
+  const modulesById = {};
+  (DATA.modules || []).forEach(function (m) { modulesById[m.slug] = m; });
+
+  // ============================================================
+  // 5. Header meta + tabs
+  // ============================================================
+  document.getElementById("brand-name").textContent = DATA.project_name || "System Diagram";
+  document.getElementById("brand-meta").textContent =
+    "generated " + (DATA.generated_at || "—") +
+    " · " + (DATA.mode || "full trace") +
+    " · " + (DATA.source_commit ? DATA.source_commit.slice(0, 12) : "no commit info");
+
+  const TAB_DEFS = [
+    { id: "modules", label: "Modules", show: true },
+    { id: "flows", label: "Key Flows", show: (DATA.flows || []).length > 0 },
+    { id: "context", label: "System Context", show: !!DATA.context },
+    { id: "data_model", label: "Data Model", show: !!DATA.data_model },
+    { id: "deployment", label: "Deployment", show: !!DATA.deployment },
+  ];
+  const tabsEl = document.getElementById("tabs");
+  TAB_DEFS.filter(function (t) { return t.show; }).forEach(function (t) {
+    const b = el("button", {}, escapeHtml(t.label));
+    b.addEventListener("click", function () { setActiveTab(t.id); });
+    b.dataset.tabId = t.id;
+    tabsEl.appendChild(b);
+  });
+
+  function setActiveTab(id) {
+    state.activeTab = id;
+    Array.prototype.forEach.call(tabsEl.children, function (b) {
+      b.classList.toggle("active", b.dataset.tabId === id);
+    });
+    renderActiveTab();
+  }
+
+  // ============================================================
+  // 6. Sidebar module list + search
+  // ============================================================
+  const moduleListEl = document.getElementById("module-list");
+  function renderModuleList() {
+    clear(moduleListEl);
+    const term = state.searchTerm.toLowerCase();
+    (DATA.modules || []).forEach(function (m) {
+      const matches = !term || m.name.toLowerCase().indexOf(term) !== -1 || m.slug.toLowerCase().indexOf(term) !== -1;
+      const item = el("div", { class: "module-item" + (matches ? "" : " dimmed") }, escapeHtml(m.name));
+      if (m.slug === state.selectedModule) item.classList.add("selected");
+      item.addEventListener("click", function () {
+        setActiveTab("modules");
+        selectModule(m.slug);
+      });
+      moduleListEl.appendChild(item);
+    });
+  }
+  document.getElementById("search-input").addEventListener("input", function (e) {
+    state.searchTerm = e.target.value;
+    renderModuleList();
+    if (state.activeTab === "modules") highlightSearch();
+  });
+
+  // ============================================================
+  // 7. Detail panel
+  // ============================================================
+  const detailEl = document.getElementById("detail-panel");
+  function showModuleDetail(m) {
+    clear(detailEl);
+    detailEl.appendChild(el("div", { class: "detail-title" }, escapeHtml(m.name) + (m.confirmed === false ? " ⋯" : "")));
+    detailEl.appendChild(el("div", { class: "detail-path" }, escapeHtml(m.path || "")));
+    if (m.confirmed === false) {
+      detailEl.appendChild(el("div", { class: "detail-hint" }, "Unconfirmed -- quick-scan mode, not individually traced this run."));
+    }
+    if (m.role) {
+      const s = el("div", { class: "detail-section" });
+      s.appendChild(el("div", { class: "detail-label" }, "Role"));
+      s.appendChild(el("div", { class: "detail-body" }, escapeHtml(m.role)));
+      detailEl.appendChild(s);
+    }
+    const deps = (DATA.edges || []).filter(function (e) { return e.from === m.slug; });
+    const usedBy = (DATA.edges || []).filter(function (e) { return e.to === m.slug; });
+    function edgeSection(title, list, otherKey) {
+      if (!list.length) return;
+      const s = el("div", { class: "detail-section" });
+      s.appendChild(el("div", { class: "detail-label" }, title));
+      const ul = el("ul", { class: "detail-list" });
+      list.forEach(function (e) {
+        const other = modulesById[e[otherKey]];
+        const li = el("li", {},
+          '<span class="who">' + escapeHtml(other ? other.name : e[otherKey]) + "</span>" +
+          (e.label ? " — " + escapeHtml(e.label) : "") +
+          (e.confirmed === false ? ' <span class="detail-hint">(unconfirmed)</span>' : ""));
+        ul.appendChild(li);
+      });
+      s.appendChild(ul);
+      detailEl.appendChild(s);
+    }
+    edgeSection("Depends on", deps, "to");
+    edgeSection("Used by", usedBy, "from");
+    if (m.doc) {
+      const link = el("a", { class: "detail-link", href: m.doc }, "Open module doc →");
+      detailEl.appendChild(link);
+    }
+  }
+  function showGenericDetail(title, path, sub, rows, linkHref, linkText) {
+    clear(detailEl);
+    detailEl.appendChild(el("div", { class: "detail-title" }, escapeHtml(title)));
+    if (path) detailEl.appendChild(el("div", { class: "detail-path" }, escapeHtml(path)));
+    if (sub) {
+      const s = el("div", { class: "detail-section" });
+      s.appendChild(el("div", { class: "detail-body" }, escapeHtml(sub)));
+      detailEl.appendChild(s);
+    }
+    (rows || []).forEach(function (r) {
+      const s = el("div", { class: "detail-section" });
+      s.appendChild(el("div", { class: "detail-label" }, escapeHtml(r.label)));
+      s.appendChild(el("div", { class: "detail-body" }, escapeHtml(r.value)));
+      detailEl.appendChild(s);
+    });
+    if (linkHref) detailEl.appendChild(el("a", { class: "detail-link", href: linkHref }, linkText || "Open →"));
+  }
+
+  // ============================================================
+  // 8. Pan / zoom (shared by all SVG graph tabs)
+  // ============================================================
+  const canvasEl = document.getElementById("canvas");
+  const viewport = document.getElementById("canvas-viewport");
+  function applyView() {
+    viewport.setAttribute("transform",
+      "translate(" + state.view.x + "," + state.view.y + ") scale(" + state.view.scale + ")");
+  }
+  function fitToScreen(graphWidth, graphHeight) {
+    const wrap = document.getElementById("canvas-wrap");
+    const w = wrap.clientWidth - 60, h = wrap.clientHeight - 60;
+    const scale = Math.min(1.15, Math.max(0.25, Math.min(w / Math.max(graphWidth, 1), h / Math.max(graphHeight, 1))));
+    state.view.scale = scale;
+    state.view.x = 40;
+    state.view.y = Math.max(40, (wrap.clientHeight - graphHeight * scale) / 2);
+    applyView();
+  }
+  let dragging = false, dragStart = null;
+  canvasEl.addEventListener("mousedown", function (e) {
+    dragging = true; dragStart = { x: e.clientX, y: e.clientY, vx: state.view.x, vy: state.view.y };
+    canvasEl.classList.add("dragging");
+  });
+  window.addEventListener("mousemove", function (e) {
+    if (!dragging) return;
+    state.view.x = dragStart.vx + (e.clientX - dragStart.x);
+    state.view.y = dragStart.vy + (e.clientY - dragStart.y);
+    applyView();
+  });
+  window.addEventListener("mouseup", function () { dragging = false; canvasEl.classList.remove("dragging"); });
+  canvasEl.addEventListener("wheel", function (e) {
+    e.preventDefault();
+    const factor = e.deltaY < 0 ? 1.08 : 0.93;
+    state.view.scale = Math.min(2.5, Math.max(0.15, state.view.scale * factor));
+    applyView();
+  }, { passive: false });
+  let touchStart = null;
+  canvasEl.addEventListener("touchstart", function (e) {
+    if (e.touches.length === 1) touchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY, vx: state.view.x, vy: state.view.y };
+  }, { passive: true });
+  canvasEl.addEventListener("touchmove", function (e) {
+    if (!touchStart || e.touches.length !== 1) return;
+    state.view.x = touchStart.vx + (e.touches[0].clientX - touchStart.x);
+    state.view.y = touchStart.vy + (e.touches[0].clientY - touchStart.y);
+    applyView();
+  }, { passive: true });
+  document.getElementById("zoom-in").addEventListener("click", function () {
+    state.view.scale = Math.min(2.5, state.view.scale * 1.2); applyView();
+  });
+  document.getElementById("zoom-out").addEventListener("click", function () {
+    state.view.scale = Math.max(0.15, state.view.scale / 1.2); applyView();
+  });
+  document.getElementById("zoom-reset").addEventListener("click", function () {
+    if (state._lastGraphSize) fitToScreen(state._lastGraphSize.w, state._lastGraphSize.h);
+  });
+
+  // ============================================================
+  // 9. Generic graph renderer — used for Modules / Context / Deployment / Data Model
+  // ============================================================
+  function renderGraphTab(nodes, edges, opts) {
+    opts = opts || {};
+    document.getElementById("legend").style.display = "flex";
+    document.getElementById("canvas-wrap").style.display = "block";
+    document.getElementById("empty-state").style.display = "none";
+    clear(viewport);
+
+    if (!nodes.length) {
+      document.getElementById("empty-state").style.display = "flex";
+      document.getElementById("empty-state").textContent = opts.emptyText || "No data for this view.";
+      return;
+    }
+
+    const layout = layoutGraph(nodes, edges, {});
+    state._lastGraphSize = { w: layout.width, h: layout.height };
+
+    // edges first (under nodes)
+    edges.forEach(function (e) {
+      const from = layout.pos[e.from], to = layout.pos[e.to];
+      if (!from || !to) return;
+      const isBack = layout.backEdges.has(e.from + "->" + e.to);
+      const d = edgePathD(from, to, layout.nodeW, layout.nodeH, isBack);
+      const path = svgEl("path", { d: d, class: "edge-path" + (e.kind === "async" ? " async" : "") + (e.confirmed === false ? " unconfirmed" : "") });
+      path.dataset.from = e.from; path.dataset.to = e.to;
+      viewport.appendChild(path);
+      if (e.label) {
+        const mx = (from.x + layout.nodeW + to.x) / 2, my = (from.y + to.y) / 2 + layout.nodeH / 2 - 6;
+        const t = svgEl("text", { x: mx, y: my, class: "edge-label", "text-anchor": "middle" });
+        t.textContent = e.label.length > 34 ? e.label.slice(0, 32) + "…" : e.label;
+        viewport.appendChild(t);
+      }
+    });
+
+    // nodes
+    nodes.forEach(function (n) {
+      const p = layout.pos[n.id];
+      if (!p) return;
+      const g = svgEl("g", { class: "node-group", transform: "translate(" + p.x + "," + p.y + ")" });
+      g.dataset.id = n.id;
+      const rectClass = "node-rect" + (n.kind === "external" ? " external" : "") + (n.confirmed === false ? " unconfirmed" : "");
+      g.appendChild(svgEl("rect", { width: layout.nodeW, height: layout.nodeH, rx: 3, class: rectClass }));
+      // blueprint corner ticks
+      [[0, 0, 1, 1], [layout.nodeW, 0, -1, 1], [0, layout.nodeH, 1, -1], [layout.nodeW, layout.nodeH, -1, -1]].forEach(function (c) {
+        const x = c[0], y = c[1], dx = c[2] * 7, dy = c[3] * 7;
+        g.appendChild(svgEl("path", { d: "M " + (x - dx * 0) + " " + y + " l " + dx + " 0", class: "node-tick" }));
+        g.appendChild(svgEl("path", { d: "M " + x + " " + y + " l 0 " + dy, class: "node-tick" }));
+      });
+      const lines = wrapLabel(n.label, 20);
+      lines.forEach(function (line, i) {
+        const t = svgEl("text", {
+          x: layout.nodeW / 2, y: layout.nodeH / 2 - (lines.length - 1) * 7 + i * 14 + (n.sub ? -4 : 4),
+          class: "node-label", "text-anchor": "middle",
+        });
+        t.textContent = line;
+        g.appendChild(t);
+      });
+      if (n.sub) {
+        const t = svgEl("text", { x: layout.nodeW / 2, y: layout.nodeH - 9, class: "node-sub", "text-anchor": "middle" });
+        t.textContent = n.sub;
+        g.appendChild(t);
+      }
+      g.addEventListener("click", function () {
+        if (opts.onNodeClick) opts.onNodeClick(n);
+      });
+      viewport.appendChild(g);
+    });
+
+    fitToScreen(layout.width, layout.height);
+    if (state.selectedModule) applySelectionStyles();
+  }
+
+  function applySelectionStyles() {
+    const sel = state.selectedModule;
+    Array.prototype.forEach.call(viewport.querySelectorAll(".node-group"), function (g) {
+      const match = g.dataset.id === sel;
+      g.classList.toggle("dimmed", !!sel && !match);
+      const rect = g.querySelector("rect");
+      if (rect) rect.classList.toggle("selected", match);
+    });
+    Array.prototype.forEach.call(viewport.querySelectorAll(".edge-path"), function (p) {
+      const touches = p.dataset.from === sel || p.dataset.to === sel;
+      p.classList.toggle("highlighted", !!sel && touches);
+      p.classList.toggle("dimmed", !!sel && !touches);
+    });
+  }
+  function highlightSearch() {
+    const term = state.searchTerm.toLowerCase();
+    Array.prototype.forEach.call(viewport.querySelectorAll(".node-group"), function (g) {
+      const m = modulesById[g.dataset.id];
+      const matches = !term || (m && (m.name.toLowerCase().indexOf(term) !== -1 || m.slug.toLowerCase().indexOf(term) !== -1));
+      g.classList.toggle("dimmed", !matches);
+    });
+  }
+
+  function selectModule(slug) {
+    state.selectedModule = slug;
+    renderModuleList();
+    const m = modulesById[slug];
+    if (m) showModuleDetail(m);
+    applySelectionStyles();
+  }
+
+  // ============================================================
+  // 10. Tab renderers
+  // ============================================================
+  function renderModulesTab() {
+    const anyUnconfirmed = (DATA.modules || []).some(function (m) { return m.confirmed === false; }) ||
+      (DATA.edges || []).some(function (e) { return e.confirmed === false; });
+    document.getElementById("legend").innerHTML =
+      '<span class="legend-item"><span class="legend-line"></span> sync call</span>' +
+      '<span class="legend-item"><span class="legend-line async"></span> async / fire-and-forget</span>' +
+      (anyUnconfirmed ? '<span class="legend-item"><span class="legend-line unconfirmed"></span> unconfirmed (quick-scan)</span>' : '');
+    const nodes = (DATA.modules || []).map(function (m) { return { id: m.slug, label: m.name, sub: m.path, kind: "module", confirmed: m.confirmed }; });
+    renderGraphTab(nodes, DATA.edges || [], {
+      onNodeClick: function (n) { selectModule(n.id); },
+      emptyText: "No modules traced yet.",
+    });
+    if (state.selectedModule) applySelectionStyles();
+  }
+
+  function renderContextTab() {
+    const ctx = DATA.context || { actors: [], external_systems: [], edges: [] };
+    document.getElementById("legend").innerHTML =
+      '<span class="legend-item"><span class="legend-swatch" style="background:var(--blueprint-fill);border:1px solid var(--blueprint)"></span> this system</span>' +
+      '<span class="legend-item"><span class="legend-swatch" style="background:var(--paper);border:1px dashed var(--ink-faint)"></span> external</span>';
+    const nodes = [{ id: "__system__", label: DATA.project_name || "This system", kind: "module" }]
+      .concat((ctx.actors || []).map(function (a, i) { return { id: "actor_" + i, label: a, kind: "external" }; }))
+      .concat((ctx.external_systems || []).map(function (s, i) { return { id: "ext_" + i, label: s, kind: "external" }; }));
+    const nameToId = {};
+    nodes.forEach(function (n) { nameToId[n.label] = n.id; });
+    const edges = (ctx.edges || []).map(function (e) {
+      return { from: nameToId[e.from] || e.from, to: nameToId[e.to] || e.to, label: e.label };
+    });
+    renderGraphTab(nodes, edges, { onNodeClick: function (n) {
+      showGenericDetail(n.label, "", n.kind === "external" ? "External to this system." : "The system this trace documents.");
+    }, emptyText: "No system-context data." });
+  }
+
+  function renderDataModelTab() {
+    const dm = DATA.data_model || { entities: [], relations: [] };
+    document.getElementById("legend").style.display = "none";
+    document.getElementById("canvas-wrap").style.display = "none";
+    let host = document.getElementById("simple-tab-host");
+    if (!host) {
+      host = el("div", { id: "simple-tab-host", class: "simple-tab-wrap" });
+      document.querySelector(".layout").insertBefore(host, document.getElementById("detail-panel"));
+    }
+    host.style.display = "block";
+    clear(host);
+    if (!(dm.entities || []).length) {
+      host.appendChild(el("div", { class: "detail-hint" }, "No data model captured for this project."));
+      return;
+    }
+    const grid = el("div", { class: "card-grid" });
+    dm.entities.forEach(function (ent) {
+      const card = el("div", { class: "info-card" });
+      card.appendChild(el("h3", {}, escapeHtml(ent.name)));
+      const ul = el("ul", { class: "field-list" });
+      (ent.fields || []).forEach(function (f) { ul.appendChild(el("li", {}, escapeHtml(f))); });
+      card.appendChild(ul);
+      const rels = (dm.relations || []).filter(function (r) { return r.from === ent.name || r.to === ent.name; });
+      if (rels.length) {
+        const relBox = el("div", { class: "rel-list" });
+        relBox.innerHTML = rels.map(function (r) {
+          return escapeHtml(r.from) + " → " + escapeHtml(r.to) + (r.label ? " (" + escapeHtml(r.label) + ")" : "");
+        }).join("<br>");
+        card.appendChild(relBox);
+      }
+      card.addEventListener("click", function () {
+        showGenericDetail(ent.name, ent.module ? "module: " + ent.module : "", "", [], ent.module && modulesById[ent.module] ? modulesById[ent.module].doc : null, "Open owning module →");
+      });
+      grid.appendChild(card);
+    });
+    host.appendChild(grid);
+  }
+
+  function renderDeploymentTab() {
+    const dep = DATA.deployment || { services: [] };
+    document.getElementById("legend").style.display = "none";
+    document.getElementById("canvas-wrap").style.display = "none";
+    let host = document.getElementById("simple-tab-host");
+    if (!host) {
+      host = el("div", { id: "simple-tab-host", class: "simple-tab-wrap" });
+      document.querySelector(".layout").insertBefore(host, document.getElementById("detail-panel"));
+    }
+    host.style.display = "block";
+    clear(host);
+    if (!(dep.services || []).length) {
+      host.appendChild(el("div", { class: "detail-hint" }, "No deployment topology captured for this project."));
+      return;
+    }
+    const grid = el("div", { class: "card-grid" });
+    dep.services.forEach(function (svc) {
+      const card = el("div", { class: "info-card" });
+      card.appendChild(el("h3", {}, escapeHtml(svc.name)));
+      const ul = el("ul", { class: "field-list" });
+      if (svc.module) ul.appendChild(el("li", {}, "module: " + escapeHtml(svc.module)));
+      (svc.ports || []).forEach(function (p) { ul.appendChild(el("li", {}, "port " + escapeHtml(p))); });
+      if ((svc.depends_on || []).length) ul.appendChild(el("li", {}, "depends on: " + svc.depends_on.map(escapeHtml).join(", ")));
+      card.appendChild(ul);
+      grid.appendChild(card);
+    });
+    host.appendChild(grid);
+  }
+
+  function renderFlowsTab() {
+    document.getElementById("legend").style.display = "none";
+    document.getElementById("canvas-wrap").style.display = "none";
+    let host = document.getElementById("flows-host");
+    if (!host) {
+      host = el("div", { id: "flows-host", class: "flows-wrap" });
+      document.querySelector(".layout").insertBefore(host, document.getElementById("detail-panel"));
+    }
+    host.style.display = "flex";
+    clear(host);
+    const list = el("div", { class: "flow-list" });
+    const detail = el("div", { class: "flow-detail" });
+    host.appendChild(list); host.appendChild(detail);
+
+    function showFlow(idx) {
+      const flow = DATA.flows[idx];
+      Array.prototype.forEach.call(list.children, function (c, i) { c.classList.toggle("selected", i === idx); });
+      clear(detail);
+      detail.appendChild(el("h2", {}, escapeHtml(flow.name)));
+      const modsInvolved = Array.from(new Set((flow.steps || []).reduce(function (acc, s) {
+        return acc.concat([s.from, s.to]);
+      }, [])));
+      detail.appendChild(el("div", { class: "flow-modules" }, modsInvolved.map(escapeHtml).join("  ·  ")));
+      (flow.steps || []).forEach(function (step, i) {
+        const row = el("div", { class: "flow-step" });
+        const lineCol = el("div", { class: "flow-step-line" });
+        lineCol.appendChild(el("div", { class: "flow-step-dot" }));
+        if (i < flow.steps.length - 1) lineCol.appendChild(el("div", { class: "flow-step-rule" }));
+        row.appendChild(lineCol);
+        const body = el("div", { class: "flow-step-body" });
+        body.innerHTML =
+          '<div class="flow-step-who"><span class="from">' + escapeHtml(step.from) + '</span>' +
+          '<span class="arrow">' + (step.kind === "async" ? "⇢" : "→") + "</span>" +
+          '<span class="to">' + escapeHtml(step.to) + "</span></div>" +
+          (step.label ? '<div class="flow-step-label">' + escapeHtml(step.label) + "</div>" : "") +
+          (step.note ? '<div class="flow-step-note">' + escapeHtml(step.note) + "</div>" : "");
+        row.appendChild(body);
+        detail.appendChild(row);
+      });
+    }
+
+    (DATA.flows || []).forEach(function (flow, idx) {
+      const card = el("div", { class: "flow-card" }, escapeHtml(flow.name));
+      card.addEventListener("click", function () { showFlow(idx); });
+      list.appendChild(card);
+    });
+    if ((DATA.flows || []).length) showFlow(0);
+  }
+
+  // ============================================================
+  // 11. Tab dispatch
+  // ============================================================
+  function hideExtraHosts() {
+    ["flows-host", "simple-tab-host"].forEach(function (id) {
+      const h = document.getElementById(id);
+      if (h) h.style.display = "none";
+    });
+  }
+  function renderActiveTab() {
+    hideExtraHosts();
+    document.getElementById("canvas-wrap").style.display = "block";
+    document.getElementById("legend").style.display = "flex";
+    if (state.activeTab === "modules") renderModulesTab();
+    else if (state.activeTab === "context") renderContextTab();
+    else if (state.activeTab === "data_model") renderDataModelTab();
+    else if (state.activeTab === "deployment") renderDeploymentTab();
+    else if (state.activeTab === "flows") renderFlowsTab();
+  }
+
+  // ============================================================
+  // 12. Boot
+  // ============================================================
+  renderModuleList();
+  const firstTab = TAB_DEFS.filter(function (t) { return t.show; })[0];
+  setActiveTab(firstTab ? firstTab.id : "modules");
+  window.addEventListener("resize", function () {
+    if (state._lastGraphSize && (state.activeTab === "modules" || state.activeTab === "context")) {
+      fitToScreen(state._lastGraphSize.w, state._lastGraphSize.h);
+    }
+  });
+})();
+</script>
+</body>
+</html>

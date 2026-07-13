@@ -68,7 +68,124 @@ def load_registry(path: Path | None = None) -> dict[str, Any]:
     return data
 
 
-def _validate_harness_entry(harness_entry: dict[str, Any], seen: set[str]) -> str:
+_MIN_DRIVE_LETTER_LEN = 2
+
+
+def _validate_declared_artifact_path(harness_id: str, path: str) -> None:
+    """Validate declared artifact path.
+
+    Rejects remote, absolute, traversal, Windows drive-letter, and UNC paths.
+    """
+    if path.startswith(REMOTE_ARTIFACT_PREFIXES):
+        msg = (
+            f"{harness_id}: remote artifact {path!r} is not allowed; "
+            "a registry-declared certification artifact must be locally verifiable"
+        )
+        raise HarnessRegistryError(msg)
+
+    # Reject UNC paths (\\server\share or //server/share).
+    # Must be checked before absolute-path check because // starts with /.
+    if path.startswith(("\\\\", "//")):
+        msg = (
+            f"{harness_id}: UNC artifact path {path!r} is not allowed; "
+            "artifact paths must be repo-relative"
+        )
+        raise HarnessRegistryError(msg)
+
+    # Reject absolute paths.
+    if path.startswith("/"):
+        msg = (
+            f"{harness_id}: absolute artifact path {path!r} is not "
+            "allowed; artifact paths must be repo-relative"
+        )
+        raise HarnessRegistryError(msg)
+
+    # Reject path-traversal components.
+    normalized = Path(path).as_posix()
+    if ".." in normalized.split("/"):
+        msg = (
+            f"{harness_id}: artifact path {path!r} contains '..' "
+            "traversal; artifact paths must be contained within the repo"
+        )
+        raise HarnessRegistryError(msg)
+
+    # Reject Windows drive-letter paths (e.g. C:\foo).
+    if len(path) >= _MIN_DRIVE_LETTER_LEN and path[1] == ":":
+        msg = (
+            f"{harness_id}: Windows-style artifact path {path!r} is "
+            "not allowed; artifact paths must use POSIX relative notation"
+        )
+        raise HarnessRegistryError(msg)
+
+
+def _validate_prerequisites(
+    prereqs: list[str], harness_id: str, all_ids: set[str]
+) -> None:
+    """Validate a harness's prerequisite list.
+
+    Rejects duplicates, self-references, and unknown IDs.  Also validates
+    the graph is acyclic by running a topological-sort check against the
+    full set of harness entries (deferred to a per-registry call).
+    """
+    if len(prereqs) != len(set(prereqs)):
+        msg = f"{harness_id}: prerequisites contain duplicates: {prereqs}"
+        raise HarnessRegistryError(msg)
+
+    if harness_id in prereqs:
+        msg = f"{harness_id}: prerequisite references itself"
+        raise HarnessRegistryError(msg)
+
+    for prereq_id in prereqs:
+        if prereq_id not in all_ids:
+            msg = f"{harness_id}: prerequisite {prereq_id!r} is not a known harness ID"
+            raise HarnessRegistryError(msg)
+
+
+def _validate_prerequisite_cycles(
+    harnesses: list[dict[str, Any]],
+) -> None:
+    """Validate the prerequisite graph has no cycles (topological sort)."""
+    # Build adjacency and in-degree maps for all harnesses.
+    by_id: dict[str, dict[str, Any]] = {}
+    for h in harnesses:
+        hid = str(h["id"])
+        by_id[hid] = h
+
+    in_degree: dict[str, int] = dict.fromkeys(by_id, 0)
+    adjacency: dict[str, list[str]] = {hid: [] for hid in by_id}
+
+    for h in harnesses:
+        hid = str(h["id"])
+        prereqs_entry = h.get("prerequisites")
+        if isinstance(prereqs_entry, list):
+            prereqs_raw: list[object] = cast("list[object]", prereqs_entry)
+            prereq_items: list[str] = [str(p) for p in prereqs_raw]
+            for pid in prereq_items:
+                if pid in by_id:
+                    adjacency[pid].append(hid)
+                    in_degree[hid] += 1
+
+    # Kahn's algorithm.
+    queue = [hid for hid, deg in in_degree.items() if deg == 0]
+    sorted_count = 0
+    while queue:
+        node = queue.pop()
+        sorted_count += 1
+        for neighbor in adjacency[node]:
+            in_degree[neighbor] -= 1
+            if in_degree[neighbor] == 0:
+                queue.append(neighbor)
+
+    if sorted_count != len(by_id):
+        cyclic = [hid for hid, deg in in_degree.items() if deg > 0]
+        msg = f"prerequisite graph contains a cycle involving: {sorted(cyclic)}"
+        raise HarnessRegistryError(msg)
+
+
+def _validate_harness_entry(
+    harness_entry: dict[str, Any],
+    seen: set[str],
+) -> str:
     """Validate a single harness entry; return the normalized harness id."""
     for field in REQUIRED_FIELDS:
         if field not in harness_entry:
@@ -89,12 +206,8 @@ def _validate_harness_entry(harness_entry: dict[str, Any], seen: set[str]) -> st
         msg = f"{harness_id}: artifact is required"
         raise HarnessRegistryError(msg)
     declared_artifact = str(harness_entry["artifact"])
-    if declared_artifact.startswith(REMOTE_ARTIFACT_PREFIXES):
-        msg = (
-            f"{harness_id}: remote artifact {declared_artifact!r} is not allowed; "
-            "a registry-declared certification artifact must be locally verifiable"
-        )
-        raise HarnessRegistryError(msg)
+    _validate_declared_artifact_path(harness_id, declared_artifact)
+
     applicability = str(harness_entry.get("applicability", ""))
     if applicability not in APPLICABILITY:
         msg = f"{harness_id}: invalid applicability {applicability!r}"
@@ -192,9 +305,21 @@ def validate_registry(data: dict[str, Any]) -> None:
     harnesses = cast("list[dict[str, Any]]", harnesses_raw)
 
     seen: set[str] = set()
+    all_ids: set[str] = set()
     for harness_entry in harnesses:
-        _ = _validate_harness_entry(harness_entry, seen)
+        hid = _validate_harness_entry(harness_entry, seen)
+        all_ids.add(hid)
 
+    # Validate prerequisites for every harness after all IDs are known.
+    for harness_entry in harnesses:
+        prereqs_entry = harness_entry.get("prerequisites")
+        hid = str(harness_entry["id"])
+        if isinstance(prereqs_entry, list):
+            prereqs_raw: list[object] = cast("list[object]", prereqs_entry)
+            prereqs: list[str] = [str(p) for p in prereqs_raw]
+            _validate_prerequisites(prereqs, hid, all_ids)
+
+    _validate_prerequisite_cycles(harnesses)
     _ = _validate_registry_counts(data, harnesses)
     _ = _validate_foundation_closure(data, seen)
 
@@ -214,3 +339,12 @@ def foundation_closure(registry: dict[str, Any]) -> list[str]:
         raise HarnessRegistryError(msg)
     closure = cast("list[Any]", closure_raw)
     return [str(item) for item in closure]
+
+
+def get_prerequisites(registry: dict[str, Any], harness_id: str) -> list[str]:
+    harness = get_harness(registry, harness_id)
+    prereqs_entry = harness.get("prerequisites")
+    if isinstance(prereqs_entry, list):
+        prereqs_raw: list[object] = cast("list[object]", prereqs_entry)
+        return [str(p) for p in prereqs_raw]
+    return []

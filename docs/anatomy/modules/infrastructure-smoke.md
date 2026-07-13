@@ -7,6 +7,7 @@
 
 - `python scripts/migration_smoke.py` — validates migration rollback/recovery.
 - `python scripts/minio_roundtrip.py` — validates object storage lifecycle.
+- `python scripts/build_harness_registry.py` — rebuilds the machine-readable harness registry from the Markdown catalog; now derives prerequisite relationships from section/layer layout.
 
 ## Depends on
 
@@ -17,7 +18,7 @@
 
 ## Used by
 
-- **`delivery-ci`** — starts infrastructure and runs smoke harnesses (`.github/workflows/ci.yml:52`)
+- **`delivery-ci`** — starts services and executes database/object-store smokes (`.github/workflows/ci.yml:52`)
 
 ## Data & side effects
 
@@ -25,4 +26,4 @@
 
 ---
 
-_Traced from source on 2026-07-12. Files examined in depth: all files listed in this module’s internal structure or public interface._
+_Traced from source on 2026-07-13. Files examined in depth: all files listed in this module’s internal structure or public interface._

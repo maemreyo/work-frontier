@@ -33,7 +33,12 @@ class Invocation(BaseModel):
     )
     exit_code: int = Field(description="Process exit code")
     working_directory: str = Field(
-        description="Working directory (repo-relative) where command was executed"
+        min_length=1,
+        pattern=r"^[^/]",
+        description=(
+            "Working directory (repo-relative) where command was executed. "
+            "Must be a POSIX relative path (no leading slash)."
+        ),
     )
     start_time: AwareDatetime = Field(
         description="ISO 8601 timestamp when execution started (must be timezone-aware)"
@@ -112,7 +117,14 @@ class Artifact(BaseModel):
 
     model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
 
-    path: str = Field(min_length=1, description="File path relative to repository root")
+    path: str = Field(
+        min_length=1,
+        pattern=r"^[^/]",
+        description=(
+            "File path relative to repository root. "
+            "Must be a POSIX relative path (no leading slash)."
+        ),
+    )
     hashes: ArtifactHashes = Field(
         description="Content hashes with required canonical sha256",
     )
@@ -219,7 +231,21 @@ class EvidenceRecord(BaseModel):
         ),
     )
     environment: dict[str, str] = Field(
-        description="Environment fingerprint (OS, runtime versions, etc.)",
+        description=(
+            "Environment fingerprint (OS, runtime versions, etc.). "
+            "Must include 'os' key."
+        ),
+        json_schema_extra={
+            "required": ["os"],
+            "properties": {
+                "os": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Operating system identifier (e.g., "
+                    "linux-x86_64, darwin-arm64)",
+                }
+            },
+        },
     )
     artifacts: list[Artifact] = Field(
         default_factory=list,

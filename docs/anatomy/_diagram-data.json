@@ -14,15 +14,15 @@
     {
       "slug": "contracts",
       "name": "Canonical Contracts",
-      "role": "Defines canonical DecisionRecord and EvidenceRecord schemas plus harness registry contracts.",
+      "role": "Defines canonical DecisionRecord and EvidenceRecord schemas plus harness registry contracts with comprehensive validation.",
       "path": "backend/src/work_frontier/contracts",
       "doc": "modules/contracts.md"
     },
     {
       "slug": "evidence-runtime",
       "name": "Evidence Runtime",
-      "role": "Executes registered harnesses and writes reproducible evidence bound to the tested Git revision.",
-      "path": "backend/src/work_frontier/contracts",
+      "role": "Executes registered harnesses and writes reproducible evidence bound to the tested Git revision with tamper detection and prerequisite-satisfaction gating.",
+      "path": "scripts/run_harness.py",
       "doc": "modules/evidence-runtime.md"
     },
     {
@@ -35,7 +35,7 @@
     {
       "slug": "contract-generation",
       "name": "Contract Generation",
-      "role": "Generates JSON Schema and frontend Zod artifacts from the canonical Pydantic contract and checks drift.",
+      "role": "Generates JSON Schema and frontend Zod artifacts for both DecisionRecord and EvidenceRecord from the canonical Pydantic contracts and checks drift.",
       "path": "scripts/generate_contracts.py",
       "doc": "modules/contract-generation.md"
     },
@@ -49,7 +49,7 @@
     {
       "slug": "frontend-foundation",
       "name": "Frontend Foundation",
-      "role": "Contains TypeScript contract artifacts, evidence helper code and test/tooling configuration, but no product UI shell yet.",
+      "role": "Contains TypeScript contract artifacts (DecisionRecord and EvidenceRecord Zod validators with semantic validation), evidence helper code and test/tooling configuration, but no product UI shell yet.",
       "path": "frontend",
       "doc": "modules/frontend-foundation.md"
     },

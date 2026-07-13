@@ -2,7 +2,9 @@
 """Build or check the machine-readable harness registry from the catalog.
 
 Catalog is the sole semantic source of truth. This builder only:
-- parses catalog entries
+- parses catalog entries grouped by section/layer
+- derives prerequisites from catalog layout (layers execute bottom-up;
+  within each layer, sequence determines order)
 - marks foundation-closure IDs as implemented when their catalog command is local
 - does not rewrite harness meaning, name, or artifact semantics
 """
@@ -43,6 +45,34 @@ FOUNDATION_CLOSURE: tuple[str, ...] = (
 
 FIELD_RE = re.compile(r"\|\s*\*\*([^*]+)\*\*\s*\|\s*(.*?)\s*\|")
 
+# Section names whose harnesses live outside the numbered layer sequence.
+# Cross-cutting harnesses have no layer/sequence semantics in the catalog,
+# so they receive no derived prerequisites (conservative decision).
+CROSS_CUTTING_SECTION = "Cross-Cutting Harnesses"
+
+# Known numbered-layer prefixes.  PREFLIGHT lives in the Layer 1 (Static)
+# section of the catalog.
+KNOWN_LAYER_ORDER: dict[str, int] = {
+    "PREFLIGHT": 1,
+    "STATIC": 1,
+    "DOMAIN": 2,
+    "PROPERTY": 3,
+    "META": 4,
+    "CONTRACT": 5,
+    "INTEG": 6,
+    "PRODUCT": 7,
+    "OPS": 8,
+}
+
+# Layer-extraction pattern from a harness ID: WF-HAR-{LAYER}-{SEQ}-{NAME}
+# For IDs with an extra trailing qualifier like -L or -T the layer is
+# still the third segment.
+_HAR_ID_LAYER_RE = re.compile(r"^WF-HAR-([A-Z0-9]+(?:-[A-Z0-9]+)*)-\d+")
+
+# Sequence extraction from a harness ID: the first numeric segment after
+# WF-HAR-{LAYER}-
+_HAR_ID_SEQ_RE = re.compile(r"^WF-HAR-(?:[A-Z0-9]+(?:-[A-Z0-9]+)*)-(\d+)")
+
 
 def _clean_cell(value: str) -> str:
     value = value.strip()
@@ -52,29 +82,146 @@ def _clean_cell(value: str) -> str:
     return value
 
 
+def _extract_layer_from_id(harness_id: str) -> str:
+    """Extract the LAYER component from a WF-HAR-{LAYER}-{SEQ}-{NAME} id."""
+    m = _HAR_ID_LAYER_RE.match(harness_id)
+    if m:
+        return m.group(1)
+    return ""
+
+
+def _extract_sequence_from_id(harness_id: str) -> int:
+    """Extract the numeric SEQUENCE from a WF-HAR-{LAYER}-{SEQ}-{NAME} id."""
+    m = _HAR_ID_SEQ_RE.search(harness_id)
+    if m:
+        return int(m.group(1))
+    return 0
+
+
+def _section_title(line: str) -> str:
+    """Return the plain-text section title stripped of markdown and layer prefix."""
+    # "## Layer 1: Static (WF-HAR-STATIC)" -> "Layer 1: Static"
+    # "## Cross-Cutting Harnesses" -> "Cross-Cutting Harnesses"
+    title = line.lstrip("#").strip()
+    return title
+
+
+def _layer_number_for_harness(harness_id: str) -> int | None:
+    """Return the numeric layer order for a harness based on catalog placement.
+
+    Returns None if no unambiguous layer can be established.  Cross-cutting
+    harnesses receive None because the catalog provides no layer/sequence
+    semantics for them — a conservative decision that yields no derived
+    prerequisites.
+    """
+    # Check if this harness's layer prefix is a known numbered-layer prefix.
+    id_layer = _extract_layer_from_id(harness_id)
+    if id_layer in KNOWN_LAYER_ORDER:
+        return KNOWN_LAYER_ORDER[id_layer]
+
+    # Cross-cutting harnesses are outside the numbered layer sequence and
+    # receive no derived prerequisites.  Returns None so derive_prerequisites
+    # skips them.
+    return None
+
+
+def _harness_sort_key(
+    harness: dict[str, object],
+) -> tuple[int, int]:
+    layer_val = harness.get("_layer_order", 99)
+    seq_val = harness.get("_sequence", 0)
+    if not isinstance(layer_val, int):
+        layer_val = 99
+    if not isinstance(seq_val, int):
+        seq_val = 0
+    return (layer_val, seq_val)  # type: ignore[return-value]
+
+
+def derive_prerequisites(
+    harnesses: list[dict[str, object]],
+) -> None:
+    """Derive prerequisites for each harness from catalog layer ordering.
+
+    Prerequisites are all harnesses that must have been run before this one:
+    - All harnesses from lower-numbered layers in the catalog.
+    - Within the same layer, all harnesses that appear earlier in catalog
+      order (stable sort by layer, then sequence, then catalog position).
+    - When a harness has no unambiguous layer assignment (e.g. cross-cutting
+      harnesses outside the numbered-layer sequence), it gets no derived
+      prerequisites (conservative).
+
+    Mutates *harnesses* in place by adding a ``prerequisites`` list.
+    """
+    # Sort harnesses by (layer, sequence); stable sort preserves catalog
+    # order within equal (layer, sequence) groups.
+    sorted_harnesses = sorted(harnesses, key=_harness_sort_key)
+    for i, harness in enumerate(sorted_harnesses):
+        layer = harness.get("_layer_order")
+        prereqs: list[str] = []
+        if layer is not None:
+            for j in range(i):
+                candidate = sorted_harnesses[j]
+                clayer = candidate.get("_layer_order")
+                if clayer is not None:
+                    prereqs.append(str(candidate["id"]))
+        harness["prerequisites"] = prereqs
+
+    # Strip internal metadata before returning.
+    for h in harnesses:
+        _ = h.pop("_layer_order", None)
+        _ = h.pop("_sequence", None)
+
+
 def parse_catalog(text: str) -> list[dict[str, object]]:
-    parts = re.split(r"^### (WF-HAR-[^\n]+)\n", text, flags=re.MULTILINE)
-    harnesses: list[dict[str, object]] = []
-    for index in range(1, len(parts), 2):
-        title = parts[index].strip()
-        body = parts[index + 1]
-        match = re.match(r"^(WF-HAR-\S+):\s*(.+)$", title)
-        if match is None:
-            msg = f"unparseable harness header: {title}"
-            raise ValueError(msg)
-        harness_id, name = match.group(1), match.group(2).strip()
-        fields = {
-            key.strip(): _clean_cell(value) for key, value in FIELD_RE.findall(body)
-        }
-        blocks = fields.get("Blocks release", "").lower().startswith("yes")
-        applicability = "standard"
-        if harness_id.endswith("-L"):
-            applicability = "large"
-        elif harness_id.endswith("-T"):
-            applicability = "tenant"
-        status = "implemented" if harness_id in FOUNDATION_CLOSURE else "specified"
-        harnesses.append(
-            {
+    """Parse the catalog Markdown into a list of harness dicts.
+
+    Each result includes internal ``_layer_order`` and ``_sequence`` keys
+    used for prerequisite derivation; these are stripped before final output.
+    """
+    # Split the document into sections at ## headings.
+    lines = text.splitlines()
+    sections: list[tuple[str, list[str]]] = []
+    current_section = ""
+    current_lines: list[str] = []
+    for line in lines:
+        if line.startswith("## ") and not line.startswith("### "):
+            if current_section:
+                sections.append((current_section, current_lines))
+            current_section = _section_title(line)
+            current_lines = []
+        else:
+            current_lines.append(line)
+    if current_section:
+        sections.append((current_section, current_lines))
+
+    # Process each section using the existing ###-based harness parser.
+    all_harnesses: list[dict[str, object]] = []
+    for _, section_lines in sections:
+        section_text = "\n".join(section_lines)
+        parts = re.split(r"^### (WF-HAR-[^\n]+)\n", section_text, flags=re.MULTILINE)
+        for index in range(1, len(parts), 2):
+            title = parts[index].strip()
+            body = parts[index + 1]
+            match = re.match(r"^(WF-HAR-\S+):\s*(.+)$", title)
+            if match is None:
+                msg = f"unparseable harness header: {title}"
+                raise ValueError(msg)
+            harness_id, name = match.group(1), match.group(2).strip()
+            fields = {
+                key.strip(): _clean_cell(value) for key, value in FIELD_RE.findall(body)
+            }
+            blocks = fields.get("Blocks release", "").lower().startswith("yes")
+            applicability = "standard"
+            if harness_id.endswith("-L"):
+                applicability = "large"
+            elif harness_id.endswith("-T"):
+                applicability = "tenant"
+            status = "implemented" if harness_id in FOUNDATION_CLOSURE else "specified"
+
+            # Derive layer metadata from harness ID.
+            layer_order = _layer_number_for_harness(harness_id)
+
+            entry: dict[str, object] = {
                 "id": harness_id,
                 "name": name,
                 "command": fields.get("Command", ""),
@@ -84,9 +231,12 @@ def parse_catalog(text: str) -> list[dict[str, object]]:
                 "pass_criteria": fields.get("Pass criteria", ""),
                 "applicability": applicability,
                 "status": status,
+                "_layer_order": layer_order,
+                "_sequence": _extract_sequence_from_id(harness_id),
             }
-        )
-    return harnesses
+            all_harnesses.append(entry)
+
+    return all_harnesses
 
 
 def build_registry(harnesses: list[dict[str, object]]) -> dict[str, object]:
@@ -95,6 +245,9 @@ def build_registry(harnesses: list[dict[str, object]]) -> dict[str, object]:
         if harness_id not in by_id:
             msg = f"foundation closure harness missing from catalog: {harness_id}"
             raise ValueError(msg)
+
+    # Derive prerequisites from catalog layer ordering before building.
+    derive_prerequisites(harnesses)
 
     standard_blockers = [
         str(item["id"])

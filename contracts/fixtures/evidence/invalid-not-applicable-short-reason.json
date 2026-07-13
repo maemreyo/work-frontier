@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0.0",
   "harness_id": "WF-HAR-PREFLIGHT-01",
-  "status": "pass",
-  "run_id": "run-1720764000000",
+  "status": "not_applicable",
+  "run_id": "run-test-na-short-reason",
   "subject_sha": "a1b2c3d4e5f6789012345678901234567890abcd",
   "subject_tree_sha": "0123456789abcdef0123456789abcdef01234567",
   "invocation": {
@@ -11,7 +11,7 @@
     "working_directory": ".",
     "start_time": "2026-07-12T03:20:00Z",
     "end_time": "2026-07-12T03:20:15Z",
-    "duration_seconds": 15
+    "duration_seconds": 15.0
   },
   "tool": {
     "name": "pytest",
@@ -19,21 +19,21 @@
     "commit_sha": "a1b2c3d4e5f6789012345678901234567890abcd"
   },
   "applicability": "standard",
-  "applicability_reason": "Standard foundation closure fixture",
+  "applicability_reason": "Too short",
   "environment": {
     "os": "linux-x86_64",
     "python": "3.13.5"
   },
   "stdout_artifact": {
-    "path": ".omo/evidence/static/test-stdout.txt",
+    "path": "stdout.txt",
     "hashes": {
-      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      "sha256": "abababababababababababababababababababababababababababababababab"
     }
   },
   "stderr_artifact": {
-    "path": ".omo/evidence/static/test-stderr.txt",
+    "path": "stderr.txt",
     "hashes": {
-      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      "sha256": "abababababababababababababababababababababababababababababababab"
     }
   }
 }

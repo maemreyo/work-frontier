@@ -15,7 +15,7 @@
 
 ## Used by
 
-- **`delivery-ci`** — runs the ADR-006 preflight gate before broader verification (`.github/workflows/ci.yml:16`)
+- **`delivery-ci`** — runs the preflight gate before verification (`.github/workflows/ci.yml:16`)
 
 ## Data & side effects
 

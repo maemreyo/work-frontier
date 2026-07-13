@@ -92,7 +92,8 @@
       "pass_criteria": "Gate status passed; all positive documents validate; all negative fixtures reject with expected failure IDs; behavioral tests pass",
       "applicability": "standard",
       "status": "implemented",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": []
     },
     {
       "id": "WF-HAR-STATIC-01",
@@ -104,7 +105,10 @@
       "pass_criteria": "Zero errors",
       "applicability": "standard",
       "status": "implemented",
-      "artifact_mode": "runner_evidence"
+      "artifact_mode": "runner_evidence",
+      "prerequisites": [
+        "WF-HAR-PREFLIGHT-01"
+      ]
     },
     {
       "id": "WF-HAR-STATIC-02",
@@ -116,7 +120,11 @@
       "pass_criteria": "Zero violations of ADR-006 and architecture import matrix; unknown layers fail closed; 36-pair behavioral fixtures pass",
       "applicability": "standard",
       "status": "implemented",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": [
+        "WF-HAR-PREFLIGHT-01",
+        "WF-HAR-STATIC-01"
+      ]
     },
     {
       "id": "WF-HAR-STATIC-03",
@@ -128,7 +136,12 @@
       "pass_criteria": "No new dead code since last release. Existing dead code tracked in tech-debt backlog.",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": [
+        "WF-HAR-PREFLIGHT-01",
+        "WF-HAR-STATIC-01",
+        "WF-HAR-STATIC-02"
+      ]
     },
     {
       "id": "WF-HAR-STATIC-04",
@@ -140,7 +153,13 @@
       "pass_criteria": "Zero violations",
       "applicability": "standard",
       "status": "implemented",
-      "artifact_mode": "runner_evidence"
+      "artifact_mode": "runner_evidence",
+      "prerequisites": [
+        "WF-HAR-PREFLIGHT-01",
+        "WF-HAR-STATIC-01",
+        "WF-HAR-STATIC-02",
+        "WF-HAR-STATIC-03"
+      ]
     },
     {
       "id": "WF-HAR-STATIC-05",
@@ -152,7 +171,14 @@
       "pass_criteria": "Zero findings",
       "applicability": "standard",
       "status": "implemented",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": [
+        "WF-HAR-PREFLIGHT-01",
+        "WF-HAR-STATIC-01",
+        "WF-HAR-STATIC-02",
+        "WF-HAR-STATIC-03",
+        "WF-HAR-STATIC-04"
+      ]
     },
     {
       "id": "WF-HAR-DOMAIN-01",
@@ -164,7 +190,15 @@
       "pass_criteria": "DecisionRecord envelope hash matches golden data exactly. Replaying the identified normalized snapshot, source revision set, graph revision, policy bundle, ranking pipeline, and engine version yields identical output. No item missing or ordering discrepancy.",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": [
+        "WF-HAR-PREFLIGHT-01",
+        "WF-HAR-STATIC-01",
+        "WF-HAR-STATIC-02",
+        "WF-HAR-STATIC-03",
+        "WF-HAR-STATIC-04",
+        "WF-HAR-STATIC-05"
+      ]
     },
     {
       "id": "WF-HAR-DOMAIN-02",
@@ -176,7 +210,16 @@
       "pass_criteria": "All precedence evaluations deterministic. Conflicts surfaced, not silently resolved.",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": [
+        "WF-HAR-PREFLIGHT-01",
+        "WF-HAR-STATIC-01",
+        "WF-HAR-STATIC-02",
+        "WF-HAR-STATIC-03",
+        "WF-HAR-STATIC-04",
+        "WF-HAR-STATIC-05",
+        "WF-HAR-DOMAIN-01"
+      ]
     },
     {
       "id": "WF-HAR-DOMAIN-03",
@@ -188,7 +231,17 @@
       "pass_criteria": "Acyclic chains resolve correctly. Containment cycles are rejected. Cyclic dependency SCCs are isolated fail-closed with their paths reported, while unaffected components remain evaluable.",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": [
+        "WF-HAR-PREFLIGHT-01",
+        "WF-HAR-STATIC-01",
+        "WF-HAR-STATIC-02",
+        "WF-HAR-STATIC-03",
+        "WF-HAR-STATIC-04",
+        "WF-HAR-STATIC-05",
+        "WF-HAR-DOMAIN-01",
+        "WF-HAR-DOMAIN-02"
+      ]
     },
     {
       "id": "WF-HAR-DOMAIN-04",
@@ -200,7 +253,18 @@
       "pass_criteria": "Every gate correctly classifies items. Safety gates cannot be waived. Localized fail-closed when uncertain.",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": [
+        "WF-HAR-PREFLIGHT-01",
+        "WF-HAR-STATIC-01",
+        "WF-HAR-STATIC-02",
+        "WF-HAR-STATIC-03",
+        "WF-HAR-STATIC-04",
+        "WF-HAR-STATIC-05",
+        "WF-HAR-DOMAIN-01",
+        "WF-HAR-DOMAIN-02",
+        "WF-HAR-DOMAIN-03"
+      ]
     },
     {
       "id": "WF-HAR-DOMAIN-05",
@@ -212,7 +276,19 @@
       "pass_criteria": "Stale sources flagged. Authority status downgraded. AttentionItem emitted for stale sources.",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": [
+        "WF-HAR-PREFLIGHT-01",
+        "WF-HAR-STATIC-01",
+        "WF-HAR-STATIC-02",
+        "WF-HAR-STATIC-03",
+        "WF-HAR-STATIC-04",
+        "WF-HAR-STATIC-05",
+        "WF-HAR-DOMAIN-01",
+        "WF-HAR-DOMAIN-02",
+        "WF-HAR-DOMAIN-03",
+        "WF-HAR-DOMAIN-04"
+      ]
     },
     {
       "id": "WF-HAR-PROPERTY-01",
@@ -224,7 +300,20 @@
       "pass_criteria": "10,000 inputs, zero cases where replay produces different DecisionRecord hash.",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": [
+        "WF-HAR-PREFLIGHT-01",
+        "WF-HAR-STATIC-01",
+        "WF-HAR-STATIC-02",
+        "WF-HAR-STATIC-03",
+        "WF-HAR-STATIC-04",
+        "WF-HAR-STATIC-05",
+        "WF-HAR-DOMAIN-01",
+        "WF-HAR-DOMAIN-02",
+        "WF-HAR-DOMAIN-03",
+        "WF-HAR-DOMAIN-04",
+        "WF-HAR-DOMAIN-05"
+      ]
     },
     {
       "id": "WF-HAR-PROPERTY-02",
@@ -236,7 +325,21 @@
       "pass_criteria": "Acyclic graphs accepted. All cyclic graphs detected via SCC and rejected with cycle path reported.",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": [
+        "WF-HAR-PREFLIGHT-01",
+        "WF-HAR-STATIC-01",
+        "WF-HAR-STATIC-02",
+        "WF-HAR-STATIC-03",
+        "WF-HAR-STATIC-04",
+        "WF-HAR-STATIC-05",
+        "WF-HAR-DOMAIN-01",
+        "WF-HAR-DOMAIN-02",
+        "WF-HAR-DOMAIN-03",
+        "WF-HAR-DOMAIN-04",
+        "WF-HAR-DOMAIN-05",
+        "WF-HAR-PROPERTY-01"
+      ]
     },
     {
       "id": "WF-HAR-PROPERTY-03",
@@ -248,7 +351,22 @@
       "pass_criteria": "No case where closing a valid blocker shrinks readiness or adding an open blocker increases frontier.",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": [
+        "WF-HAR-PREFLIGHT-01",
+        "WF-HAR-STATIC-01",
+        "WF-HAR-STATIC-02",
+        "WF-HAR-STATIC-03",
+        "WF-HAR-STATIC-04",
+        "WF-HAR-STATIC-05",
+        "WF-HAR-DOMAIN-01",
+        "WF-HAR-DOMAIN-02",
+        "WF-HAR-DOMAIN-03",
+        "WF-HAR-DOMAIN-04",
+        "WF-HAR-DOMAIN-05",
+        "WF-HAR-PROPERTY-01",
+        "WF-HAR-PROPERTY-02"
+      ]
     },
     {
       "id": "WF-HAR-PROPERTY-04",
@@ -260,7 +378,23 @@
       "pass_criteria": "Incremental projection converges to full-solve result for every input. No items lost or reordered.",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": [
+        "WF-HAR-PREFLIGHT-01",
+        "WF-HAR-STATIC-01",
+        "WF-HAR-STATIC-02",
+        "WF-HAR-STATIC-03",
+        "WF-HAR-STATIC-04",
+        "WF-HAR-STATIC-05",
+        "WF-HAR-DOMAIN-01",
+        "WF-HAR-DOMAIN-02",
+        "WF-HAR-DOMAIN-03",
+        "WF-HAR-DOMAIN-04",
+        "WF-HAR-DOMAIN-05",
+        "WF-HAR-PROPERTY-01",
+        "WF-HAR-PROPERTY-02",
+        "WF-HAR-PROPERTY-03"
+      ]
     },
     {
       "id": "WF-HAR-PROPERTY-05",
@@ -272,7 +406,24 @@
       "pass_criteria": "Output identical regardless of input processing order. No ordering-dependent behavior.",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": [
+        "WF-HAR-PREFLIGHT-01",
+        "WF-HAR-STATIC-01",
+        "WF-HAR-STATIC-02",
+        "WF-HAR-STATIC-03",
+        "WF-HAR-STATIC-04",
+        "WF-HAR-STATIC-05",
+        "WF-HAR-DOMAIN-01",
+        "WF-HAR-DOMAIN-02",
+        "WF-HAR-DOMAIN-03",
+        "WF-HAR-DOMAIN-04",
+        "WF-HAR-DOMAIN-05",
+        "WF-HAR-PROPERTY-01",
+        "WF-HAR-PROPERTY-02",
+        "WF-HAR-PROPERTY-03",
+        "WF-HAR-PROPERTY-04"
+      ]
     },
     {
       "id": "WF-HAR-META-01",
@@ -284,7 +435,25 @@
       "pass_criteria": "DecisionRecord hash identical across all 500 replay pairs",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": [
+        "WF-HAR-PREFLIGHT-01",
+        "WF-HAR-STATIC-01",
+        "WF-HAR-STATIC-02",
+        "WF-HAR-STATIC-03",
+        "WF-HAR-STATIC-04",
+        "WF-HAR-STATIC-05",
+        "WF-HAR-DOMAIN-01",
+        "WF-HAR-DOMAIN-02",
+        "WF-HAR-DOMAIN-03",
+        "WF-HAR-DOMAIN-04",
+        "WF-HAR-DOMAIN-05",
+        "WF-HAR-PROPERTY-01",
+        "WF-HAR-PROPERTY-02",
+        "WF-HAR-PROPERTY-03",
+        "WF-HAR-PROPERTY-04",
+        "WF-HAR-PROPERTY-05"
+      ]
     },
     {
       "id": "WF-HAR-META-02",
@@ -296,7 +465,26 @@
       "pass_criteria": "Adding an open blocker never increases the frontier set",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": [
+        "WF-HAR-PREFLIGHT-01",
+        "WF-HAR-STATIC-01",
+        "WF-HAR-STATIC-02",
+        "WF-HAR-STATIC-03",
+        "WF-HAR-STATIC-04",
+        "WF-HAR-STATIC-05",
+        "WF-HAR-DOMAIN-01",
+        "WF-HAR-DOMAIN-02",
+        "WF-HAR-DOMAIN-03",
+        "WF-HAR-DOMAIN-04",
+        "WF-HAR-DOMAIN-05",
+        "WF-HAR-PROPERTY-01",
+        "WF-HAR-PROPERTY-02",
+        "WF-HAR-PROPERTY-03",
+        "WF-HAR-PROPERTY-04",
+        "WF-HAR-PROPERTY-05",
+        "WF-HAR-META-01"
+      ]
     },
     {
       "id": "WF-HAR-META-03",
@@ -308,7 +496,27 @@
       "pass_criteria": "Closing a valid blocker never shrinks readiness unless policy or source changes",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": [
+        "WF-HAR-PREFLIGHT-01",
+        "WF-HAR-STATIC-01",
+        "WF-HAR-STATIC-02",
+        "WF-HAR-STATIC-03",
+        "WF-HAR-STATIC-04",
+        "WF-HAR-STATIC-05",
+        "WF-HAR-DOMAIN-01",
+        "WF-HAR-DOMAIN-02",
+        "WF-HAR-DOMAIN-03",
+        "WF-HAR-DOMAIN-04",
+        "WF-HAR-DOMAIN-05",
+        "WF-HAR-PROPERTY-01",
+        "WF-HAR-PROPERTY-02",
+        "WF-HAR-PROPERTY-03",
+        "WF-HAR-PROPERTY-04",
+        "WF-HAR-PROPERTY-05",
+        "WF-HAR-META-01",
+        "WF-HAR-META-02"
+      ]
     },
     {
       "id": "WF-HAR-META-04",
@@ -320,7 +528,28 @@
       "pass_criteria": "Item ordering agrees between full and incremental. No item reachable in one but not the other.",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": [
+        "WF-HAR-PREFLIGHT-01",
+        "WF-HAR-STATIC-01",
+        "WF-HAR-STATIC-02",
+        "WF-HAR-STATIC-03",
+        "WF-HAR-STATIC-04",
+        "WF-HAR-STATIC-05",
+        "WF-HAR-DOMAIN-01",
+        "WF-HAR-DOMAIN-02",
+        "WF-HAR-DOMAIN-03",
+        "WF-HAR-DOMAIN-04",
+        "WF-HAR-DOMAIN-05",
+        "WF-HAR-PROPERTY-01",
+        "WF-HAR-PROPERTY-02",
+        "WF-HAR-PROPERTY-03",
+        "WF-HAR-PROPERTY-04",
+        "WF-HAR-PROPERTY-05",
+        "WF-HAR-META-01",
+        "WF-HAR-META-02",
+        "WF-HAR-META-03"
+      ]
     },
     {
       "id": "WF-HAR-META-05",
@@ -332,7 +561,29 @@
       "pass_criteria": "Valid components unaffected. Invalid component rejected with localized error. No corruption of neighbors.",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": [
+        "WF-HAR-PREFLIGHT-01",
+        "WF-HAR-STATIC-01",
+        "WF-HAR-STATIC-02",
+        "WF-HAR-STATIC-03",
+        "WF-HAR-STATIC-04",
+        "WF-HAR-STATIC-05",
+        "WF-HAR-DOMAIN-01",
+        "WF-HAR-DOMAIN-02",
+        "WF-HAR-DOMAIN-03",
+        "WF-HAR-DOMAIN-04",
+        "WF-HAR-DOMAIN-05",
+        "WF-HAR-PROPERTY-01",
+        "WF-HAR-PROPERTY-02",
+        "WF-HAR-PROPERTY-03",
+        "WF-HAR-PROPERTY-04",
+        "WF-HAR-PROPERTY-05",
+        "WF-HAR-META-01",
+        "WF-HAR-META-02",
+        "WF-HAR-META-03",
+        "WF-HAR-META-04"
+      ]
     },
     {
       "id": "WF-HAR-CONTRACT-01",
@@ -344,7 +595,30 @@
       "pass_criteria": "Zero schema violations across 1,000 generated requests per endpoint",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": [
+        "WF-HAR-PREFLIGHT-01",
+        "WF-HAR-STATIC-01",
+        "WF-HAR-STATIC-02",
+        "WF-HAR-STATIC-03",
+        "WF-HAR-STATIC-04",
+        "WF-HAR-STATIC-05",
+        "WF-HAR-DOMAIN-01",
+        "WF-HAR-DOMAIN-02",
+        "WF-HAR-DOMAIN-03",
+        "WF-HAR-DOMAIN-04",
+        "WF-HAR-DOMAIN-05",
+        "WF-HAR-PROPERTY-01",
+        "WF-HAR-PROPERTY-02",
+        "WF-HAR-PROPERTY-03",
+        "WF-HAR-PROPERTY-04",
+        "WF-HAR-PROPERTY-05",
+        "WF-HAR-META-01",
+        "WF-HAR-META-02",
+        "WF-HAR-META-03",
+        "WF-HAR-META-04",
+        "WF-HAR-META-05"
+      ]
     },
     {
       "id": "WF-HAR-CONTRACT-02",
@@ -356,7 +630,31 @@
       "pass_criteria": "All migrations apply cleanly. Data round-trips for reversible migrations.",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": [
+        "WF-HAR-PREFLIGHT-01",
+        "WF-HAR-STATIC-01",
+        "WF-HAR-STATIC-02",
+        "WF-HAR-STATIC-03",
+        "WF-HAR-STATIC-04",
+        "WF-HAR-STATIC-05",
+        "WF-HAR-DOMAIN-01",
+        "WF-HAR-DOMAIN-02",
+        "WF-HAR-DOMAIN-03",
+        "WF-HAR-DOMAIN-04",
+        "WF-HAR-DOMAIN-05",
+        "WF-HAR-PROPERTY-01",
+        "WF-HAR-PROPERTY-02",
+        "WF-HAR-PROPERTY-03",
+        "WF-HAR-PROPERTY-04",
+        "WF-HAR-PROPERTY-05",
+        "WF-HAR-META-01",
+        "WF-HAR-META-02",
+        "WF-HAR-META-03",
+        "WF-HAR-META-04",
+        "WF-HAR-META-05",
+        "WF-HAR-CONTRACT-01"
+      ]
     },
     {
       "id": "WF-HAR-CONTRACT-03",
@@ -368,7 +666,32 @@
       "pass_criteria": "All event types match their registered schema version",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": [
+        "WF-HAR-PREFLIGHT-01",
+        "WF-HAR-STATIC-01",
+        "WF-HAR-STATIC-02",
+        "WF-HAR-STATIC-03",
+        "WF-HAR-STATIC-04",
+        "WF-HAR-STATIC-05",
+        "WF-HAR-DOMAIN-01",
+        "WF-HAR-DOMAIN-02",
+        "WF-HAR-DOMAIN-03",
+        "WF-HAR-DOMAIN-04",
+        "WF-HAR-DOMAIN-05",
+        "WF-HAR-PROPERTY-01",
+        "WF-HAR-PROPERTY-02",
+        "WF-HAR-PROPERTY-03",
+        "WF-HAR-PROPERTY-04",
+        "WF-HAR-PROPERTY-05",
+        "WF-HAR-META-01",
+        "WF-HAR-META-02",
+        "WF-HAR-META-03",
+        "WF-HAR-META-04",
+        "WF-HAR-META-05",
+        "WF-HAR-CONTRACT-01",
+        "WF-HAR-CONTRACT-02"
+      ]
     },
     {
       "id": "WF-HAR-CONTRACT-04",
@@ -380,7 +703,33 @@
       "pass_criteria": "All message types deserialize correctly on receiving end",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": [
+        "WF-HAR-PREFLIGHT-01",
+        "WF-HAR-STATIC-01",
+        "WF-HAR-STATIC-02",
+        "WF-HAR-STATIC-03",
+        "WF-HAR-STATIC-04",
+        "WF-HAR-STATIC-05",
+        "WF-HAR-DOMAIN-01",
+        "WF-HAR-DOMAIN-02",
+        "WF-HAR-DOMAIN-03",
+        "WF-HAR-DOMAIN-04",
+        "WF-HAR-DOMAIN-05",
+        "WF-HAR-PROPERTY-01",
+        "WF-HAR-PROPERTY-02",
+        "WF-HAR-PROPERTY-03",
+        "WF-HAR-PROPERTY-04",
+        "WF-HAR-PROPERTY-05",
+        "WF-HAR-META-01",
+        "WF-HAR-META-02",
+        "WF-HAR-META-03",
+        "WF-HAR-META-04",
+        "WF-HAR-META-05",
+        "WF-HAR-CONTRACT-01",
+        "WF-HAR-CONTRACT-02",
+        "WF-HAR-CONTRACT-03"
+      ]
     },
     {
       "id": "WF-HAR-CONTRACT-05",
@@ -392,7 +741,34 @@
       "pass_criteria": "Zero generation drift; all required fixtures present; valid fixtures pass both runtimes with matching canonical hashes; invalid fixtures rejected by both",
       "applicability": "standard",
       "status": "implemented",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": [
+        "WF-HAR-PREFLIGHT-01",
+        "WF-HAR-STATIC-01",
+        "WF-HAR-STATIC-02",
+        "WF-HAR-STATIC-03",
+        "WF-HAR-STATIC-04",
+        "WF-HAR-STATIC-05",
+        "WF-HAR-DOMAIN-01",
+        "WF-HAR-DOMAIN-02",
+        "WF-HAR-DOMAIN-03",
+        "WF-HAR-DOMAIN-04",
+        "WF-HAR-DOMAIN-05",
+        "WF-HAR-PROPERTY-01",
+        "WF-HAR-PROPERTY-02",
+        "WF-HAR-PROPERTY-03",
+        "WF-HAR-PROPERTY-04",
+        "WF-HAR-PROPERTY-05",
+        "WF-HAR-META-01",
+        "WF-HAR-META-02",
+        "WF-HAR-META-03",
+        "WF-HAR-META-04",
+        "WF-HAR-META-05",
+        "WF-HAR-CONTRACT-01",
+        "WF-HAR-CONTRACT-02",
+        "WF-HAR-CONTRACT-03",
+        "WF-HAR-CONTRACT-04"
+      ]
     },
     {
       "id": "WF-HAR-INTEG-01",
@@ -404,7 +780,35 @@
       "pass_criteria": "Marker table present after upgrade; seed row survives failed-revision rollback; failing revision does not advance alembic_version; downgrade/re-upgrade succeed",
       "applicability": "standard",
       "status": "implemented",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": [
+        "WF-HAR-PREFLIGHT-01",
+        "WF-HAR-STATIC-01",
+        "WF-HAR-STATIC-02",
+        "WF-HAR-STATIC-03",
+        "WF-HAR-STATIC-04",
+        "WF-HAR-STATIC-05",
+        "WF-HAR-DOMAIN-01",
+        "WF-HAR-DOMAIN-02",
+        "WF-HAR-DOMAIN-03",
+        "WF-HAR-DOMAIN-04",
+        "WF-HAR-DOMAIN-05",
+        "WF-HAR-PROPERTY-01",
+        "WF-HAR-PROPERTY-02",
+        "WF-HAR-PROPERTY-03",
+        "WF-HAR-PROPERTY-04",
+        "WF-HAR-PROPERTY-05",
+        "WF-HAR-META-01",
+        "WF-HAR-META-02",
+        "WF-HAR-META-03",
+        "WF-HAR-META-04",
+        "WF-HAR-META-05",
+        "WF-HAR-CONTRACT-01",
+        "WF-HAR-CONTRACT-02",
+        "WF-HAR-CONTRACT-03",
+        "WF-HAR-CONTRACT-04",
+        "WF-HAR-CONTRACT-05"
+      ]
     },
     {
       "id": "WF-HAR-INTEG-02",
@@ -416,7 +820,36 @@
       "pass_criteria": "Upload/download payload match; bucket cleaned up on success and failure paths",
       "applicability": "standard",
       "status": "implemented",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": [
+        "WF-HAR-PREFLIGHT-01",
+        "WF-HAR-STATIC-01",
+        "WF-HAR-STATIC-02",
+        "WF-HAR-STATIC-03",
+        "WF-HAR-STATIC-04",
+        "WF-HAR-STATIC-05",
+        "WF-HAR-DOMAIN-01",
+        "WF-HAR-DOMAIN-02",
+        "WF-HAR-DOMAIN-03",
+        "WF-HAR-DOMAIN-04",
+        "WF-HAR-DOMAIN-05",
+        "WF-HAR-PROPERTY-01",
+        "WF-HAR-PROPERTY-02",
+        "WF-HAR-PROPERTY-03",
+        "WF-HAR-PROPERTY-04",
+        "WF-HAR-PROPERTY-05",
+        "WF-HAR-META-01",
+        "WF-HAR-META-02",
+        "WF-HAR-META-03",
+        "WF-HAR-META-04",
+        "WF-HAR-META-05",
+        "WF-HAR-CONTRACT-01",
+        "WF-HAR-CONTRACT-02",
+        "WF-HAR-CONTRACT-03",
+        "WF-HAR-CONTRACT-04",
+        "WF-HAR-CONTRACT-05",
+        "WF-HAR-INTEG-01"
+      ]
     },
     {
       "id": "WF-HAR-INTEG-03",
@@ -428,7 +861,37 @@
       "pass_criteria": "No duplicate ownership; stale worker cannot complete after lease loss; retry backs off correctly; dead letter/replay is auditable; outbox intent cannot exist without its internal state transaction.",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": [
+        "WF-HAR-PREFLIGHT-01",
+        "WF-HAR-STATIC-01",
+        "WF-HAR-STATIC-02",
+        "WF-HAR-STATIC-03",
+        "WF-HAR-STATIC-04",
+        "WF-HAR-STATIC-05",
+        "WF-HAR-DOMAIN-01",
+        "WF-HAR-DOMAIN-02",
+        "WF-HAR-DOMAIN-03",
+        "WF-HAR-DOMAIN-04",
+        "WF-HAR-DOMAIN-05",
+        "WF-HAR-PROPERTY-01",
+        "WF-HAR-PROPERTY-02",
+        "WF-HAR-PROPERTY-03",
+        "WF-HAR-PROPERTY-04",
+        "WF-HAR-PROPERTY-05",
+        "WF-HAR-META-01",
+        "WF-HAR-META-02",
+        "WF-HAR-META-03",
+        "WF-HAR-META-04",
+        "WF-HAR-META-05",
+        "WF-HAR-CONTRACT-01",
+        "WF-HAR-CONTRACT-02",
+        "WF-HAR-CONTRACT-03",
+        "WF-HAR-CONTRACT-04",
+        "WF-HAR-CONTRACT-05",
+        "WF-HAR-INTEG-01",
+        "WF-HAR-INTEG-02"
+      ]
     },
     {
       "id": "WF-HAR-INTEG-04",
@@ -440,7 +903,38 @@
       "pass_criteria": "All routes respond correctly. Auth enforced. Middleware executes in order.",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": [
+        "WF-HAR-PREFLIGHT-01",
+        "WF-HAR-STATIC-01",
+        "WF-HAR-STATIC-02",
+        "WF-HAR-STATIC-03",
+        "WF-HAR-STATIC-04",
+        "WF-HAR-STATIC-05",
+        "WF-HAR-DOMAIN-01",
+        "WF-HAR-DOMAIN-02",
+        "WF-HAR-DOMAIN-03",
+        "WF-HAR-DOMAIN-04",
+        "WF-HAR-DOMAIN-05",
+        "WF-HAR-PROPERTY-01",
+        "WF-HAR-PROPERTY-02",
+        "WF-HAR-PROPERTY-03",
+        "WF-HAR-PROPERTY-04",
+        "WF-HAR-PROPERTY-05",
+        "WF-HAR-META-01",
+        "WF-HAR-META-02",
+        "WF-HAR-META-03",
+        "WF-HAR-META-04",
+        "WF-HAR-META-05",
+        "WF-HAR-CONTRACT-01",
+        "WF-HAR-CONTRACT-02",
+        "WF-HAR-CONTRACT-03",
+        "WF-HAR-CONTRACT-04",
+        "WF-HAR-CONTRACT-05",
+        "WF-HAR-INTEG-01",
+        "WF-HAR-INTEG-02",
+        "WF-HAR-INTEG-03"
+      ]
     },
     {
       "id": "WF-HAR-INTEG-05",
@@ -452,7 +946,39 @@
       "pass_criteria": "Jobs execute. Failures retry. Dead letters captured. No orphaned jobs.",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": [
+        "WF-HAR-PREFLIGHT-01",
+        "WF-HAR-STATIC-01",
+        "WF-HAR-STATIC-02",
+        "WF-HAR-STATIC-03",
+        "WF-HAR-STATIC-04",
+        "WF-HAR-STATIC-05",
+        "WF-HAR-DOMAIN-01",
+        "WF-HAR-DOMAIN-02",
+        "WF-HAR-DOMAIN-03",
+        "WF-HAR-DOMAIN-04",
+        "WF-HAR-DOMAIN-05",
+        "WF-HAR-PROPERTY-01",
+        "WF-HAR-PROPERTY-02",
+        "WF-HAR-PROPERTY-03",
+        "WF-HAR-PROPERTY-04",
+        "WF-HAR-PROPERTY-05",
+        "WF-HAR-META-01",
+        "WF-HAR-META-02",
+        "WF-HAR-META-03",
+        "WF-HAR-META-04",
+        "WF-HAR-META-05",
+        "WF-HAR-CONTRACT-01",
+        "WF-HAR-CONTRACT-02",
+        "WF-HAR-CONTRACT-03",
+        "WF-HAR-CONTRACT-04",
+        "WF-HAR-CONTRACT-05",
+        "WF-HAR-INTEG-01",
+        "WF-HAR-INTEG-02",
+        "WF-HAR-INTEG-03",
+        "WF-HAR-INTEG-04"
+      ]
     },
     {
       "id": "WF-HAR-INTEG-06",
@@ -464,7 +990,40 @@
       "pass_criteria": "Schedules trigger on time. Overlapping executions prevented. State persisted.",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": [
+        "WF-HAR-PREFLIGHT-01",
+        "WF-HAR-STATIC-01",
+        "WF-HAR-STATIC-02",
+        "WF-HAR-STATIC-03",
+        "WF-HAR-STATIC-04",
+        "WF-HAR-STATIC-05",
+        "WF-HAR-DOMAIN-01",
+        "WF-HAR-DOMAIN-02",
+        "WF-HAR-DOMAIN-03",
+        "WF-HAR-DOMAIN-04",
+        "WF-HAR-DOMAIN-05",
+        "WF-HAR-PROPERTY-01",
+        "WF-HAR-PROPERTY-02",
+        "WF-HAR-PROPERTY-03",
+        "WF-HAR-PROPERTY-04",
+        "WF-HAR-PROPERTY-05",
+        "WF-HAR-META-01",
+        "WF-HAR-META-02",
+        "WF-HAR-META-03",
+        "WF-HAR-META-04",
+        "WF-HAR-META-05",
+        "WF-HAR-CONTRACT-01",
+        "WF-HAR-CONTRACT-02",
+        "WF-HAR-CONTRACT-03",
+        "WF-HAR-CONTRACT-04",
+        "WF-HAR-CONTRACT-05",
+        "WF-HAR-INTEG-01",
+        "WF-HAR-INTEG-02",
+        "WF-HAR-INTEG-03",
+        "WF-HAR-INTEG-04",
+        "WF-HAR-INTEG-05"
+      ]
     },
     {
       "id": "WF-HAR-PRODUCT-01",
@@ -476,7 +1035,41 @@
       "pass_criteria": "First Recommended Next displayed. Ranking rationale visible. p95 read latency < 500ms. No console errors.",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": [
+        "WF-HAR-PREFLIGHT-01",
+        "WF-HAR-STATIC-01",
+        "WF-HAR-STATIC-02",
+        "WF-HAR-STATIC-03",
+        "WF-HAR-STATIC-04",
+        "WF-HAR-STATIC-05",
+        "WF-HAR-DOMAIN-01",
+        "WF-HAR-DOMAIN-02",
+        "WF-HAR-DOMAIN-03",
+        "WF-HAR-DOMAIN-04",
+        "WF-HAR-DOMAIN-05",
+        "WF-HAR-PROPERTY-01",
+        "WF-HAR-PROPERTY-02",
+        "WF-HAR-PROPERTY-03",
+        "WF-HAR-PROPERTY-04",
+        "WF-HAR-PROPERTY-05",
+        "WF-HAR-META-01",
+        "WF-HAR-META-02",
+        "WF-HAR-META-03",
+        "WF-HAR-META-04",
+        "WF-HAR-META-05",
+        "WF-HAR-CONTRACT-01",
+        "WF-HAR-CONTRACT-02",
+        "WF-HAR-CONTRACT-03",
+        "WF-HAR-CONTRACT-04",
+        "WF-HAR-CONTRACT-05",
+        "WF-HAR-INTEG-01",
+        "WF-HAR-INTEG-02",
+        "WF-HAR-INTEG-03",
+        "WF-HAR-INTEG-04",
+        "WF-HAR-INTEG-05",
+        "WF-HAR-INTEG-06"
+      ]
     },
     {
       "id": "WF-HAR-PRODUCT-02",
@@ -488,7 +1081,42 @@
       "pass_criteria": "Why-blocked chains resolve to root cause. Dependency paths correct. p95 latency < 1s.",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": [
+        "WF-HAR-PREFLIGHT-01",
+        "WF-HAR-STATIC-01",
+        "WF-HAR-STATIC-02",
+        "WF-HAR-STATIC-03",
+        "WF-HAR-STATIC-04",
+        "WF-HAR-STATIC-05",
+        "WF-HAR-DOMAIN-01",
+        "WF-HAR-DOMAIN-02",
+        "WF-HAR-DOMAIN-03",
+        "WF-HAR-DOMAIN-04",
+        "WF-HAR-DOMAIN-05",
+        "WF-HAR-PROPERTY-01",
+        "WF-HAR-PROPERTY-02",
+        "WF-HAR-PROPERTY-03",
+        "WF-HAR-PROPERTY-04",
+        "WF-HAR-PROPERTY-05",
+        "WF-HAR-META-01",
+        "WF-HAR-META-02",
+        "WF-HAR-META-03",
+        "WF-HAR-META-04",
+        "WF-HAR-META-05",
+        "WF-HAR-CONTRACT-01",
+        "WF-HAR-CONTRACT-02",
+        "WF-HAR-CONTRACT-03",
+        "WF-HAR-CONTRACT-04",
+        "WF-HAR-CONTRACT-05",
+        "WF-HAR-INTEG-01",
+        "WF-HAR-INTEG-02",
+        "WF-HAR-INTEG-03",
+        "WF-HAR-INTEG-04",
+        "WF-HAR-INTEG-05",
+        "WF-HAR-INTEG-06",
+        "WF-HAR-PRODUCT-01"
+      ]
     },
     {
       "id": "WF-HAR-PRODUCT-03",
@@ -500,7 +1128,43 @@
       "pass_criteria": "Exactly one claim succeeds. Item state consistent. WorkLease assigned to winner. Loser receives conflict signal.",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": [
+        "WF-HAR-PREFLIGHT-01",
+        "WF-HAR-STATIC-01",
+        "WF-HAR-STATIC-02",
+        "WF-HAR-STATIC-03",
+        "WF-HAR-STATIC-04",
+        "WF-HAR-STATIC-05",
+        "WF-HAR-DOMAIN-01",
+        "WF-HAR-DOMAIN-02",
+        "WF-HAR-DOMAIN-03",
+        "WF-HAR-DOMAIN-04",
+        "WF-HAR-DOMAIN-05",
+        "WF-HAR-PROPERTY-01",
+        "WF-HAR-PROPERTY-02",
+        "WF-HAR-PROPERTY-03",
+        "WF-HAR-PROPERTY-04",
+        "WF-HAR-PROPERTY-05",
+        "WF-HAR-META-01",
+        "WF-HAR-META-02",
+        "WF-HAR-META-03",
+        "WF-HAR-META-04",
+        "WF-HAR-META-05",
+        "WF-HAR-CONTRACT-01",
+        "WF-HAR-CONTRACT-02",
+        "WF-HAR-CONTRACT-03",
+        "WF-HAR-CONTRACT-04",
+        "WF-HAR-CONTRACT-05",
+        "WF-HAR-INTEG-01",
+        "WF-HAR-INTEG-02",
+        "WF-HAR-INTEG-03",
+        "WF-HAR-INTEG-04",
+        "WF-HAR-INTEG-05",
+        "WF-HAR-INTEG-06",
+        "WF-HAR-PRODUCT-01",
+        "WF-HAR-PRODUCT-02"
+      ]
     },
     {
       "id": "WF-HAR-PRODUCT-04",
@@ -512,7 +1176,44 @@
       "pass_criteria": "Repair proposal shown with affected items. Approval creates correct `blocks` edges. Frontier recomputed.",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": [
+        "WF-HAR-PREFLIGHT-01",
+        "WF-HAR-STATIC-01",
+        "WF-HAR-STATIC-02",
+        "WF-HAR-STATIC-03",
+        "WF-HAR-STATIC-04",
+        "WF-HAR-STATIC-05",
+        "WF-HAR-DOMAIN-01",
+        "WF-HAR-DOMAIN-02",
+        "WF-HAR-DOMAIN-03",
+        "WF-HAR-DOMAIN-04",
+        "WF-HAR-DOMAIN-05",
+        "WF-HAR-PROPERTY-01",
+        "WF-HAR-PROPERTY-02",
+        "WF-HAR-PROPERTY-03",
+        "WF-HAR-PROPERTY-04",
+        "WF-HAR-PROPERTY-05",
+        "WF-HAR-META-01",
+        "WF-HAR-META-02",
+        "WF-HAR-META-03",
+        "WF-HAR-META-04",
+        "WF-HAR-META-05",
+        "WF-HAR-CONTRACT-01",
+        "WF-HAR-CONTRACT-02",
+        "WF-HAR-CONTRACT-03",
+        "WF-HAR-CONTRACT-04",
+        "WF-HAR-CONTRACT-05",
+        "WF-HAR-INTEG-01",
+        "WF-HAR-INTEG-02",
+        "WF-HAR-INTEG-03",
+        "WF-HAR-INTEG-04",
+        "WF-HAR-INTEG-05",
+        "WF-HAR-INTEG-06",
+        "WF-HAR-PRODUCT-01",
+        "WF-HAR-PRODUCT-02",
+        "WF-HAR-PRODUCT-03"
+      ]
     },
     {
       "id": "WF-HAR-PRODUCT-05",
@@ -524,7 +1225,45 @@
       "pass_criteria": "Stale decision rejected. Authority status remains `stale`. AttentionItem emitted. No state mutation.",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": [
+        "WF-HAR-PREFLIGHT-01",
+        "WF-HAR-STATIC-01",
+        "WF-HAR-STATIC-02",
+        "WF-HAR-STATIC-03",
+        "WF-HAR-STATIC-04",
+        "WF-HAR-STATIC-05",
+        "WF-HAR-DOMAIN-01",
+        "WF-HAR-DOMAIN-02",
+        "WF-HAR-DOMAIN-03",
+        "WF-HAR-DOMAIN-04",
+        "WF-HAR-DOMAIN-05",
+        "WF-HAR-PROPERTY-01",
+        "WF-HAR-PROPERTY-02",
+        "WF-HAR-PROPERTY-03",
+        "WF-HAR-PROPERTY-04",
+        "WF-HAR-PROPERTY-05",
+        "WF-HAR-META-01",
+        "WF-HAR-META-02",
+        "WF-HAR-META-03",
+        "WF-HAR-META-04",
+        "WF-HAR-META-05",
+        "WF-HAR-CONTRACT-01",
+        "WF-HAR-CONTRACT-02",
+        "WF-HAR-CONTRACT-03",
+        "WF-HAR-CONTRACT-04",
+        "WF-HAR-CONTRACT-05",
+        "WF-HAR-INTEG-01",
+        "WF-HAR-INTEG-02",
+        "WF-HAR-INTEG-03",
+        "WF-HAR-INTEG-04",
+        "WF-HAR-INTEG-05",
+        "WF-HAR-INTEG-06",
+        "WF-HAR-PRODUCT-01",
+        "WF-HAR-PRODUCT-02",
+        "WF-HAR-PRODUCT-03",
+        "WF-HAR-PRODUCT-04"
+      ]
     },
     {
       "id": "WF-HAR-PRODUCT-06",
@@ -536,7 +1275,46 @@
       "pass_criteria": "Mutation triggers recomputation. Projection reflects new DecisionRecord. Ranking rationale updated.",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": [
+        "WF-HAR-PREFLIGHT-01",
+        "WF-HAR-STATIC-01",
+        "WF-HAR-STATIC-02",
+        "WF-HAR-STATIC-03",
+        "WF-HAR-STATIC-04",
+        "WF-HAR-STATIC-05",
+        "WF-HAR-DOMAIN-01",
+        "WF-HAR-DOMAIN-02",
+        "WF-HAR-DOMAIN-03",
+        "WF-HAR-DOMAIN-04",
+        "WF-HAR-DOMAIN-05",
+        "WF-HAR-PROPERTY-01",
+        "WF-HAR-PROPERTY-02",
+        "WF-HAR-PROPERTY-03",
+        "WF-HAR-PROPERTY-04",
+        "WF-HAR-PROPERTY-05",
+        "WF-HAR-META-01",
+        "WF-HAR-META-02",
+        "WF-HAR-META-03",
+        "WF-HAR-META-04",
+        "WF-HAR-META-05",
+        "WF-HAR-CONTRACT-01",
+        "WF-HAR-CONTRACT-02",
+        "WF-HAR-CONTRACT-03",
+        "WF-HAR-CONTRACT-04",
+        "WF-HAR-CONTRACT-05",
+        "WF-HAR-INTEG-01",
+        "WF-HAR-INTEG-02",
+        "WF-HAR-INTEG-03",
+        "WF-HAR-INTEG-04",
+        "WF-HAR-INTEG-05",
+        "WF-HAR-INTEG-06",
+        "WF-HAR-PRODUCT-01",
+        "WF-HAR-PRODUCT-02",
+        "WF-HAR-PRODUCT-03",
+        "WF-HAR-PRODUCT-04",
+        "WF-HAR-PRODUCT-05"
+      ]
     },
     {
       "id": "WF-HAR-OPS-01",
@@ -548,7 +1326,47 @@
       "pass_criteria": "All components healthy. Basic CRUD succeeds. Response times within baseline.",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": [
+        "WF-HAR-PREFLIGHT-01",
+        "WF-HAR-STATIC-01",
+        "WF-HAR-STATIC-02",
+        "WF-HAR-STATIC-03",
+        "WF-HAR-STATIC-04",
+        "WF-HAR-STATIC-05",
+        "WF-HAR-DOMAIN-01",
+        "WF-HAR-DOMAIN-02",
+        "WF-HAR-DOMAIN-03",
+        "WF-HAR-DOMAIN-04",
+        "WF-HAR-DOMAIN-05",
+        "WF-HAR-PROPERTY-01",
+        "WF-HAR-PROPERTY-02",
+        "WF-HAR-PROPERTY-03",
+        "WF-HAR-PROPERTY-04",
+        "WF-HAR-PROPERTY-05",
+        "WF-HAR-META-01",
+        "WF-HAR-META-02",
+        "WF-HAR-META-03",
+        "WF-HAR-META-04",
+        "WF-HAR-META-05",
+        "WF-HAR-CONTRACT-01",
+        "WF-HAR-CONTRACT-02",
+        "WF-HAR-CONTRACT-03",
+        "WF-HAR-CONTRACT-04",
+        "WF-HAR-CONTRACT-05",
+        "WF-HAR-INTEG-01",
+        "WF-HAR-INTEG-02",
+        "WF-HAR-INTEG-03",
+        "WF-HAR-INTEG-04",
+        "WF-HAR-INTEG-05",
+        "WF-HAR-INTEG-06",
+        "WF-HAR-PRODUCT-01",
+        "WF-HAR-PRODUCT-02",
+        "WF-HAR-PRODUCT-03",
+        "WF-HAR-PRODUCT-04",
+        "WF-HAR-PRODUCT-05",
+        "WF-HAR-PRODUCT-06"
+      ]
     },
     {
       "id": "WF-HAR-OPS-02",
@@ -560,7 +1378,48 @@
       "pass_criteria": "All p95 latencies within targets (see [performance envelope](performance-envelope.md)): Control Room read < 500ms, Program overview/why-blocked < 1s, Webhook-to-decision < 30s, Full solve Standard < 5s, Incremental < 2s. p95/p99 include all valid completed requests with no latency outlier removal; errors/timeouts are separately counted and reported. Error rate < 0.1%. No resource exhaustion.",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": [
+        "WF-HAR-PREFLIGHT-01",
+        "WF-HAR-STATIC-01",
+        "WF-HAR-STATIC-02",
+        "WF-HAR-STATIC-03",
+        "WF-HAR-STATIC-04",
+        "WF-HAR-STATIC-05",
+        "WF-HAR-DOMAIN-01",
+        "WF-HAR-DOMAIN-02",
+        "WF-HAR-DOMAIN-03",
+        "WF-HAR-DOMAIN-04",
+        "WF-HAR-DOMAIN-05",
+        "WF-HAR-PROPERTY-01",
+        "WF-HAR-PROPERTY-02",
+        "WF-HAR-PROPERTY-03",
+        "WF-HAR-PROPERTY-04",
+        "WF-HAR-PROPERTY-05",
+        "WF-HAR-META-01",
+        "WF-HAR-META-02",
+        "WF-HAR-META-03",
+        "WF-HAR-META-04",
+        "WF-HAR-META-05",
+        "WF-HAR-CONTRACT-01",
+        "WF-HAR-CONTRACT-02",
+        "WF-HAR-CONTRACT-03",
+        "WF-HAR-CONTRACT-04",
+        "WF-HAR-CONTRACT-05",
+        "WF-HAR-INTEG-01",
+        "WF-HAR-INTEG-02",
+        "WF-HAR-INTEG-03",
+        "WF-HAR-INTEG-04",
+        "WF-HAR-INTEG-05",
+        "WF-HAR-INTEG-06",
+        "WF-HAR-PRODUCT-01",
+        "WF-HAR-PRODUCT-02",
+        "WF-HAR-PRODUCT-03",
+        "WF-HAR-PRODUCT-04",
+        "WF-HAR-PRODUCT-05",
+        "WF-HAR-PRODUCT-06",
+        "WF-HAR-OPS-01"
+      ]
     },
     {
       "id": "WF-HAR-OPS-02-L",
@@ -572,7 +1431,49 @@
       "pass_criteria": "Full solve Large < 30s, Incremental < 2s. All other p95 targets per [performance-envelope.md](../quality/performance-envelope.md). Error rate < 0.1%.",
       "applicability": "large",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": [
+        "WF-HAR-PREFLIGHT-01",
+        "WF-HAR-STATIC-01",
+        "WF-HAR-STATIC-02",
+        "WF-HAR-STATIC-03",
+        "WF-HAR-STATIC-04",
+        "WF-HAR-STATIC-05",
+        "WF-HAR-DOMAIN-01",
+        "WF-HAR-DOMAIN-02",
+        "WF-HAR-DOMAIN-03",
+        "WF-HAR-DOMAIN-04",
+        "WF-HAR-DOMAIN-05",
+        "WF-HAR-PROPERTY-01",
+        "WF-HAR-PROPERTY-02",
+        "WF-HAR-PROPERTY-03",
+        "WF-HAR-PROPERTY-04",
+        "WF-HAR-PROPERTY-05",
+        "WF-HAR-META-01",
+        "WF-HAR-META-02",
+        "WF-HAR-META-03",
+        "WF-HAR-META-04",
+        "WF-HAR-META-05",
+        "WF-HAR-CONTRACT-01",
+        "WF-HAR-CONTRACT-02",
+        "WF-HAR-CONTRACT-03",
+        "WF-HAR-CONTRACT-04",
+        "WF-HAR-CONTRACT-05",
+        "WF-HAR-INTEG-01",
+        "WF-HAR-INTEG-02",
+        "WF-HAR-INTEG-03",
+        "WF-HAR-INTEG-04",
+        "WF-HAR-INTEG-05",
+        "WF-HAR-INTEG-06",
+        "WF-HAR-PRODUCT-01",
+        "WF-HAR-PRODUCT-02",
+        "WF-HAR-PRODUCT-03",
+        "WF-HAR-PRODUCT-04",
+        "WF-HAR-PRODUCT-05",
+        "WF-HAR-PRODUCT-06",
+        "WF-HAR-OPS-01",
+        "WF-HAR-OPS-02"
+      ]
     },
     {
       "id": "WF-HAR-OPS-02-T",
@@ -584,7 +1485,50 @@
       "pass_criteria": "No correctness loss, cross-workspace isolation breach, unbounded memory growth, or silent truncation. Results identify when architectural consultation is required before operation at these bounds.",
       "applicability": "tenant",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": [
+        "WF-HAR-PREFLIGHT-01",
+        "WF-HAR-STATIC-01",
+        "WF-HAR-STATIC-02",
+        "WF-HAR-STATIC-03",
+        "WF-HAR-STATIC-04",
+        "WF-HAR-STATIC-05",
+        "WF-HAR-DOMAIN-01",
+        "WF-HAR-DOMAIN-02",
+        "WF-HAR-DOMAIN-03",
+        "WF-HAR-DOMAIN-04",
+        "WF-HAR-DOMAIN-05",
+        "WF-HAR-PROPERTY-01",
+        "WF-HAR-PROPERTY-02",
+        "WF-HAR-PROPERTY-03",
+        "WF-HAR-PROPERTY-04",
+        "WF-HAR-PROPERTY-05",
+        "WF-HAR-META-01",
+        "WF-HAR-META-02",
+        "WF-HAR-META-03",
+        "WF-HAR-META-04",
+        "WF-HAR-META-05",
+        "WF-HAR-CONTRACT-01",
+        "WF-HAR-CONTRACT-02",
+        "WF-HAR-CONTRACT-03",
+        "WF-HAR-CONTRACT-04",
+        "WF-HAR-CONTRACT-05",
+        "WF-HAR-INTEG-01",
+        "WF-HAR-INTEG-02",
+        "WF-HAR-INTEG-03",
+        "WF-HAR-INTEG-04",
+        "WF-HAR-INTEG-05",
+        "WF-HAR-INTEG-06",
+        "WF-HAR-PRODUCT-01",
+        "WF-HAR-PRODUCT-02",
+        "WF-HAR-PRODUCT-03",
+        "WF-HAR-PRODUCT-04",
+        "WF-HAR-PRODUCT-05",
+        "WF-HAR-PRODUCT-06",
+        "WF-HAR-OPS-01",
+        "WF-HAR-OPS-02",
+        "WF-HAR-OPS-02-L"
+      ]
     },
     {
       "id": "WF-HAR-OPS-03",
@@ -596,7 +1540,51 @@
       "pass_criteria": "Event durability \u2265 99.99%. Zero acknowledged-event loss. No partial internal commit or orphaned external-write intent; unacknowledged events may be lost only before durable inbox persistence and are tracked.",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": [
+        "WF-HAR-PREFLIGHT-01",
+        "WF-HAR-STATIC-01",
+        "WF-HAR-STATIC-02",
+        "WF-HAR-STATIC-03",
+        "WF-HAR-STATIC-04",
+        "WF-HAR-STATIC-05",
+        "WF-HAR-DOMAIN-01",
+        "WF-HAR-DOMAIN-02",
+        "WF-HAR-DOMAIN-03",
+        "WF-HAR-DOMAIN-04",
+        "WF-HAR-DOMAIN-05",
+        "WF-HAR-PROPERTY-01",
+        "WF-HAR-PROPERTY-02",
+        "WF-HAR-PROPERTY-03",
+        "WF-HAR-PROPERTY-04",
+        "WF-HAR-PROPERTY-05",
+        "WF-HAR-META-01",
+        "WF-HAR-META-02",
+        "WF-HAR-META-03",
+        "WF-HAR-META-04",
+        "WF-HAR-META-05",
+        "WF-HAR-CONTRACT-01",
+        "WF-HAR-CONTRACT-02",
+        "WF-HAR-CONTRACT-03",
+        "WF-HAR-CONTRACT-04",
+        "WF-HAR-CONTRACT-05",
+        "WF-HAR-INTEG-01",
+        "WF-HAR-INTEG-02",
+        "WF-HAR-INTEG-03",
+        "WF-HAR-INTEG-04",
+        "WF-HAR-INTEG-05",
+        "WF-HAR-INTEG-06",
+        "WF-HAR-PRODUCT-01",
+        "WF-HAR-PRODUCT-02",
+        "WF-HAR-PRODUCT-03",
+        "WF-HAR-PRODUCT-04",
+        "WF-HAR-PRODUCT-05",
+        "WF-HAR-PRODUCT-06",
+        "WF-HAR-OPS-01",
+        "WF-HAR-OPS-02",
+        "WF-HAR-OPS-02-L",
+        "WF-HAR-OPS-02-T"
+      ]
     },
     {
       "id": "WF-HAR-OPS-04",
@@ -608,7 +1596,52 @@
       "pass_criteria": "No memory leak. No connection leak. Latency stable (no upward trend). Event durability maintained.",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": [
+        "WF-HAR-PREFLIGHT-01",
+        "WF-HAR-STATIC-01",
+        "WF-HAR-STATIC-02",
+        "WF-HAR-STATIC-03",
+        "WF-HAR-STATIC-04",
+        "WF-HAR-STATIC-05",
+        "WF-HAR-DOMAIN-01",
+        "WF-HAR-DOMAIN-02",
+        "WF-HAR-DOMAIN-03",
+        "WF-HAR-DOMAIN-04",
+        "WF-HAR-DOMAIN-05",
+        "WF-HAR-PROPERTY-01",
+        "WF-HAR-PROPERTY-02",
+        "WF-HAR-PROPERTY-03",
+        "WF-HAR-PROPERTY-04",
+        "WF-HAR-PROPERTY-05",
+        "WF-HAR-META-01",
+        "WF-HAR-META-02",
+        "WF-HAR-META-03",
+        "WF-HAR-META-04",
+        "WF-HAR-META-05",
+        "WF-HAR-CONTRACT-01",
+        "WF-HAR-CONTRACT-02",
+        "WF-HAR-CONTRACT-03",
+        "WF-HAR-CONTRACT-04",
+        "WF-HAR-CONTRACT-05",
+        "WF-HAR-INTEG-01",
+        "WF-HAR-INTEG-02",
+        "WF-HAR-INTEG-03",
+        "WF-HAR-INTEG-04",
+        "WF-HAR-INTEG-05",
+        "WF-HAR-INTEG-06",
+        "WF-HAR-PRODUCT-01",
+        "WF-HAR-PRODUCT-02",
+        "WF-HAR-PRODUCT-03",
+        "WF-HAR-PRODUCT-04",
+        "WF-HAR-PRODUCT-05",
+        "WF-HAR-PRODUCT-06",
+        "WF-HAR-OPS-01",
+        "WF-HAR-OPS-02",
+        "WF-HAR-OPS-02-L",
+        "WF-HAR-OPS-02-T",
+        "WF-HAR-OPS-03"
+      ]
     },
     {
       "id": "WF-HAR-OPS-05",
@@ -620,7 +1653,53 @@
       "pass_criteria": "System recovers. No acknowledged event loss. Jobs retry from last checkpoint. Alerting fires.",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": [
+        "WF-HAR-PREFLIGHT-01",
+        "WF-HAR-STATIC-01",
+        "WF-HAR-STATIC-02",
+        "WF-HAR-STATIC-03",
+        "WF-HAR-STATIC-04",
+        "WF-HAR-STATIC-05",
+        "WF-HAR-DOMAIN-01",
+        "WF-HAR-DOMAIN-02",
+        "WF-HAR-DOMAIN-03",
+        "WF-HAR-DOMAIN-04",
+        "WF-HAR-DOMAIN-05",
+        "WF-HAR-PROPERTY-01",
+        "WF-HAR-PROPERTY-02",
+        "WF-HAR-PROPERTY-03",
+        "WF-HAR-PROPERTY-04",
+        "WF-HAR-PROPERTY-05",
+        "WF-HAR-META-01",
+        "WF-HAR-META-02",
+        "WF-HAR-META-03",
+        "WF-HAR-META-04",
+        "WF-HAR-META-05",
+        "WF-HAR-CONTRACT-01",
+        "WF-HAR-CONTRACT-02",
+        "WF-HAR-CONTRACT-03",
+        "WF-HAR-CONTRACT-04",
+        "WF-HAR-CONTRACT-05",
+        "WF-HAR-INTEG-01",
+        "WF-HAR-INTEG-02",
+        "WF-HAR-INTEG-03",
+        "WF-HAR-INTEG-04",
+        "WF-HAR-INTEG-05",
+        "WF-HAR-INTEG-06",
+        "WF-HAR-PRODUCT-01",
+        "WF-HAR-PRODUCT-02",
+        "WF-HAR-PRODUCT-03",
+        "WF-HAR-PRODUCT-04",
+        "WF-HAR-PRODUCT-05",
+        "WF-HAR-PRODUCT-06",
+        "WF-HAR-OPS-01",
+        "WF-HAR-OPS-02",
+        "WF-HAR-OPS-02-L",
+        "WF-HAR-OPS-02-T",
+        "WF-HAR-OPS-03",
+        "WF-HAR-OPS-04"
+      ]
     },
     {
       "id": "WF-HAR-OPS-06",
@@ -632,7 +1711,54 @@
       "pass_criteria": "Restore completes within RTO \u2264 60 minutes. RPO \u2264 5 minutes verified. Data integrity verified. Application starts and serves.",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": [
+        "WF-HAR-PREFLIGHT-01",
+        "WF-HAR-STATIC-01",
+        "WF-HAR-STATIC-02",
+        "WF-HAR-STATIC-03",
+        "WF-HAR-STATIC-04",
+        "WF-HAR-STATIC-05",
+        "WF-HAR-DOMAIN-01",
+        "WF-HAR-DOMAIN-02",
+        "WF-HAR-DOMAIN-03",
+        "WF-HAR-DOMAIN-04",
+        "WF-HAR-DOMAIN-05",
+        "WF-HAR-PROPERTY-01",
+        "WF-HAR-PROPERTY-02",
+        "WF-HAR-PROPERTY-03",
+        "WF-HAR-PROPERTY-04",
+        "WF-HAR-PROPERTY-05",
+        "WF-HAR-META-01",
+        "WF-HAR-META-02",
+        "WF-HAR-META-03",
+        "WF-HAR-META-04",
+        "WF-HAR-META-05",
+        "WF-HAR-CONTRACT-01",
+        "WF-HAR-CONTRACT-02",
+        "WF-HAR-CONTRACT-03",
+        "WF-HAR-CONTRACT-04",
+        "WF-HAR-CONTRACT-05",
+        "WF-HAR-INTEG-01",
+        "WF-HAR-INTEG-02",
+        "WF-HAR-INTEG-03",
+        "WF-HAR-INTEG-04",
+        "WF-HAR-INTEG-05",
+        "WF-HAR-INTEG-06",
+        "WF-HAR-PRODUCT-01",
+        "WF-HAR-PRODUCT-02",
+        "WF-HAR-PRODUCT-03",
+        "WF-HAR-PRODUCT-04",
+        "WF-HAR-PRODUCT-05",
+        "WF-HAR-PRODUCT-06",
+        "WF-HAR-OPS-01",
+        "WF-HAR-OPS-02",
+        "WF-HAR-OPS-02-L",
+        "WF-HAR-OPS-02-T",
+        "WF-HAR-OPS-03",
+        "WF-HAR-OPS-04",
+        "WF-HAR-OPS-05"
+      ]
     },
     {
       "id": "WF-HAR-OPS-07",
@@ -644,7 +1770,55 @@
       "pass_criteria": "Migration completes within maintenance window. Data intact. Rollback succeeds.",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": [
+        "WF-HAR-PREFLIGHT-01",
+        "WF-HAR-STATIC-01",
+        "WF-HAR-STATIC-02",
+        "WF-HAR-STATIC-03",
+        "WF-HAR-STATIC-04",
+        "WF-HAR-STATIC-05",
+        "WF-HAR-DOMAIN-01",
+        "WF-HAR-DOMAIN-02",
+        "WF-HAR-DOMAIN-03",
+        "WF-HAR-DOMAIN-04",
+        "WF-HAR-DOMAIN-05",
+        "WF-HAR-PROPERTY-01",
+        "WF-HAR-PROPERTY-02",
+        "WF-HAR-PROPERTY-03",
+        "WF-HAR-PROPERTY-04",
+        "WF-HAR-PROPERTY-05",
+        "WF-HAR-META-01",
+        "WF-HAR-META-02",
+        "WF-HAR-META-03",
+        "WF-HAR-META-04",
+        "WF-HAR-META-05",
+        "WF-HAR-CONTRACT-01",
+        "WF-HAR-CONTRACT-02",
+        "WF-HAR-CONTRACT-03",
+        "WF-HAR-CONTRACT-04",
+        "WF-HAR-CONTRACT-05",
+        "WF-HAR-INTEG-01",
+        "WF-HAR-INTEG-02",
+        "WF-HAR-INTEG-03",
+        "WF-HAR-INTEG-04",
+        "WF-HAR-INTEG-05",
+        "WF-HAR-INTEG-06",
+        "WF-HAR-PRODUCT-01",
+        "WF-HAR-PRODUCT-02",
+        "WF-HAR-PRODUCT-03",
+        "WF-HAR-PRODUCT-04",
+        "WF-HAR-PRODUCT-05",
+        "WF-HAR-PRODUCT-06",
+        "WF-HAR-OPS-01",
+        "WF-HAR-OPS-02",
+        "WF-HAR-OPS-02-L",
+        "WF-HAR-OPS-02-T",
+        "WF-HAR-OPS-03",
+        "WF-HAR-OPS-04",
+        "WF-HAR-OPS-05",
+        "WF-HAR-OPS-06"
+      ]
     },
     {
       "id": "WF-HAR-GITHUB-SANDBOX-01",
@@ -656,7 +1830,8 @@
       "pass_criteria": "All GitHub operations succeed against real API. Sandbox resets clean between runs.",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": []
     },
     {
       "id": "WF-HAR-539-REPLAY-01",
@@ -668,7 +1843,8 @@
       "pass_criteria": "DecisionRecord hash matches golden-file. Close/reopen updates source state and frontier correctly. Managed projection agrees with full solve. Content hashes of imported data and computed DecisionRecords recorded.",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": []
     },
     {
       "id": "WF-HAR-SEC-01",
@@ -680,7 +1856,8 @@
       "pass_criteria": "No endpoint returns 2xx without valid auth",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": []
     },
     {
       "id": "WF-HAR-SEC-02",
@@ -692,7 +1869,8 @@
       "pass_criteria": "No high or medium risk findings",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": []
     },
     {
       "id": "WF-HAR-SEC-03",
@@ -704,7 +1882,8 @@
       "pass_criteria": "No server-side request forgery. Internal network access blocked.",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": []
     },
     {
       "id": "WF-HAR-SEC-04",
@@ -716,7 +1895,8 @@
       "pass_criteria": "No unauthorized access to objects outside user's scope.",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": []
     },
     {
       "id": "WF-HAR-SEC-05",
@@ -728,7 +1908,8 @@
       "pass_criteria": "All state-changing endpoints reject invalid CSRF tokens.",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": []
     },
     {
       "id": "WF-HAR-SEC-06",
@@ -740,7 +1921,8 @@
       "pass_criteria": "Brute-force and enumeration attacks throttled. Repeated failures trigger lockout or delay.",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": []
     },
     {
       "id": "WF-HAR-SEC-07",
@@ -752,7 +1934,8 @@
       "pass_criteria": "No critical or high CVEs. Medium CVEs documented with mitigation plan.",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": []
     },
     {
       "id": "WF-HAR-SEC-08",
@@ -764,7 +1947,8 @@
       "pass_criteria": "All communication channels use TLS. No plaintext fallback.",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": []
     },
     {
       "id": "WF-HAR-SEC-09",
@@ -776,7 +1960,8 @@
       "pass_criteria": "No privilege escalation. Role boundaries enforced at every endpoint.",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": []
     },
     {
       "id": "WF-HAR-SEC-10",
@@ -788,7 +1973,8 @@
       "pass_criteria": "All safety-gate-circumventing overrides rejected. Safety gates remain enforced.",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": []
     },
     {
       "id": "WF-HAR-SEC-11",
@@ -800,7 +1986,8 @@
       "pass_criteria": "All overrides outside scope rejected. Completion policy not weakened. Cascade beyond scope blocked.",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": []
     },
     {
       "id": "WF-HAR-SEC-12",
@@ -812,7 +1999,8 @@
       "pass_criteria": "Spoofed authority status rejected. Only legitimate sources can set authority.",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": []
     },
     {
       "id": "WF-HAR-SEC-13",
@@ -824,7 +2012,8 @@
       "pass_criteria": "No tracker credentials in logs, API responses, or state dumps.",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": []
     },
     {
       "id": "WF-HAR-SEC-14",
@@ -836,7 +2025,8 @@
       "pass_criteria": "Old evidence records cannot be modified or deleted. Mutation attempts rejected.",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": []
     },
     {
       "id": "WF-HAR-SEC-15",
@@ -848,7 +2038,8 @@
       "pass_criteria": "Canonical envelope/payload hash mismatch is detected. Entry overwrite/reorder fails. Privileged-DB threat profile cannot claim tamper resistance unless signed anchor or WORM evidence validates.",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": []
     },
     {
       "id": "WF-HAR-A11Y-01",
@@ -860,7 +2051,8 @@
       "pass_criteria": "Zero violations",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": []
     },
     {
       "id": "WF-HAR-A11Y-02",
@@ -872,7 +2064,8 @@
       "pass_criteria": "All interactive elements reachable. Focus visible. Logical tab order.",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": []
     },
     {
       "id": "WF-HAR-A11Y-03",
@@ -884,7 +2077,8 @@
       "pass_criteria": "Focus indicators meet 2.2 AA minimum area and contrast ratio.",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": []
     },
     {
       "id": "WF-HAR-A11Y-04",
@@ -896,7 +2090,8 @@
       "pass_criteria": "All drag operations accessible via keyboard and single-pointer alternatives.",
       "applicability": "standard",
       "status": "specified",
-      "artifact_mode": "declared_file"
+      "artifact_mode": "declared_file",
+      "prerequisites": []
     }
   ]
 }

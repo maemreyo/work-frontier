@@ -19,8 +19,48 @@ if (!inputPath || !outputPath || !schemaName) {
   process.exit(1);
 }
 
+/**
+ * Recursively resolve $ref pointers in a JSON Schema.
+ * Returns a new schema with all $ref resolved in-place.
+ */
+function resolveRefs(schema, defs = null) {
+  if (defs === null) {
+    defs = schema.$defs || {};
+  }
+  if (schema == null || typeof schema !== "object") return schema;
+
+  // Arrays: recursively resolve each element
+  if (Array.isArray(schema)) {
+    return schema.map((item) => resolveRefs(item, defs));
+  }
+
+  // If this object IS a $ref, replace it with the definition
+  if (schema.$ref && typeof schema.$ref === "string" && schema.$ref.startsWith("#/$defs/")) {
+    const defName = schema.$ref.slice("#/$defs/".length);
+    if (!defs[defName]) {
+      throw new Error(`Unresolvable $ref: ${schema.$ref}`);
+    }
+    const resolved = JSON.parse(JSON.stringify(defs[defName]));
+    // Recursively resolve any refs inside the def
+    return resolveRefs(resolved, defs);
+  }
+
+  // Otherwise, recursively process all keys
+  const result = {};
+  for (const [key, value] of Object.entries(schema)) {
+    result[key] = resolveRefs(value, defs);
+  }
+  return result;
+}
+
+
 try {
-  const jsonSchema = JSON.parse(readFileSync(inputPath, "utf-8"));
+  const rawSchema = JSON.parse(readFileSync(inputPath, "utf-8"));
+
+  // Resolve all $ref pointers throughout the schema so that nested
+  // definitions (e.g. Invocation, Artifact) are inlined before
+  // x-to-zod processes them.  x-to-zod does not follow $ref.
+  const jsonSchema = resolveRefs(rawSchema);
 
   let zodCode = jsonSchemaToZod(jsonSchema, {
     module: "esm",
@@ -33,6 +73,9 @@ try {
 
   // Post-process: add minProperties refinements from JSON Schema
   zodCode = addMinPropertiesRefinements(zodCode, jsonSchema);
+
+  // Post-process: add required-key refinements for object+additionalProperties schemas
+  zodCode = addRequiredKeyRefinements(zodCode, jsonSchema);
 
   // Re-format the z.object with each field on its own line for readability
   zodCode = formatObjectFields(zodCode);
@@ -98,6 +141,52 @@ function addMinPropertiesRefinements(zodCode, jsonSchema) {
   }
   return zodCode;
 }
+
+/**
+ * Walk JSON Schema properties looking for object-with-additionalProperties
+ * that specify required keys.  x-to-zod emits these as z.object({...}).catchall(...)
+ * which preserves required properties — but when the schema has ONLY
+ * additionalProperties (no properties), x-to-zod emits z.record(...) which
+ * cannot express required keys.  For those, append a .refine() call.
+ */
+function addRequiredKeyRefinements(zodCode, jsonSchema) {
+  if (!jsonSchema.properties) return zodCode;
+
+  for (const [propName, propSchema] of Object.entries(jsonSchema.properties)) {
+    if (
+      propSchema.type === "object" &&
+      propSchema.additionalProperties &&
+      propSchema.required &&
+      propSchema.required.length > 0 &&
+      // Only handle cases WITHOUT explicit properties (pure additionalProperties)
+      (!propSchema.properties || Object.keys(propSchema.properties).length === 0)
+    ) {
+      for (const requiredKey of propSchema.required) {
+        // Look for the property name followed by z.record(...) in zodCode
+        const recordNeedle = `"${propName}": z.record(`;
+        const recordPos = zodCode.indexOf(recordNeedle);
+        if (recordPos === -1) continue;
+
+        // Check if there's already a .refine() after this (avoid double-wrapping)
+        const afterRecord = zodCode.slice(recordPos);
+        if (afterRecord.includes(`.refine((obj) =>`)) continue;
+
+        // Find the end of z.record(...) expression
+        const innerNeedle = `${propName}": z.record(`;
+        const innerPos = zodCode.indexOf(innerNeedle);
+        if (innerPos === -1) continue;
+        const openParenPos = innerPos + innerNeedle.length - 1; // position of (
+        const closeEnd = findMatchingCloseParen(zodCode, openParenPos);
+        if (closeEnd === -1) continue;
+
+        const refine = `.refine((obj) => obj !== null && typeof obj === "object" && "${requiredKey}" in obj, { message: "Must include required key '${requiredKey}'" })`;
+        zodCode = zodCode.slice(0, closeEnd) + refine + zodCode.slice(closeEnd);
+      }
+    }
+  }
+  return zodCode;
+}
+
 
 /**
  * Format z.object fields so each property is on its own line.

@@ -14,7 +14,7 @@
 
 ## Used by
 
-- **`delivery-ci`** — executes import-boundary verification as a foundation harness (`.github/workflows/ci.yml:52`)
+- **`delivery-ci`** — runs import-boundary enforcement through the harness suite (`.github/workflows/ci.yml:52`)
 
 ## Data & side effects
 

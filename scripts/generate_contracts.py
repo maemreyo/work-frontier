@@ -23,6 +23,7 @@ CONTRACT_DIRECTORY: Final = Path("contracts/generated")
 JSON_SCHEMA_PATH: Final = CONTRACT_DIRECTORY / "decision-record.schema.json"
 EVIDENCE_SCHEMA_PATH: Final = CONTRACT_DIRECTORY / "evidence-record.schema.json"
 ZOD_PATH: Final = Path("frontend/src/contracts/decision-record.generated.ts")
+ZOD_EVIDENCE_PATH: Final = Path("frontend/src/contracts/evidence-record.generated.ts")
 
 
 def json_schema() -> str:
@@ -68,12 +69,44 @@ def zod_source() -> str:
         _ = zod_path.unlink(missing_ok=True)
 
 
+def evidence_zod_source() -> str:
+    """Generate Zod source for EvidenceRecord from Pydantic-derived schema."""
+    with tempfile.NamedTemporaryFile(
+        mode="w", suffix=".json", delete=False
+    ) as schema_tmp:
+        _ = schema_tmp.write(evidence_schema())
+        schema_path = Path(schema_tmp.name)
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".ts", delete=False) as zod_tmp:
+        zod_path = Path(zod_tmp.name)
+
+    try:
+        _ = subprocess.run(
+            [
+                "node",
+                "scripts/generate_zod_from_schema.mjs",
+                str(schema_path),
+                str(zod_path),
+                "EvidenceRecordSchema",
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        content = zod_path.read_text(encoding="utf-8")
+        return content.replace(str(schema_path), str(EVIDENCE_SCHEMA_PATH))
+    finally:
+        _ = schema_path.unlink(missing_ok=True)
+        _ = zod_path.unlink(missing_ok=True)
+
+
 def expected_artifacts() -> tuple[tuple[Path, str], ...]:
     """Return every generated artifact and its expected deterministic content."""
     return (
         (JSON_SCHEMA_PATH, json_schema()),
         (EVIDENCE_SCHEMA_PATH, evidence_schema()),
         (ZOD_PATH, zod_source()),
+        (ZOD_EVIDENCE_PATH, evidence_zod_source()),
     )
 
 
@@ -115,6 +148,11 @@ def main(arguments: list[str]) -> int:
                 detail=str(EVIDENCE_SCHEMA_PATH),
             ),
             Result(kind="zod_generated", passed=True, detail=str(ZOD_PATH)),
+            Result(
+                kind="evidence_zod_generated",
+                passed=True,
+                detail=str(ZOD_EVIDENCE_PATH),
+            ),
         ]
     elif check_mode:
         is_current = artifacts_are_current()

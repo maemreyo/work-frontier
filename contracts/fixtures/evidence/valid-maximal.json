@@ -8,7 +8,7 @@
   "invocation": {
     "command": "mypy backend/app --strict",
     "exit_code": 1,
-    "working_directory": ".",
+    "working_directory": "backend",
     "start_time": "2026-07-12T03:21:30Z",
     "end_time": "2026-07-12T03:22:45Z",
     "duration_seconds": 75
@@ -18,8 +18,8 @@
     "version": "1.10.0",
     "commit_sha": "f1e2d3c4b5a6978012345678901234567890fedc"
   },
-  "applicability": "standard",
-  "applicability_reason": "Standard foundation closure fixture with results",
+  "applicability": "tenant",
+  "applicability_reason": "Envelope triggered by tenant-scope certification request T-042",
   "environment": {
     "python": "3.13.5",
     "os": "darwin-arm64",
@@ -32,28 +32,39 @@
         "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         "md5": "d41d8cd98f00b204e9800998ecf8427e"
       }
+    },
+    {
+      "path": "backend/pyproject.toml",
+      "hashes": {
+        "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+      }
     }
   ],
   "results": [
     {
       "kind": "type_error",
       "passed": false,
-      "detail": "backend/app/models/user.py:42: error: Incompatible return value type (got \"Optional[str]\", expected \"str\")"
+      "detail": "backend/app/models/user.py:42: error: Incompatible return value type"
     },
     {
       "kind": "type_check",
       "passed": true,
       "detail": "backend/app/services/auth.py passed strict type checking"
+    },
+    {
+      "kind": "lint",
+      "passed": true,
+      "detail": "All lint checks passed"
     }
   ],
   "stdout_artifact": {
-    "path": ".omo/evidence/static/mypy-stdout-1720764090000.txt",
+    "path": ".omo/evidence/static/mypy-stdout.txt",
     "hashes": {
       "sha256": "a3b2c1d0e9f8876543210fedcba9876543210fedcba9876543210fedcba98765"
     }
   },
   "stderr_artifact": {
-    "path": ".omo/evidence/static/mypy-stderr-1720764090000.txt",
+    "path": ".omo/evidence/static/mypy-stderr.txt",
     "hashes": {
       "sha256": "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
     }
@@ -61,7 +72,6 @@
   "property_bag": {
     "contract.service_name": "backend",
     "contract.strict_mode": true,
-    "mypy.config_file": "pyproject.toml",
-    "mypy.cache_dir": ".mypy_cache"
+    "mypy.config_file": "pyproject.toml"
   }
 }

@@ -1,23 +1,23 @@
 # Module: Contract Generation
 
 **Path:** `scripts/generate_contracts.py`  
-**Role:** Generates JSON Schema and frontend Zod artifacts from the canonical Pydantic contract and checks drift.
+**Role:** Generates JSON Schema and frontend Zod artifacts for both DecisionRecord and EvidenceRecord from the canonical Pydantic contracts and checks drift.
 
 ## Public interface
 
-- `python scripts/generate_contracts.py --check` — verifies generated frontend contract artifacts are current.
-- `python scripts/generate_contracts.py --write` — regenerates schema and Zod outputs.
+- `python scripts/generate_contracts.py --check` — verifies generated frontend contract artifacts are current (both DecisionRecord and EvidenceRecord).
+- `python scripts/generate_contracts.py --write` — regenerates JSON Schema, DecisionRecord Zod schema, and EvidenceRecord Zod schema.
 
 ## Depends on
 
-- **`contracts`** — imports the canonical DecisionRecord model as the source schema (`scripts/generate_contracts.py:15`)
-- external: `node` — runs the JSON Schema to Zod conversion helper (`scripts/generate_contracts.py:42`)
+- **`contracts`** — imports canonical DecisionRecord and EvidenceRecord models as the source schemas (`scripts/generate_contracts.py:15`)
+- external: `node` — runs the JSON Schema to Zod conversion helper for both contract types (`scripts/generate_contracts.py:42`)
 - external: `zod` — emits the frontend runtime validator (`scripts/generate_zod.mjs:24`)
 
 ## Used by
 
-- **`frontend-foundation`** — provides generated TypeScript validation artifacts (`frontend/src/contracts/decision-record.generated.ts:3`)
-- **`delivery-ci`** — runs the contract drift check (`.github/workflows/ci.yml:34`)
+- **`delivery-ci`** — checks generated contract drift (`.github/workflows/ci.yml:34`)
+- **`frontend-foundation`** — consumes generated Zod schemas for both DecisionRecord and EvidenceRecord (`frontend/src/contracts/decision-record.generated.ts:3`, `frontend/src/contracts/evidence-record.generated.ts:3`)
 
 ## Data & side effects
 
@@ -25,8 +25,8 @@
 
 ## Notes / discrepancies vs existing docs
 
-- `generate_zod.mjs` requests Zod v3 generation while the frontend declares Zod 4.x; generated output currently remains simple enough to work, but the configuration should be aligned.
+- `generate_zod_from_schema.mjs` requests Zod v3 generation while the frontend declares Zod 4.x; generated output currently remains simple enough to work, but the configuration should be aligned.
 
 ---
 
-_Traced from source on 2026-07-12. Files examined in depth: all files listed in this module’s internal structure or public interface._
+_Traced from source on 2026-07-13. Files examined in depth: all files listed in this module’s internal structure or public interface._

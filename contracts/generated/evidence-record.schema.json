@@ -9,8 +9,9 @@
           "description": "Content hashes with required canonical sha256"
         },
         "path": {
-          "description": "File path relative to repository root",
+          "description": "File path relative to repository root. Must be a POSIX relative path (no leading slash).",
           "minLength": 1,
+          "pattern": "^[^/]",
           "title": "Path",
           "type": "string"
         }
@@ -101,7 +102,9 @@
           "type": "string"
         },
         "working_directory": {
-          "description": "Working directory (repo-relative) where command was executed",
+          "description": "Working directory (repo-relative) where command was executed. Must be a POSIX relative path (no leading slash).",
+          "minLength": 1,
+          "pattern": "^[^/]",
           "title": "Working Directory",
           "type": "string"
         }
@@ -226,7 +229,17 @@
       "additionalProperties": {
         "type": "string"
       },
-      "description": "Environment fingerprint (OS, runtime versions, etc.)",
+      "description": "Environment fingerprint (OS, runtime versions, etc.). Must include 'os' key.",
+      "properties": {
+        "os": {
+          "description": "Operating system identifier (e.g., linux-x86_64, darwin-arm64)",
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "os"
+      ],
       "title": "Environment",
       "type": "object"
     },

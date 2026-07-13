@@ -2,7 +2,7 @@
 
 Work Frontier currently provides a source-controlled foundation verification and evidence toolchain for a future dependency-aware readiness control plane. The executable system is primarily Python and Node/TypeScript tooling: strict contracts, preflight mutation tests, import-boundary enforcement, harness execution, evidence capture, and local PostgreSQL/MinIO smoke tests. The business control-plane runtime described in architecture documents is not implemented yet.
 
-**Generated:** 2026-07-12 · **Mode:** full trace · **Source commit:** `e54bfeca1150fbc15fb6da1b603af938e2bca79`
+**Generated:** 2026-07-13 · **Mode:** incremental update
 
 ## Tech stack & key dependencies
 
@@ -18,12 +18,12 @@ Work Frontier currently provides a source-controlled foundation verification and
 | Module | Responsibility | Depends on | File |
 | --- | --- | --- | --- |
 | `foundation-preflight` | Validates the seven foundation baselines and proves negative fixtures fail with typed failure IDs. | `contracts` | [modules/foundation-preflight.md](modules/foundation-preflight.md) |
-| `contracts` | Defines canonical DecisionRecord and EvidenceRecord schemas plus harness registry contracts. | — | [modules/contracts.md](modules/contracts.md) |
-| `evidence-runtime` | Executes registered harnesses and writes reproducible evidence bound to the tested Git revision. | `contracts` | [modules/evidence-runtime.md](modules/evidence-runtime.md) |
+| `contracts` | Defines canonical DecisionRecord and EvidenceRecord schemas plus harness registry contracts with comprehensive validation. | — | [modules/contracts.md](modules/contracts.md) |
+| `evidence-runtime` | Executes registered harnesses and writes reproducible evidence bound to the tested Git revision with tamper detection and prerequisite-satisfaction gating. | `contracts` | [modules/evidence-runtime.md](modules/evidence-runtime.md) |
 | `architecture-enforcement` | Statically scans Python imports and enforces the allowed dependency matrix between architectural layers. | `contracts` | [modules/architecture-enforcement.md](modules/architecture-enforcement.md) |
-| `contract-generation` | Generates JSON Schema and frontend Zod artifacts from the canonical Pydantic contract and checks drift. | `contracts` | [modules/contract-generation.md](modules/contract-generation.md) |
+| `contract-generation` | Generates JSON Schema and frontend Zod artifacts for both DecisionRecord and EvidenceRecord from the canonical Pydantic contracts and checks drift. | `contracts` | [modules/contract-generation.md](modules/contract-generation.md) |
 | `infrastructure-smoke` | Proves PostgreSQL migration rollback behavior and MinIO object lifecycle behavior against local containers. | `contracts` | [modules/infrastructure-smoke.md](modules/infrastructure-smoke.md) |
-| `frontend-foundation` | Contains TypeScript contract artifacts, evidence helper code and test/tooling configuration, but no product UI shell yet. | `contract-generation` | [modules/frontend-foundation.md](modules/frontend-foundation.md) |
+| `frontend-foundation` | Contains TypeScript contract artifacts (DecisionRecord and EvidenceRecord Zod validators with semantic validation), evidence helper code and test/tooling configuration, but no product UI shell yet. | `contract-generation` | [modules/frontend-foundation.md](modules/frontend-foundation.md) |
 | `delivery-ci` | Orchestrates preflight, contract drift, static checks, tests, infrastructure smokes, security scans and evidence collection. | `foundation-preflight`, `contract-generation`, `architecture-enforcement`, `evidence-runtime`, `infrastructure-smoke`, `frontend-foundation` | [modules/delivery-ci.md](modules/delivery-ci.md) |
 
 ## Entry points
@@ -55,16 +55,16 @@ See [system-diagram.md](system-diagram.md) or the standalone [system-diagram.htm
 
 **Dependency cycles:** none found among the traced modules.
 
-**Trace coverage:** all 8 selected current-state modules were traced in full. Empty future-layer packages were inventoried and disclosed as scaffolds rather than promoted to modules with invented behavior.
+**Trace coverage:** All 8 modules are traced with full file coverage. Empty future-layer packages were inventoried and disclosed as scaffolds rather than promoted to modules with invented behavior.
 
 ## Important discrepancies
 
-- Frontend evidence construction is not schema-equivalent to the canonical backend `EvidenceRecord`.
-- Two overlapping Python evidence APIs exist.
+- Frontend `lib/evidence-collector.ts` does not match the canonical `EvidenceRecord` schema; the new `evidence-record-semantic.ts` and generated Zod validator fill part of the gap but the helper remains non-canonical.
+- Two overlapping Python evidence APIs exist (`backend/lib/evidence_collector.py` and `contracts/evidence_writer.py`).
 - `WF-HAR-STATIC-05` registry wording and its command do not describe the same check.
 - The Zod generator requests v3 output while the frontend declares Zod 4.x.
 - Target architecture documents describe planned modules and flows that are absent from executable source.
 
 ## How this was generated
 
-This documentation was generated by tracing actual source rather than summarizing README claims. `_manifest.json` tracks traced state for future incremental updates; deleting it forces a full re-trace. `_graph.json` is a machine-readable snapshot. `_diagram-data.json` is the canonical source for both diagram formats.
+This documentation was generated by tracing actual source rather than summarizing README claims. `_manifest.json` tracks traced state for future incremental updates; deleting it forces a full re-trace. This was an incremental update: changed module docs were re-traced, unchanged ones preserved. `_graph.json` is a machine-readable snapshot. `_diagram-data.json` is the canonical source for both diagram formats.

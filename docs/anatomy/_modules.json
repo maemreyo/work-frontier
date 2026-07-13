@@ -1,7 +1,7 @@
 {
   "foundation-preflight": ".omo/preflight/adr-006",
   "contracts": "backend/src/work_frontier/contracts",
-  "evidence-runtime": "backend/src/work_frontier/contracts",
+  "evidence-runtime": "scripts/run_harness.py",
   "architecture-enforcement": "scripts/check_import_boundaries.py",
   "contract-generation": "scripts/generate_contracts.py",
   "infrastructure-smoke": "scripts",
