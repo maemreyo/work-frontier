@@ -7,7 +7,7 @@
  * false positive acceptance, or wrong failure ID fails the process.
  */
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
-import { basename, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 const root = resolve(import.meta.dirname, "../../..");
@@ -931,8 +931,9 @@ export async function main() {
   const documents = await readCanonicalDocuments();
   const result = runGate(manifest, positive, negative, documents);
 
-  await mkdir(evidence, { recursive: true });
-  await writeFile(join(evidence, "validation.json"), `${JSON.stringify(result, null, 2)}\n`);
+  const artifactPath = process.env.WF_HARNESS_ARTIFACT ?? join(evidence, "validation.json");
+  await mkdir(dirname(artifactPath), { recursive: true });
+  await writeFile(artifactPath, `${JSON.stringify(result, null, 2)}\n`);
   console.log(JSON.stringify(result, null, 2));
   process.exitCode = failuresExit(result.failures);
   return result;
