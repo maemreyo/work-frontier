@@ -69,7 +69,7 @@ Do not start Todo 6 until all of the following are true:
 5. Todo 5 validates exact harness IDs, subject identity, evidence freshness, logs, hashes, applicability, and certification status.
 6. Todos 1-4 are rerun through the Todo 5 runner against the exact subject revision; stale or contradictory reports are superseded, not silently retained as current proof.
 
-**Continuation status:** blocked before Todo 6; next executable work is foundation repair followed by Todo 5 and recertification.
+**Continuation status:** P0 through Todo 27 are implemented and verified; the next executable work is Todo 28, Coordinator proposal and dependency workflows. Todos 28-35 remain open until exact-revision GA certification; F1-F4 additionally require surfaced audit results and explicit user acceptance.
 
 ## Verification strategy
 

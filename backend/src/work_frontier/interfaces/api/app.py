@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Annotated, cast
 
 from fastapi import FastAPI, Path, Query, Request, status
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 
 from work_frontier.interfaces.api.errors import ControlPlaneError
 from work_frontier.interfaces.api.models import (
@@ -24,6 +24,7 @@ from work_frontier.interfaces.api.models import (
     SyncResponse,
     WriterStateResponse,
 )
+from work_frontier.interfaces.api.security import install_security_middleware
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -37,7 +38,7 @@ if TYPE_CHECKING:
 
 _ItemId = Annotated[str, Path(pattern=r"^[A-Za-z0-9._:-]{1,128}$")]
 _ProposalId = Annotated[str, Path(pattern=r"^[A-Fa-f0-9]{16,64}$")]
-_PUBLIC_PATHS = frozenset({"/healthz", "/openapi.json", "/docs", "/redoc"})
+_PUBLIC_PATHS = frozenset({"/healthz", "/metrics", "/openapi.json", "/docs", "/redoc"})
 
 
 def create_app(service: ControlPlaneService) -> FastAPI:
@@ -48,6 +49,7 @@ def create_app(service: ControlPlaneService) -> FastAPI:
         openapi_version="3.1.0",
     )
     app.state.control_plane_service = service
+    install_security_middleware(app)
     _install_error_handlers(app)
     _install_scope_middleware(app, service)
     _install_routes(app, service)
@@ -140,6 +142,17 @@ def _install_read_routes(app: FastAPI, service: ControlPlaneService) -> None:
     def health() -> HealthResponse:
         return HealthResponse(status="ok", process="web")
 
+    @app.get("/metrics", response_class=PlainTextResponse)
+    def metrics() -> str:
+        return (
+            "# HELP work_frontier_up Process health
+"
+            "# TYPE work_frontier_up gauge
+"
+            "work_frontier_up{process="web"} 1
+"
+        )
+
     @app.get("/frontier", response_model=FrontierPage)
     def frontier(
         request: Request,
@@ -160,7 +173,7 @@ def _install_read_routes(app: FastAPI, service: ControlPlaneService) -> None:
     def attention(request: Request) -> tuple[AttentionResponse, ...]:
         return service.attention(_request_context(request))
 
-    _ = health, frontier, item, writer_state, attention
+    _ = health, metrics, frontier, item, writer_state, attention
 
 
 def _install_write_routes(app: FastAPI, service: ControlPlaneService) -> None:

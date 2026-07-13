@@ -1,0 +1,13 @@
+groups:
+  - name: work-frontier
+    rules:
+      - alert: WorkFrontierErrorBudgetBurn
+        expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) > 0.001
+        for: 10m
+        labels: {severity: critical}
+        annotations: {summary: "Work Frontier error rate exceeds Standard SLO"}
+      - alert: WorkFrontierQueueStalled
+        expr: max_over_time(work_frontier_oldest_job_seconds[10m]) > 30
+        for: 5m
+        labels: {severity: warning}
+        annotations: {summary: "Queue latency exceeds webhook-to-decision target"}

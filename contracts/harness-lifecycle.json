@@ -54,7 +54,31 @@
     "WF-HAR-PRODUCT-04",
     "WF-HAR-PRODUCT-05",
     "WF-HAR-PRODUCT-06",
-    "WF-HAR-OPS-01"
+    "WF-HAR-OPS-01",
+    "WF-HAR-STATIC-03",
+    "WF-HAR-CONTRACT-02",
+    "WF-HAR-CONTRACT-03",
+    "WF-HAR-OPS-02",
+    "WF-HAR-OPS-02-L",
+    "WF-HAR-OPS-02-T",
+    "WF-HAR-OPS-04",
+    "WF-HAR-OPS-05",
+    "WF-HAR-OPS-06",
+    "WF-HAR-OPS-07",
+    "WF-HAR-SEC-01",
+    "WF-HAR-SEC-02",
+    "WF-HAR-SEC-03",
+    "WF-HAR-SEC-05",
+    "WF-HAR-SEC-06",
+    "WF-HAR-SEC-07",
+    "WF-HAR-SEC-08",
+    "WF-HAR-SEC-10",
+    "WF-HAR-SEC-11",
+    "WF-HAR-SEC-12",
+    "WF-HAR-A11Y-01",
+    "WF-HAR-A11Y-02",
+    "WF-HAR-A11Y-03",
+    "WF-HAR-A11Y-04"
   ],
   "deferred_harnesses": [],
   "pre_ga_harnesses": [
@@ -242,6 +266,78 @@
       "WF-HAR-INTEG-04",
       "WF-HAR-INTEG-05",
       "WF-HAR-INTEG-06"
+    ],
+    "WF-HAR-STATIC-03": [
+      "WF-HAR-STATIC-04"
+    ],
+    "WF-HAR-CONTRACT-02": [
+      "WF-HAR-CONTRACT-05"
+    ],
+    "WF-HAR-CONTRACT-03": [
+      "WF-HAR-CONTRACT-05"
+    ],
+    "WF-HAR-OPS-02": [
+      "WF-HAR-OPS-01"
+    ],
+    "WF-HAR-OPS-02-L": [
+      "WF-HAR-OPS-02"
+    ],
+    "WF-HAR-OPS-02-T": [
+      "WF-HAR-OPS-02"
+    ],
+    "WF-HAR-OPS-04": [
+      "WF-HAR-OPS-03"
+    ],
+    "WF-HAR-OPS-05": [
+      "WF-HAR-OPS-03"
+    ],
+    "WF-HAR-OPS-06": [
+      "WF-HAR-OPS-05"
+    ],
+    "WF-HAR-OPS-07": [
+      "WF-HAR-CONTRACT-02"
+    ],
+    "WF-HAR-SEC-01": [
+      "WF-HAR-INTEG-04"
+    ],
+    "WF-HAR-SEC-02": [
+      "WF-HAR-SEC-01"
+    ],
+    "WF-HAR-SEC-03": [
+      "WF-HAR-SEC-02"
+    ],
+    "WF-HAR-SEC-05": [
+      "WF-HAR-SEC-01"
+    ],
+    "WF-HAR-SEC-06": [
+      "WF-HAR-SEC-01"
+    ],
+    "WF-HAR-SEC-07": [
+      "WF-HAR-STATIC-05"
+    ],
+    "WF-HAR-SEC-08": [
+      "WF-HAR-INTEG-04"
+    ],
+    "WF-HAR-SEC-10": [
+      "WF-HAR-DOMAIN-04"
+    ],
+    "WF-HAR-SEC-11": [
+      "WF-HAR-SEC-10"
+    ],
+    "WF-HAR-SEC-12": [
+      "WF-HAR-DOMAIN-05"
+    ],
+    "WF-HAR-A11Y-01": [
+      "WF-HAR-PRODUCT-01"
+    ],
+    "WF-HAR-A11Y-02": [
+      "WF-HAR-A11Y-01"
+    ],
+    "WF-HAR-A11Y-03": [
+      "WF-HAR-A11Y-02"
+    ],
+    "WF-HAR-A11Y-04": [
+      "WF-HAR-A11Y-03"
     ]
   }
 }

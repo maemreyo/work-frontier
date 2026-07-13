@@ -26,6 +26,7 @@ from work_frontier.contracts.evidence_writer import (
     is_working_tree_clean,
     write_evidence,
 )
+from work_frontier.contracts.harness_applicability import resolve_declared_outcome
 from work_frontier.contracts.harness_registry import (
     dependency_closure,
     foundation_closure,
@@ -159,18 +160,29 @@ def run_harness(  # noqa: PLR0915 - harness lifecycle spans pre/post validation
     )
     end_time = datetime.now(UTC)
 
-    status: Literal["pass", "fail", "skip", "not_applicable"]
-    status = "pass" if completed.returncode == 0 else "fail"
+    outcome = resolve_declared_outcome(
+        exit_code=completed.returncode,
+        artifact_path=run_artifact_path,
+    )
+    status: Literal["pass", "fail", "skip", "not_applicable"] = outcome.status
 
     stdout = completed.stdout or ""
     stderr = completed.stderr or ""
     results = [
         Result(
             kind="harness_exit",
-            passed=completed.returncode == 0,
-            detail=f"exit_code={completed.returncode}",
+            passed=completed.returncode == 0 and status != "fail",
+            detail=f"exit_code={completed.returncode}; status={status}",
         )
     ]
+    if outcome.failure_detail is not None:
+        results.append(
+            Result(
+                kind="applicability_declaration",
+                passed=False,
+                detail=outcome.failure_detail,
+            )
+        )
 
     property_bag: dict[str, JsonValue] = {
         "registry.harness_id": harness_id,
@@ -274,6 +286,7 @@ def run_harness(  # noqa: PLR0915 - harness lifecycle spans pre/post validation
             "Literal['pre_ga', 'ga']",
             get_release_stage(registry, harness_id),
         ),
+        applicability_reason=outcome.applicability_reason,
     )
 
     evidence_path = evidence_root / evidence_filename
@@ -322,10 +335,15 @@ def run_harness_with_prerequisites(
             require_blocking_pass=True,
             repo_root=root,
         )
-        if record.status != "pass":
+        member = get_harness(registry, member_id)
+        acceptable = record.status == "pass" or (
+            record.status == "not_applicable"
+            and not bool(member.get("blocks_release"))
+        )
+        if not acceptable:
             failures.append(
                 f"{member_id}: prerequisite closure member status is "
-                f"{record.status!r}, not 'pass'"
+                f"{record.status!r}, not an acceptable outcome"
             )
             failures.extend(_failure_diagnostics(record, root))
         if failures:

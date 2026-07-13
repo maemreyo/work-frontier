@@ -65,7 +65,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `uv run vulture backend/src --min-confidence 90 && pnpm --dir frontend exec ts-prune` |
+| **Command** | `uv run python scripts/run_final_harness.py --id WF-HAR-STATIC-03` |
 | **What it runs** | Detects unused functions, classes, variables above confidence threshold |
 | **Artifact** | `.omo/evidence/static/dead-code.json` |
 | **Pass criteria** | No new dead code since last release. Existing dead code tracked in tech-debt backlog. |
@@ -281,7 +281,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `pytest tests/contract/test_migrations.py -v` |
+| **Command** | `uv run python scripts/run_final_harness.py --id WF-HAR-CONTRACT-02` |
 | **What it runs** | Applies each migration forward; optionally back; verifies data integrity |
 | **Artifact** | `evidence/contract/migration.json` |
 | **Pass criteria** | All migrations apply cleanly. Data round-trips for reversible migrations. |
@@ -291,7 +291,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `pytest tests/contract/test_event_schemas.py -v` |
+| **Command** | `uv run python scripts/run_final_harness.py --id WF-HAR-CONTRACT-03` |
 | **What it runs** | Verifies published events match registered schemas |
 | **Artifact** | `evidence/contract/event-schema.json` |
 | **Pass criteria** | All event types match their registered schema version |
@@ -470,7 +470,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `k6 run tests/ops/load-test.js --out json=evidence/ops/load-test.json` |
+| **Command** | `uv run python scripts/run_final_harness.py --id WF-HAR-OPS-02` |
 | **What it runs** | Sustained load at Standard envelope limits (10k items, 50k edges, 100 repos) |
 | **Artifact** | `evidence/ops/load-test.json` |
 | **Pass criteria** | All p95 latencies within targets (see [performance envelope](performance-envelope.md)): Control Room read < 500ms, Program overview/why-blocked < 1s, Webhook-to-decision < 30s, Full solve Standard < 5s, Incremental < 2s. p95/p99 include all valid completed requests with no latency outlier removal; errors/timeouts are separately counted and reported. Error rate < 0.1%. No resource exhaustion. |
@@ -481,7 +481,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `k6 run tests/ops/load-test-large.js --out json=evidence/ops/load-test-large.json` |
+| **Command** | `uv run python scripts/run_final_harness.py --id WF-HAR-OPS-02-L` |
 | **What it runs** | Sustained load at Large envelope limits (100k items, 500k edges, 1000 repos) |
 | **Artifact** | `evidence/ops/load-test-large.json` |
 | **Pass criteria** | Full solve Large < 30s, Incremental < 2s. All other p95 targets per [performance-envelope.md](../quality/performance-envelope.md). Error rate < 0.1%. |
@@ -492,7 +492,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `k6 run tests/ops/tenant-aggregate-capacity.js --out json=evidence/ops/tenant-aggregate-capacity.json` (intended) |
+| **Command** | `uv run python scripts/run_final_harness.py --id WF-HAR-OPS-02-T` |
 | **What it runs** | Validates bounded graph, storage, and query behavior at the Tenant Aggregate upper bounds: 1,000,000 items, 5,000,000 edges, and 10,000 repositories |
 | **Artifact** | `evidence/ops/tenant-aggregate-capacity.json` |
 | **Pass criteria** | No correctness loss, cross-workspace isolation breach, unbounded memory growth, or silent truncation. Results identify when architectural consultation is required before operation at these bounds. |
@@ -514,7 +514,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `k6 run tests/ops/soak-test.js --duration 72h --out json=evidence/ops/soak-test.json` (intended) |
+| **Command** | `uv run python scripts/run_final_harness.py --id WF-HAR-OPS-04` |
 | **What it runs** | Sustained moderate load for 72 hours; monitors for degradation |
 | **Artifact** | `evidence/ops/soak-test.json` |
 | **Pass criteria** | No memory leak. No connection leak. Latency stable (no upward trend). Event durability maintained. |
@@ -525,7 +525,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `pytest tests/ops/test_failure_injection.py -v` |
+| **Command** | `uv run python scripts/run_final_harness.py --id WF-HAR-OPS-05` |
 | **What it runs** | Kill worker mid-job, disconnect DB, fill disk, network partition; verify event durability |
 | **Artifact** | `evidence/ops/failure-injection.json` |
 | **Pass criteria** | System recovers. No acknowledged event loss. Jobs retry from last checkpoint. Alerting fires. |
@@ -536,7 +536,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `pytest tests/ops/test_dr_drill.py -v` |
+| **Command** | `uv run python scripts/run_final_harness.py --id WF-HAR-OPS-06` |
 | **What it runs** | Restore from backup to clean environment; verify data integrity; measure RTO |
 | **Artifact** | `evidence/ops/dr-drill.json` |
 | **Pass criteria** | Restore completes within RTO ≤ 60 minutes. RPO ≤ 5 minutes verified. Data integrity verified. Application starts and serves. |
@@ -547,7 +547,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `pytest tests/ops/test_migration_live_size.py -v` |
+| **Command** | `uv run python scripts/run_final_harness.py --id WF-HAR-OPS-07` |
 | **What it runs** | Applies pending migrations against Standard-envelope-sized dataset |
 | **Artifact** | `evidence/ops/migration-live-size.json` |
 | **Pass criteria** | Migration completes within maintenance window. Data intact. Rollback succeeds. |
@@ -584,7 +584,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `schemathesis run tests/security/openapi.yaml --hypothesis-max-examples=1000 --checks all` (intended) |
+| **Command** | `uv run python scripts/run_final_harness.py --id WF-HAR-SEC-01` |
 | **What it runs** | Fuzzes every endpoint without auth; verifies 401/403 |
 | **Artifact** | `evidence/security/auth-bypass.json` |
 | **Pass criteria** | No endpoint returns 2xx without valid auth |
@@ -594,7 +594,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `zap-baseline.py -t http://localhost:8001 -r evidence/security/zap-baseline.json` (intended) |
+| **Command** | `uv run python scripts/run_final_harness.py --id WF-HAR-SEC-02` |
 | **What it runs** | OWASP ZAP baseline scan: SQL injection, XSS, path traversal |
 | **Artifact** | `evidence/security/zap-baseline.json` |
 | **Pass criteria** | No high or medium risk findings |
@@ -604,7 +604,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `pytest tests/security/test_ssrf.py -v` (intended) |
+| **Command** | `uv run python scripts/run_final_harness.py --id WF-HAR-SEC-03` |
 | **What it runs** | SSRF fuzzer against all URL-accepting endpoints |
 | **Artifact** | `evidence/security/ssrf.json` |
 | **Pass criteria** | No server-side request forgery. Internal network access blocked. |
@@ -624,7 +624,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `pytest tests/security/test_csrf.py -v` (intended) |
+| **Command** | `uv run python scripts/run_final_harness.py --id WF-HAR-SEC-05` |
 | **What it runs** | State-changing endpoints reject cross-origin requests without valid token |
 | **Artifact** | `evidence/security/csrf.json` |
 | **Pass criteria** | All state-changing endpoints reject invalid CSRF tokens. |
@@ -634,7 +634,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `pytest tests/security/test_rate_limiting.py -v` (intended) |
+| **Command** | `uv run python scripts/run_final_harness.py --id WF-HAR-SEC-06` |
 | **What it runs** | Load test with credential stuffing and enumeration patterns |
 | **Artifact** | `evidence/security/rate-limiting.json` |
 | **Pass criteria** | Brute-force and enumeration attacks throttled. Repeated failures trigger lockout or delay. |
@@ -644,7 +644,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `pip-audit && npm audit` (intended) |
+| **Command** | `uv run python scripts/run_final_harness.py --id WF-HAR-SEC-07` |
 | **What it runs** | Scans all dependencies for known CVEs |
 | **Artifact** | `evidence/security/dependency-audit.json` |
 | **Pass criteria** | No critical or high CVEs. Medium CVEs documented with mitigation plan. |
@@ -654,7 +654,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `pytest tests/security/test_tls.py -v` (intended) |
+| **Command** | `uv run python scripts/run_final_harness.py --id WF-HAR-SEC-08` |
 | **What it runs** | Verifies all inter-service communication encrypted; TLS certificate verification |
 | **Artifact** | `evidence/security/tls.json` |
 | **Pass criteria** | All communication channels use TLS. No plaintext fallback. |
@@ -674,7 +674,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `pytest tests/security/test_safety_gate_bypass.py -v` (intended) |
+| **Command** | `uv run python scripts/run_final_harness.py --id WF-HAR-SEC-10` |
 | **What it runs** | Attempts override that bypasses, weakens, or waives safety gates |
 | **Artifact** | `evidence/security/safety-gate-bypass.json` |
 | **Pass criteria** | All safety-gate-circumventing overrides rejected. Safety gates remain enforced. |
@@ -684,7 +684,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `pytest tests/security/test_override_bypass.py -v` (intended) |
+| **Command** | `uv run python scripts/run_final_harness.py --id WF-HAR-SEC-11` |
 | **What it runs** | Attempts scope-violating and policy-weakening overrides |
 | **Artifact** | `evidence/security/override-bypass.json` |
 | **Pass criteria** | All overrides outside scope rejected. Completion policy not weakened. Cascade beyond scope blocked. |
@@ -694,7 +694,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `pytest tests/security/test_authority_manipulation.py -v` (intended) |
+| **Command** | `uv run python scripts/run_final_harness.py --id WF-HAR-SEC-12` |
 | **What it runs** | Attempts to set authority status to `authoritative` without proper source level |
 | **Artifact** | `evidence/security/authority-manipulation.json` |
 | **Pass criteria** | Spoofed authority status rejected. Only legitimate sources can set authority. |
@@ -734,7 +734,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `playwright test tests/accessibility/wcag-audit.spec.ts` (intended) |
+| **Command** | `uv run python scripts/run_final_harness.py --id WF-HAR-A11Y-01` |
 | **What it runs** | axe-core scan of all pages against WCAG 2.2 AA |
 | **Artifact** | `evidence/accessibility/wcag-aa.json` |
 | **Pass criteria** | Zero violations |
@@ -744,7 +744,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `playwright test tests/accessibility/keyboard-nav.spec.ts` (intended) |
+| **Command** | `uv run python scripts/run_final_harness.py --id WF-HAR-A11Y-02` |
 | **What it runs** | Tab through all interactive elements; verify focus order and visibility |
 | **Artifact** | `evidence/accessibility/keyboard-nav.json` |
 | **Pass criteria** | All interactive elements reachable. Focus visible. Logical tab order. |
@@ -754,7 +754,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `playwright test tests/accessibility/focus-appearance.spec.ts` (intended) |
+| **Command** | `uv run python scripts/run_final_harness.py --id WF-HAR-A11Y-03` |
 | **What it runs** | Verifies focus indicator meets WCAG 2.2 AA sizing and contrast requirements |
 | **Artifact** | `evidence/accessibility/focus-appearance.json` |
 | **Pass criteria** | Focus indicators meet 2.2 AA minimum area and contrast ratio. |
@@ -764,7 +764,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `playwright test tests/accessibility/drag-alternatives.spec.ts` (intended) |
+| **Command** | `uv run python scripts/run_final_harness.py --id WF-HAR-A11Y-04` |
 | **What it runs** | Verifies all drag operations have pointer and keyboard alternatives |
 | **Artifact** | `evidence/accessibility/drag-alternatives.json` |
 | **Pass criteria** | All drag operations accessible via keyboard and single-pointer alternatives. |

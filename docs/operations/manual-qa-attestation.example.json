@@ -1,0 +1,12 @@
+{
+  "approved": true,
+  "cli_trace": ".omo/evidence/final/manual-cli-trace.txt",
+  "reviewed_at": "2026-07-13T00:00:00Z",
+  "reviewer": "replace-with-human-reviewer",
+  "screenshots": [
+    ".omo/evidence/final/control-room-320.png",
+    ".omo/evidence/final/control-room-768.png",
+    ".omo/evidence/final/control-room-1280.png",
+    ".omo/evidence/final/control-room-1920.png"
+  ]
+}

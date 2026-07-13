@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY: bootstrap check check-architecture check-contracts check-harness-registry check-preflight check-static clean doctor fix generate-contracts generate-harness-registry harness help infra-down infra-up migration-smoke recertify-foundation storage-smoke test test-domain test-frontend test-python verify
+.PHONY: bootstrap check check-architecture check-contracts check-harness-registry check-preflight check-static clean doctor fix generate-contracts generate-harness-registry harness help infra-down infra-up migration-smoke recertify-foundation storage-smoke test test-domain test-frontend test-python verify test-security test-ops test-final certify-standard
 
 help: ## Show supported development commands
 	@awk 'BEGIN {FS = ":.*## "; printf "Usage: make <target>\n\nTargets:\n"} /^[a-zA-Z0-9_.-]+:.*## / {printf "  %-28s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -88,3 +88,17 @@ clean: ## Remove local caches and build outputs (keeps evidence and lockfiles)
 	rm -rf .pytest_cache .ruff_cache .basedpyright .coverage htmlcov
 	find backend scripts -type d -name __pycache__ -prune -exec rm -rf {} +
 	rm -rf frontend/dist frontend/tsconfig.tsbuildinfo
+
+test-security: ## Run all 15 registry-owned security harnesses on a clean revision
+	@set -eu; trap '$(MAKE) infra-down' EXIT INT TERM; $(MAKE) infra-up; 	for id in $$(seq -f 'WF-HAR-SEC-%02g' 1 15); do $(MAKE) harness ID=$$id; done
+
+test-ops: ## Run all Standard operational harnesses and scoped applicability checks
+	@set -eu; trap '$(MAKE) infra-down' EXIT INT TERM; $(MAKE) infra-up; 	for id in WF-HAR-OPS-01 WF-HAR-OPS-02 WF-HAR-OPS-02-L WF-HAR-OPS-02-T WF-HAR-OPS-03 WF-HAR-OPS-04 WF-HAR-OPS-05 WF-HAR-OPS-06 WF-HAR-OPS-07; do $(MAKE) harness ID=$$id; done
+
+test-final: ## Run final backend, browser, accessibility, and AI-off paths
+	uv run pytest backend/tests/application/test_copilot.py backend/tests/contract/test_event_schemas.py backend/tests/contracts/test_harness_applicability.py backend/tests/operations/test_certification.py backend/tests/product/test_cutover_539.py backend/tests/release/test_certification.py backend/tests/security/test_hardening.py
+	pnpm --dir frontend run test:final
+
+certify-standard: ## Run all 68 harnesses and sign exact-revision Standard certification
+	uv run python scripts/run_release_certification.py
+

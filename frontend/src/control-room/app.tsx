@@ -3,7 +3,16 @@ import { useReducer, useState } from "react"
 import { buildBuilderWorkspace, type BuilderDecision } from "./builder"
 import { BuilderView } from "./builder-view"
 import type { FrontierItem } from "./client.generated"
+import { CoordinatorView } from "./coordinator-view"
+import type { DependencyProposal } from "./coordinator"
+import { CopilotPanel } from "./copilot-panel"
+import { ExecutiveView } from "./executive-view"
+import type {
+  ExecutiveMetric,
+  OperatorStatus,
+} from "./executive-operator"
 import { initialOnboardingState, isAuthoritative, reduceOnboarding } from "./onboarding"
+import { OperatorView } from "./operator-view"
 import { ControlRoomShell, type ControlRoomView } from "./shell"
 
 const seededItems: readonly FrontierItem[] = [
@@ -43,18 +52,104 @@ const seededItems: readonly FrontierItem[] = [
     why: ["source_revision_stale"],
     blocked_by: ["item-api"],
   },
+  {
+    item_id: "item-conflicted",
+    decision_id: "decision-conflicted",
+    decision_type: "conflicted",
+    title: "Resolve conflicting source values",
+    ready: false,
+    ranking_position: null,
+    authority: "conflicted",
+    freshness: "current",
+    why: ["distinct_source_values > 1"],
+    blocked_by: [],
+  },
+  {
+    item_id: "item-unavailable",
+    decision_id: "decision-unavailable",
+    decision_type: "unavailable",
+    title: "Restore unavailable source authority",
+    ready: false,
+    ranking_position: null,
+    authority: "unavailable",
+    freshness: "unavailable",
+    why: ["no_source_observations"],
+    blocked_by: [],
+  },
 ]
+
+const proposals: readonly DependencyProposal[] = [
+  {
+    proposalId: "proposal-independent",
+    sourceItemId: "item-stale",
+    targetItemId: "item-api",
+    action: "remove_blocker",
+    status: "pending",
+    createdBy: "builder-2",
+    sourceRevision: "rev-4",
+    currentSourceRevision: "rev-4",
+    unlockCount: 3,
+  },
+  {
+    proposalId: "proposal-self",
+    sourceItemId: "item-api",
+    targetItemId: "item-foundation",
+    action: "add_blocker",
+    status: "pending",
+    createdBy: "builder-1",
+    sourceRevision: "rev-4",
+    currentSourceRevision: "rev-4",
+    unlockCount: 1,
+  },
+]
+
+const metrics: readonly ExecutiveMetric[] = [
+  {
+    label: "Terminal outcomes",
+    value: 12,
+    unit: "completed",
+    authority: "authoritative",
+    sourceRevision: "rev-4",
+  },
+  {
+    label: "At-risk outcomes",
+    value: 2,
+    unit: "items",
+    authority: "authoritative",
+    sourceRevision: "rev-4",
+  },
+]
+
+const operatorStatus: OperatorStatus = {
+  connectionState: "degraded",
+  queueDepth: 4,
+  deadLetters: 1,
+  reconciliationState: "attention_required",
+  auditEntries: [
+    {
+      event: "connection_degraded",
+      token: "must-not-render",
+      actor: "operator-1",
+    },
+  ],
+}
 
 export function ControlRoomApp() {
   const [onboarding, dispatch] = useReducer(reduceOnboarding, initialOnboardingState)
   const [activeView, setActiveView] = useState<ControlRoomView>("builder")
   const [status, setStatus] = useState("Ready for onboarding")
   const [claimedItem, setClaimedItem] = useState<string | null>(null)
-  const workspace = buildBuilderWorkspace(seededItems)
+  const [proposalState, setProposalState] = useState(proposals)
+  const [items, setItems] = useState(seededItems)
+  const workspace = buildBuilderWorkspace(items)
 
   if (!isAuthoritative(onboarding)) {
     return (
-      <main className="wf-onboarding" id="wf-main">
+      <>
+        <a className="wf-skip-link" href="#wf-main">
+          Skip to main content
+        </a>
+        <main className="wf-onboarding" id="wf-main">
         <h1>Connect Work Frontier</h1>
         <p role="status">{onboarding.conflict ?? status}</p>
         {onboarding.step === "install" ? (
@@ -90,7 +185,8 @@ export function ControlRoomApp() {
             Reconcile authoritative state
           </button>
         ) : null}
-      </main>
+        </main>
+      </>
     )
   }
 
@@ -109,24 +205,88 @@ export function ControlRoomApp() {
       onNavigate={setActiveView}
       session={{
         actorId: "builder-1",
-        role: "builder",
+        role: activeView === "operator" ? "operator" : "builder",
         tenantId: "tenant-1",
         workspaceId: "workspace-1",
       }}
     >
-      <p aria-live="polite" role="status">{status}</p>
+      <p aria-live="polite" role="status">
+        {status}
+      </p>
       {activeView === "builder" ? (
-        <BuilderView
-          workspace={workspace}
-          onClaim={claim}
-          onOpen={(decision) => setStatus(`Opened ${decision.item.decision_id}`)}
+        <>
+          <BuilderView
+            workspace={workspace}
+            onClaim={claim}
+            onOpen={(decision) => setStatus(`Opened ${decision.item.decision_id}`)}
+          />
+          <CopilotPanel
+            citations={[]}
+            enabled={false}
+            explanation={null}
+            onExplain={() => setStatus("Copilot explanation requested")}
+          />
+        </>
+      ) : null}
+      {activeView === "coordinator" ? (
+        <CoordinatorView
+          actorId="builder-1"
+          proposals={proposalState}
+          onApprove={(proposalId) => {
+            const proposal = proposalState.find(
+              (candidate) => candidate.proposalId === proposalId,
+            )
+            if (proposal === undefined) return
+            setProposalState((current) =>
+              current.map((candidate) =>
+                candidate.proposalId === proposalId
+                  ? { ...candidate, status: "approved" }
+                  : candidate,
+              ),
+            )
+            if (proposal.action === "remove_blocker") {
+              setItems((current) =>
+                current.map((item) =>
+                  item.item_id === proposal.sourceItemId
+                    ? {
+                        ...item,
+                        ready: true,
+                        ranking_position: 3,
+                        authority: "authoritative",
+                        freshness: "current",
+                        blocked_by: [],
+                        why: [
+                          ...item.why,
+                          `approved_proposal=${proposalId}`,
+                        ],
+                      }
+                    : item,
+                ),
+              )
+            }
+            setStatus(`Approved ${proposalId}; frontier recomputed`)
+          }}
+          onReject={(proposalId) => {
+            setProposalState((current) =>
+              current.map((candidate) =>
+                candidate.proposalId === proposalId
+                  ? { ...candidate, status: "rejected" }
+                  : candidate,
+              ),
+            )
+            setStatus(`Rejected ${proposalId}`)
+          }}
         />
-      ) : (
-        <section aria-labelledby="view-heading">
-          <h1 id="view-heading">{activeView}</h1>
-          <p>This role-adapted view has no readiness editing controls.</p>
-        </section>
-      )}
+      ) : null}
+      {activeView === "executive" ? <ExecutiveView metrics={metrics} /> : null}
+      {activeView === "operator" ? (
+        <OperatorView
+          role="operator"
+          status={operatorStatus}
+          onReconcile={() => setStatus("Guarded reconciliation requested")}
+          onRetryDeadLetter={() => setStatus("Dead letter retry requested")}
+        />
+      ) : null}
     </ControlRoomShell>
   )
 }

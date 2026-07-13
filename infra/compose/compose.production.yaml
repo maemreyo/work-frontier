@@ -1,0 +1,38 @@
+services:
+  web:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    environment:
+      WF_DEPLOYMENT_CAPABILITY: single_node
+      DATABASE_URL: ${DATABASE_URL:?required}
+      MINIO_ENDPOINT_URL: ${MINIO_ENDPOINT_URL:?required}
+    ports: ["8001:8001"]
+  worker:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile
+    entrypoint: ["python", "-m", "work_frontier.interfaces.processes.worker"]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    environment:
+      WF_DEPLOYMENT_CAPABILITY: single_node
+      DATABASE_URL: ${DATABASE_URL:?required}
+  scheduler:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile
+    entrypoint: ["python", "-m", "work_frontier.interfaces.processes.scheduler"]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    environment:
+      WF_DEPLOYMENT_CAPABILITY: single_node
+      DATABASE_URL: ${DATABASE_URL:?required}

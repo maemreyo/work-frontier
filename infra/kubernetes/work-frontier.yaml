@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: work-frontier-web}
+spec:
+  replicas: 2
+  selector: {matchLabels: {app: work-frontier-web}}
+  template:
+    metadata: {labels: {app: work-frontier-web}}
+    spec:
+      securityContext: {runAsNonRoot: true, seccompProfile: {type: RuntimeDefault}}
+      containers:
+        - name: web
+          image: ${WORK_FRONTIER_IMAGE}
+          ports: [{containerPort: 8001}]
+          env:
+            - {name: WF_DEPLOYMENT_CAPABILITY, value: managed_standard}
+          readinessProbe: {httpGet: {path: /healthz, port: 8001}, periodSeconds: 10}
+          livenessProbe: {httpGet: {path: /healthz, port: 8001}, periodSeconds: 30}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+          resources:
+            requests: {cpu: 250m, memory: 256Mi}
+            limits: {cpu: "1", memory: 1Gi}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: work-frontier-web}
+spec:
+  selector: {app: work-frontier-web}
+  ports: [{port: 443, targetPort: 8001}]
