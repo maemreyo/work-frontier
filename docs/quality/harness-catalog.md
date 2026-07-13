@@ -271,7 +271,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `schemathesis run tests/contract/openapi.yaml --hypothesis-max-examples=1000` |
+| **Command** | `uv run python scripts/run_wave4_harness.py --mode api-contract` |
 | **What it runs** | Generates requests matching API schema; verifies responses match |
 | **Artifact** | `evidence/contract/api-schema.json` |
 | **Pass criteria** | Zero schema violations across 1,000 generated requests per endpoint |
@@ -301,7 +301,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `pytest tests/contract/test_inter_service.py -v` |
+| **Command** | `uv run python scripts/run_wave4_harness.py --mode process-contract` |
 | **What it runs** | Web ↔ Worker ↔ Scheduler message format compatibility |
 | **Artifact** | `evidence/contract/inter-service.json` |
 | **Pass criteria** | All message types deserialize correctly on receiving end |
@@ -358,7 +358,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `pytest tests/integration/test_web_server.py -v` |
+| **Command** | `uv run python scripts/run_wave4_harness.py --mode web` |
 | **What it runs** | FastAPI test client against real middleware stack, auth, routing |
 | **Environment** | Docker Compose: full stack |
 | **Artifact** | `evidence/integration/web-server.json` |
@@ -395,7 +395,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `playwright test tests/product/onboarding-recommendation.spec.ts` (intended) |
+| **Command** | `uv run python scripts/run_wave4_harness.py --mode ui-shell` |
 | **What it runs** | Loads Control Room; verifies first Recommended Next is displayed with ranking rationale |
 | **Artifact** | `evidence/product/onboarding-recommendation/` (screenshots, API trace, latency metrics) |
 | **Pass criteria** | First Recommended Next displayed. Ranking rationale visible. p95 read latency < 500ms. No console errors. |
@@ -405,7 +405,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `playwright test tests/product/why-blocked.spec.ts` (intended) |
+| **Command** | `uv run python scripts/run_wave4_harness.py --mode builder` |
 | **What it runs** | Drills into why-blocked explanations for blocked items; verifies dependency chain resolves to root cause |
 | **Artifact** | `evidence/product/why-blocked/` |
 | **Pass criteria** | Why-blocked chains resolve to root cause. Dependency paths correct. p95 latency < 1s. |
@@ -415,7 +415,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `pytest tests/product/test_atomic_claim_race.py -v` (intended) |
+| **Command** | `uv run python scripts/run_wave4_harness.py --mode leases` |
 | **What it runs** | Sends two concurrent claims on the same item; verifies exactly one succeeds and state is consistent |
 | **Artifact** | `evidence/product/atomic-claim-race.json` |
 | **Pass criteria** | Exactly one claim succeeds. Item state consistent. WorkLease assigned to winner. Loser receives conflict signal. |
@@ -425,7 +425,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `playwright test tests/product/dependency-repair.spec.ts` (intended) |
+| **Command** | `uv run python scripts/run_wave4_harness.py --mode proposals` |
 | **What it runs** | Shows dependency repair proposal; approval updates frontier correctly |
 | **Artifact** | `evidence/product/dependency-repair/` |
 | **Pass criteria** | Repair proposal shown with affected items. Approval creates correct `blocks` edges. Frontier recomputed. |
@@ -435,7 +435,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `pytest tests/product/test_stale_decision.py -v` (intended) |
+| **Command** | `uv run python scripts/run_wave4_harness.py --mode stale-decision` |
 | **What it runs** | Submits stale authority decision; verifies rejection and AttentionItem emission |
 | **Artifact** | `evidence/product/stale-decision.json` |
 | **Pass criteria** | Stale decision rejected. Authority status remains `stale`. AttentionItem emitted. No state mutation. |
@@ -445,7 +445,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `pytest tests/product/test_projection_update.py -v` (intended) |
+| **Command** | `uv run python scripts/run_wave4_harness.py --mode projection-update` |
 | **What it runs** | Applies mutation (human override); verifies projection recomputed and reflects new state |
 | **Artifact** | `evidence/product/projection-update.json` |
 | **Pass criteria** | Mutation triggers recomputation. Projection reflects new DecisionRecord. Ranking rationale updated. |
@@ -459,7 +459,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `pytest tests/ops/test_smoke.py -v` |
+| **Command** | `uv run python scripts/run_wave4_harness.py --mode smoke` |
 | **What it runs** | System start, health check, basic request/response cycle |
 | **Artifact** | `evidence/ops/smoke.json` |
 | **Pass criteria** | All components healthy. Basic CRUD succeeds. Response times within baseline. |

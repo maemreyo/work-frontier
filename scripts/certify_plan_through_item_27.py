@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Certify one clean committed revision for completed plan items P0 through 19."""
+"""Certify one clean committed revision for completed plan items P0 through 27."""
 
 from __future__ import annotations
 
@@ -10,28 +10,7 @@ from typing import Final
 
 ROOT: Final = Path(__file__).resolve().parents[1]
 PLAN: Final = ROOT / ".omo" / "plans" / "full-product-implementation.md"
-ITEMS: Final = (
-    "P0",
-    "1",
-    "2",
-    "3",
-    "4",
-    "5",
-    "6",
-    "7",
-    "8",
-    "9",
-    "10",
-    "11",
-    "12",
-    "13",
-    "14",
-    "15",
-    "16",
-    "17",
-    "18",
-    "19",
-)
+ITEMS: Final = ("P0", *(str(number) for number in range(1, 28)))
 HARNESS_IDS: Final = (
     "WF-HAR-DOMAIN-02",
     "WF-HAR-DOMAIN-05",
@@ -59,6 +38,16 @@ HARNESS_IDS: Final = (
     "WF-HAR-META-04",
     "WF-HAR-GITHUB-SANDBOX-01",
     "WF-HAR-539-REPLAY-01",
+    "WF-HAR-CONTRACT-01",
+    "WF-HAR-CONTRACT-04",
+    "WF-HAR-INTEG-04",
+    "WF-HAR-PRODUCT-01",
+    "WF-HAR-PRODUCT-02",
+    "WF-HAR-PRODUCT-03",
+    "WF-HAR-PRODUCT-04",
+    "WF-HAR-PRODUCT-05",
+    "WF-HAR-PRODUCT-06",
+    "WF-HAR-OPS-01",
 )
 PLATFORM_ENV: Final = {
     "DATABASE_URL": (
@@ -74,21 +63,15 @@ _SANDBOX_ENV: Final = (
 )
 
 
-def _run(
-    *args: str,
-    capture: bool = False,
-    extra_env: dict[str, str] | None = None,
-) -> subprocess.CompletedProcess[str]:
+def _run(*args: str, capture: bool = False) -> subprocess.CompletedProcess[str]:
     env = os.environ.copy()
     env.update(PLATFORM_ENV)
-    if extra_env:
-        env.update(extra_env)
     result = subprocess.run(
         list(args),
         cwd=ROOT,
         check=False,
-        text=True,
         capture_output=capture,
+        text=True,
         env=env,
     )
     if result.returncode != 0:
@@ -100,27 +83,20 @@ def _capture(*args: str) -> str:
     return _run(*args, capture=True).stdout.strip()
 
 
-def _require_sandbox() -> None:
-    missing = [name for name in _SANDBOX_ENV if not os.environ.get(name)]
-    if missing:
-        msg = "exact certification requires GitHub sandbox environment: " + ", ".join(
-            missing
-        )
-        raise SystemExit(msg)
-
-
 def main() -> int:
-    """Run static, data-service, Wave-1/2, and GitHub tracer harnesses."""
+    """Run all release-blocking harnesses through the Builder workspace."""
     status = _capture("git", "status", "--porcelain", "--untracked-files=all")
     if status:
         msg = "working tree must be clean before certification:\n" + status
         raise SystemExit(msg)
-    _require_sandbox()
-
+    missing_env = [name for name in _SANDBOX_ENV if not os.environ.get(name)]
+    if missing_env:
+        msg = "GitHub sandbox environment is required: " + ", ".join(missing_env)
+        raise SystemExit(msg)
     plan = PLAN.read_text(encoding="utf-8")
-    missing = [item for item in ITEMS if f"- [x] {item}." not in plan]
-    if missing:
-        msg = f"plan items are not marked complete: {missing}"
+    missing_items = [item for item in ITEMS if f"- [x] {item}." not in plan]
+    if missing_items:
+        msg = f"plan items are not marked complete: {missing_items}"
         raise SystemExit(msg)
 
     subject_sha = _capture("git", "rev-parse", "HEAD")
@@ -139,18 +115,11 @@ def main() -> int:
             check=False,
             text=True,
         )
-
-    post_status = _capture(
-        "git",
-        "status",
-        "--porcelain",
-        "--untracked-files=all",
-    )
+    post_status = _capture("git", "status", "--porcelain", "--untracked-files=all")
     if post_status:
         msg = "certification changed tracked source files:\n" + post_status
         raise SystemExit(msg)
-
-    print(f"plan P0-19 certified against exact subject {subject_sha}")
+    print(f"plan P0-27 certified against exact subject {subject_sha}")
     return 0
 
 

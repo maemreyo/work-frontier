@@ -271,7 +271,13 @@ work_leases = _workspace_entity(
     extra_columns=(
         sa.Column("item_id", sa.String(_ID_LENGTH), nullable=False),
         sa.Column("lease_owner", sa.String(_ID_LENGTH), nullable=False),
+        sa.Column("collaborators", _JSON, nullable=False, server_default=sa.text("'[]'")),
+        sa.Column("mode", sa.String(32), nullable=False, server_default="exclusive"),
+        sa.Column("state", sa.String(32), nullable=False, server_default="active"),
+        sa.Column("decision_id", sa.String(_ID_LENGTH), nullable=False),
         sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("heartbeat_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("handoff_to", sa.String(_ID_LENGTH)),
         sa.Column("version", sa.Integer(), nullable=False, server_default="1"),
     ),
 )
@@ -282,8 +288,12 @@ attention_items = _workspace_entity(
     extra_columns=(
         sa.Column("item_id", sa.String(_ID_LENGTH)),
         sa.Column("category", sa.String(64), nullable=False),
+        sa.Column("severity", sa.String(32), nullable=False),
         sa.Column("state", sa.String(32), nullable=False),
         sa.Column("deterministic_basis", sa.Text(), nullable=False),
+        sa.Column("opened_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("resolved_at", sa.DateTime(timezone=True)),
+        sa.Column("resolution", sa.Text()),
     ),
 )
 
@@ -469,27 +479,6 @@ local_identities = _workspace_entity(
     ),
 )
 
-local_identities = _workspace_entity(
-    "local_identities",
-    "actor_id",
-    extra_columns=(
-        sa.Column("username", sa.String(256), nullable=False),
-        sa.Column("password_salt_b64", sa.Text(), nullable=False),
-        sa.Column("password_verifier_b64", sa.Text(), nullable=False),
-        sa.Column("mfa_credential_id", sa.String(_ID_LENGTH)),
-        sa.Column("role_revision", sa.Integer(), nullable=False),
-        sa.Column("enabled", sa.Boolean(), nullable=False, server_default=sa.true()),
-    ),
-    constraints=(
-        sa.UniqueConstraint(
-            "tenant_id",
-            "workspace_id",
-            "username",
-            name="uq_local_identity_username_scope",
-        ),
-    ),
-)
-
 sessions = _workspace_entity(
     "sessions",
     "session_id",
@@ -532,6 +521,136 @@ credential_envelopes = _workspace_entity(
         sa.Column("ciphertext_b64", sa.Text(), nullable=False),
         sa.Column("associated_data_b64", sa.Text(), nullable=False),
         sa.Column("fingerprint", sa.String(_HASH_LENGTH), nullable=False),
+    ),
+)
+
+writer_states = _workspace_entity(
+    "writer_states",
+    "writer_state_id",
+    extra_columns=(
+        sa.Column("mode", sa.String(32), nullable=False),
+        sa.Column("active_writer", sa.String(64), nullable=False),
+        sa.Column("version", sa.Integer(), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+    ),
+    constraints=(
+        sa.UniqueConstraint("tenant_id", "workspace_id", name="uq_writer_state_scope"),
+    ),
+)
+
+writer_leases = _workspace_entity(
+    "writer_leases",
+    "writer_lease_id",
+    extra_columns=(
+        sa.Column("owner", sa.String(_ID_LENGTH), nullable=False),
+        sa.Column("version", sa.Integer(), nullable=False),
+        sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
+    ),
+)
+
+shadow_comparisons = _workspace_entity(
+    "shadow_comparisons",
+    "comparison_id",
+    append_only=True,
+    extra_columns=(
+        sa.Column("source_revision", sa.String(256), nullable=False),
+        sa.Column("local_version", sa.Integer(), nullable=False),
+        sa.Column("semantic_equal", sa.Boolean(), nullable=False),
+        sa.Column("payload_hash", sa.String(_HASH_LENGTH), nullable=False),
+        sa.Column("payload", _JSON, nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+    ),
+)
+
+proposed_changes = _workspace_entity(
+    "proposed_changes",
+    "proposal_id",
+    append_only=True,
+    extra_columns=(
+        sa.Column("item_id", sa.String(_ID_LENGTH), nullable=False),
+        sa.Column("proposer", sa.String(_ID_LENGTH), nullable=False),
+        sa.Column("base_decision_id", sa.String(_ID_LENGTH), nullable=False),
+        sa.Column("expected_source_revision", sa.String(256), nullable=False),
+        sa.Column("state", sa.String(32), nullable=False),
+        sa.Column("payload", _JSON, nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+    ),
+)
+
+proposal_dispositions = _workspace_entity(
+    "proposal_dispositions",
+    "disposition_id",
+    append_only=True,
+    extra_columns=(
+        sa.Column("proposal_id", sa.String(_ID_LENGTH), nullable=False),
+        sa.Column("actor_id", sa.String(_ID_LENGTH), nullable=False),
+        sa.Column("state", sa.String(32), nullable=False),
+        sa.Column("reason", sa.Text()),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+    ),
+)
+
+approval_records = _workspace_entity(
+    "approval_records",
+    "approval_record_id",
+    append_only=True,
+    extra_columns=(
+        sa.Column("proposal_id", sa.String(_ID_LENGTH), nullable=False),
+        sa.Column("approver", sa.String(_ID_LENGTH), nullable=False),
+        sa.Column("decision_id", sa.String(_ID_LENGTH), nullable=False),
+        sa.Column("source_revision", sa.String(256), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+    ),
+)
+
+break_glass_grants = _workspace_entity(
+    "break_glass_grants",
+    "grant_id",
+    append_only=True,
+    extra_columns=(
+        sa.Column("actor_id", sa.String(_ID_LENGTH), nullable=False),
+        sa.Column("permission", sa.String(128), nullable=False),
+        sa.Column("reason", sa.Text(), nullable=False),
+        sa.Column("issued_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("review_due_at", sa.DateTime(timezone=True), nullable=False),
+    ),
+)
+
+break_glass_reviews = _workspace_entity(
+    "break_glass_reviews",
+    "review_id",
+    append_only=True,
+    extra_columns=(
+        sa.Column("grant_id", sa.String(_ID_LENGTH), nullable=False),
+        sa.Column("reviewer", sa.String(_ID_LENGTH), nullable=False),
+        sa.Column("outcome", sa.String(32), nullable=False),
+        sa.Column("reviewed_at", sa.DateTime(timezone=True), nullable=False),
+    ),
+)
+
+retention_jobs = _workspace_entity(
+    "retention_jobs",
+    "retention_job_id",
+    extra_columns=(
+        sa.Column("policy_id", sa.String(_ID_LENGTH), nullable=False),
+        sa.Column("state", sa.String(32), nullable=False),
+        sa.Column("subject_id", sa.String(_ID_LENGTH), nullable=False),
+        sa.Column("scheduled_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("completed_at", sa.DateTime(timezone=True)),
+    ),
+)
+
+retention_proofs = _workspace_entity(
+    "retention_proofs",
+    "retention_proof_id",
+    append_only=True,
+    extra_columns=(
+        sa.Column("retention_job_id", sa.String(_ID_LENGTH), nullable=False),
+        sa.Column("policy_id", sa.String(_ID_LENGTH), nullable=False),
+        sa.Column("subject_fingerprint", sa.String(_HASH_LENGTH), nullable=False),
+        sa.Column("payload", _JSON, nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
     ),
 )
 
