@@ -324,7 +324,7 @@ Large todos may use the execution slices listed below, but the parent checkbox r
       QA scenarios: happy—close/reopen updates source signal and frontier; failure—crash before cursor leaves event retryable with no duplicate decision. Evidence `.omo/evidence/task-19-full-product-implementation/`.
       Commit: Y | `feat(ingestion): deliver end-to-end decision pipeline`
 
-- [ ] 20. Implement writer ownership, shadow comparison, stale-write guard, and rollback primitive
+- [x] 20. Implement writer ownership, shadow comparison, stale-write guard, and rollback primitive
       What to do / Must NOT do: Persist writer state machine and exclusive writer lease; compare canonical semantics in shadow; fence by local projection version plus exact source revision; record approved presentation-only differences; implement activation/rollback commands. Never use percentage canaries or two writers.
       Parallelization: Wave 3 | Blocked by: 14,18,19 | Blocks: 33,35
       References: `docs/integrations/GITHUB.md:439-465`; `docs/reference/oh-my-class/shadow-compare-cutover.md`; `docs/decisions/ADR-005-github-first-controlled-cutover.md`
@@ -332,7 +332,7 @@ Large todos may use the execution slices listed below, but the parent checkbox r
       QA scenarios: happy—exact parity activates sole writer; failure—semantic mismatch blocks approval and preserves legacy output. Evidence `.omo/evidence/task-20-full-product-implementation/`.
       Commit: Y | `feat(cutover): enforce single projection writer`
 
-- [ ] 21. Implement projections, ProposedChanges, approvals, overrides, and transactional recompute
+- [x] 21. Implement projections, ProposedChanges, approvals, overrides, and transactional recompute
       What to do / Must NOT do: Separate safe projections from authoritative mutations; create immutable proposal and disposition records; enforce approval/SoD/staleness; apply approved mutation and recompute in one fenced workflow; overrides scoped/audited/TTL/non-weakening. Copilot acceptance enters proposal flow, never direct mutation.
       Parallelization: Wave 4 | Blocked by: 9,12,14,15,19 | Blocks: 24,27,28,31
       References: `docs/integrations/GITHUB.md:302-386`; `docs/domain/work-item.md`; `docs/security/authorization.md:70-136`; UX proposal rules.
@@ -340,7 +340,7 @@ Large todos may use the execution slices listed below, but the parent checkbox r
       QA scenarios: happy—approve dependency repair and frontier changes; failure—claimant self-approval denied. Evidence `.omo/evidence/task-21-full-product-implementation/`.
       Commit: Y | `feat(approvals): add gated mutation workflow`
 
-- [ ] 22. Implement WorkLease coordination and AttentionItem lifecycle
+- [x] 22. Implement WorkLease coordination and AttentionItem lifecycle
       What to do / Must NOT do: Add atomic exclusive/collaborative claims, heartbeats/TTL/renewal/release/suspension, handoff and authorized override; preserve underlying readiness but actor-specific claimability. Emit deterministic AttentionItems for conflicts, stale sources/jobs, invalid SCCs, degraded connection, and break risk.
       Parallelization: Wave 4 | Blocked by: 7,9,11,13-15,19 | Blocks: 24,26-28
       References: `docs/domain/work-lease.md`; `attention-items.md`; `state-machines.md`; WF-HAR-PRODUCT-03/05.
@@ -348,7 +348,7 @@ Large todos may use the execution slices listed below, but the parent checkbox r
       QA scenarios: happy—claim/heartbeat/release; failure—stale DecisionRecord cannot support lease. Evidence `.omo/evidence/task-22-full-product-implementation/`.
       Commit: Y | `feat(workflow): add leases and attention lifecycle`
 
-- [ ] 23. Implement break-glass and governed retention workflows
+- [x] 23. Implement break-glass and governed retention workflows
       What to do / Must NOT do: Add strong reauth/MFA, reason and confirmation, two-hour scoped elevation, two-per-day rate, forbidden operations, immediate alerts, expiry and 48-hour review; add retention jobs/data-subject anonymization/deletion evidence. Never grant blanket writes or permanent hidden admin.
       Parallelization: Wave 4 | Blocked by: 12,13,15,21 | Blocks: 24,29,32
       References: `docs/security/authorization.md:140-224`; `tenancy-isolation.md:98-159`; `docs/operations/incident-response.md`
@@ -356,7 +356,7 @@ Large todos may use the execution slices listed below, but the parent checkbox r
       QA scenarios: happy—scoped emergency credential rotation and expiry; failure—third invocation/short reason rejected. Evidence `.omo/evidence/task-23-full-product-implementation/`.
       Commit: Y | `feat(security): implement break glass and retention`
 
-- [ ] 24. Implement FastAPI/OpenAPI interface and three runnable processes
+- [x] 24. Implement FastAPI/OpenAPI interface and three runnable processes
       What to do / Must NOT do: Add app factory, tenant/session middleware, typed errors, all canonical endpoints, pagination/idempotency, `/healthz`, `/openapi.json`; create web, worker and scheduler entrypoints sharing application modules; optional polling status endpoint. No business logic in handlers and no invented SSE requirement.
       Execution slices: 24a—REST/OpenAPI contracts and middleware; 24b—route implementations, errors, pagination and idempotency; 24c—independent web/worker/scheduler lifecycle, health/readiness and graceful shutdown.
       Parallelization: Wave 4 | Blocked by: 14,15,19,21-23 | Blocks: 25-35
@@ -365,7 +365,7 @@ Large todos may use the execution slices listed below, but the parent checkbox r
       QA scenarios: happy—fixture sync then GET frontier/detail/history; failure—cross-scope and malformed IDs return non-leaking typed responses. Evidence `.omo/evidence/task-24-full-product-implementation/`.
       Commit: Y | `feat(api): expose control plane and runtimes`
 
-- [ ] 25. Implement CLI parity and administrative automation
+- [x] 25. Implement CLI parity and administrative automation
       What to do / Must NOT do: Build Typer CLI as API client (not direct DB access) for programs/items/frontier/claim/proposals/connections/sync/audit/writer state/cert verification; structured JSON and human output; config profiles and safe confirmation for mutations.
       Parallelization: Wave 4 | Blocked by: 24 | Blocks: 33-35
       References: `docs/architecture/ARCHITECTURE.md:499-513`; `docs/ux/ux-critical-journeys.md`; CLI harness requirements in delivery docs.
@@ -373,7 +373,7 @@ Large todos may use the execution slices listed below, but the parent checkbox r
       QA scenarios: happy—trigger fixture sync and inspect frontier JSON; failure—stale proposal approval exits nonzero with rationale. Evidence `.omo/evidence/task-25-full-product-implementation/`.
       Commit: Y | `feat(cli): add api-parity command surface`
 
-- [ ] 26. Build Control Room shell, onboarding, design tokens, and generated API client
+- [x] 26. Build Control Room shell, onboarding, design tokens, and generated API client
       What to do / Must NOT do: Create React SPA shell, four-view navigation, workspace/session context, generated typed API client, TanStack Query, responsive token system, onboarding install/profile/reconciliation flow, accessible loading/error/empty states. Do not declare authority until reconciliation succeeds.
       Parallelization: Wave 5 | Blocked by: 4,24 | Blocks: 27-30,33
       References: `docs/ux/ux-architecture.md:18-51,152-162,205-269`; `docs/ux/ux-onboarding.md`; `docs/ux/ux-accessibility-design-system.md`
@@ -381,7 +381,7 @@ Large todos may use the execution slices listed below, but the parent checkbox r
       QA scenarios: happy—GitHub fixture onboarding/reconcile; failure—permission conflict keeps Draft state and offers recovery. Evidence `.omo/evidence/task-26-full-product-implementation/`.
       Commit: Y | `feat(ui): add control room shell and onboarding`
 
-- [ ] 27. Implement Builder view and WorkItem decision detail
+- [x] 27. Implement Builder view and WorkItem decision detail
       What to do / Must NOT do: Render Recommended Next first, authority/freshness, deterministic why, evidence, Attention, claim/open actions, full ready list, detail timeline/diffs and why-blocked root path. Permit other authoritative-ready claims with recorded divergence reason. Never hide decision type.
       Parallelization: Wave 5 | Blocked by: 21,22,24,26 | Blocks: 33,34
       References: `docs/ux/ux-architecture.md:53-98,164-202,237-269`; `docs/domain/recommended-next.md`; product harnesses 01-03/05.

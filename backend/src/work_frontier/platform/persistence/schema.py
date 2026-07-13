@@ -271,7 +271,9 @@ work_leases = _workspace_entity(
     extra_columns=(
         sa.Column("item_id", sa.String(_ID_LENGTH), nullable=False),
         sa.Column("lease_owner", sa.String(_ID_LENGTH), nullable=False),
-        sa.Column("collaborators", _JSON, nullable=False, server_default=sa.text("'[]'")),
+        sa.Column(
+            "collaborators", _JSON, nullable=False, server_default=sa.text("'[]'")
+        ),
         sa.Column("mode", sa.String(32), nullable=False, server_default="exclusive"),
         sa.Column("state", sa.String(32), nullable=False, server_default="active"),
         sa.Column("decision_id", sa.String(_ID_LENGTH), nullable=False),
