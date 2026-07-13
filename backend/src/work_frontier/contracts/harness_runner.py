@@ -31,6 +31,7 @@ from work_frontier.contracts.harness_registry import (
     foundation_closure,
     get_harness,
     get_prerequisites,
+    get_release_stage,
     load_registry,
 )
 
@@ -148,6 +149,7 @@ def run_harness(  # noqa: PLR0915 - harness lifecycle spans pre/post validation
         "registry.harness_id": harness_id,
         "registry.blocks_release": bool(harness.get("blocks_release")),
         "registry.applicability": str(harness.get("applicability", "standard")),
+        "registry.release_stage": get_release_stage(registry, harness_id),
         "registry.status": str(harness.get("status", "specified")),
         "registry.command": command,
         "registry.declared_artifact": declared_artifact,
@@ -240,6 +242,10 @@ def run_harness(  # noqa: PLR0915 - harness lifecycle spans pre/post validation
         applicability=cast(
             "Literal['standard', 'large', 'tenant']",
             str(harness.get("applicability", "standard")),
+        ),
+        release_stage=cast(
+            "Literal['pre_ga', 'ga']",
+            get_release_stage(registry, harness_id),
         ),
     )
 
@@ -450,6 +456,13 @@ def validate_evidence_record(
         failures.append(
             f"{record.harness_id}: record.applicability={record.applicability!r} "
             f"does not match registry.applicability={registry_applicability!r}"
+        )
+
+    registry_release_stage = get_release_stage(registry, record.harness_id)
+    if record.release_stage != registry_release_stage:
+        failures.append(
+            f"{record.harness_id}: record.release_stage={record.release_stage!r} "
+            f"does not match registry.release_stage={registry_release_stage!r}"
         )
 
     return failures
@@ -772,19 +785,15 @@ def recertify_foundation(  # noqa: PLR0915 - certification lifecycle spans 8 har
         ),
     }
 
-    # Reports are immutable, run-scoped records. A fixed global report path
-    # allowed concurrent recertifications to overwrite one another.
-    out_dir = (
-        root
-        / ".omo"
-        / "evidence"
-        / "reports"
-        / subject_sha[:12]
-    )
-    out_dir.mkdir(parents=True, exist_ok=True)
-    out_path = out_dir / f"{run_id}.foundation-recertification.json"
+    # The final report lives beside the exact run it certifies and is written
+    # atomically. Its evidence_manifest binds every prerequisite record/artifact.
+    out_path = evidence_root / "foundation-recertification.json"
     report["report_path"] = str(out_path.relative_to(root))
-    _ = out_path.write_text(f"{json.dumps(report, indent=2)}\n", encoding="utf-8")
+    temporary_report = out_path.with_suffix(".json.tmp")
+    _ = temporary_report.write_text(
+        f"{json.dumps(report, indent=2)}\n", encoding="utf-8"
+    )
+    temporary_report.replace(out_path)
 
     if not certified:
         raise CertificationError(

@@ -109,7 +109,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `pytest tests/domain/test_precedence.py -v` (intended) |
+| **Command** | `uv run python scripts/run_domain_authority_harness.py --mode precedence` |
 | **What it runs** | Table-driven: every (source_level_pair, field_type) combination; verifies same precedence ladder produces identical result |
 | **Artifact** | `evidence/domain/precedence.json` |
 | **Pass criteria** | All precedence evaluations deterministic. Conflicts surfaced, not silently resolved. |
@@ -139,7 +139,7 @@ NAME: short lowercase identifier
 
 | Field | Value |
 |-------|-------|
-| **Command** | `pytest tests/domain/test_source_authority.py -v` (intended) |
+| **Command** | `uv run python scripts/run_domain_authority_harness.py --mode freshness` |
 | **What it runs** | Table-driven: every (source_type, staleness_condition) pair; verifies authority status downgraded correctly per staleness rules |
 | **Artifact** | `evidence/domain/source-authority.json` |
 | **Pass criteria** | Stale sources flagged. Authority status downgraded. AttentionItem emitted for stale sources. |

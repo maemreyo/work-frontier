@@ -481,3 +481,25 @@ Large todos may use the execution slices listed below, but the parent checkbox r
 - The Standard production stack meets SLO/RPO/RTO and all 65 default blocking harnesses; all 68 harness entries have truthful evidence/applicability.
 - A signed ReleaseCertification verifies against the exact commit, and #539 reaches `projection_active` only after exact semantic parity with a proven <5-minute rollback.
 - F1-F4 all return unconditional approval, and the user explicitly accepts the surfaced final verification results.
+
+## Implementation audit ledger (2026-07-13)
+
+This ledger records implementation state only; todo checkboxes remain open until the
+registered harnesses pass against a clean exact subject revision.
+
+- P0 and Todos 1-3: implementation candidates retained; final completion depends on
+  clean-clone CI and foundation recertification.
+- Todo 4: canonical Pydantic schema now emits generated structural Zod plus generated
+  semantic validation/canonicalization metadata; producer output is a domain receipt,
+  not a nested independent EvidenceRecord.
+- Todo 5: registry lifecycle metadata separates implementation status, foundation
+  closure, immediate prerequisites, workload scope, and pre-GA/GA release stage.
+  Reports and standalone target runs are dependency-closure and run scoped.
+- Todo 6: immutable branded identities, actors, WorkItem, Program, typed edges,
+  provenance and deterministic monotonic ULID utility are implemented with invariant
+  tests. Certification remains pending exact-revision harness execution.
+- Todo 7: six-level authority precedence, five authority states, surfaced conflicts,
+  configurable freshness/revision staleness, deterministic Attention bases and
+  readiness blocking are implemented. `WF-HAR-DOMAIN-02` and
+  `WF-HAR-DOMAIN-05` are implemented outside the historical foundation closure.
+

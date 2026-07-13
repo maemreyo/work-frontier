@@ -104,7 +104,12 @@ jobs:
           make recertify-foundation
       - name: Assert recertification subject SHA matches GITHUB_SHA
         run: |
-          SUBJECT_SHA="$(python3 -c "import json,sys; d=json.load(open('.omo/evidence/task-5-full-product-implementation/foundation-recertification.json')); print(d['subject_sha'])")"
+          mapfile -t REPORTS < <(find ".omo/evidence/runs/${GITHUB_SHA:0:12}" -name foundation-recertification.json -type f)
+          if [ "${#REPORTS[@]}" -ne 1 ]; then
+            echo "::error::expected exactly one run-scoped recertification report, found ${#REPORTS[@]}"
+            exit 1
+          fi
+          SUBJECT_SHA="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["subject_sha"])' "${REPORTS[0]}")"
           if [ "$SUBJECT_SHA" != "$GITHUB_SHA" ]; then
             echo "::error::recertification subject_sha ${SUBJECT_SHA} does not match GITHUB_SHA ${GITHUB_SHA}"
             exit 1

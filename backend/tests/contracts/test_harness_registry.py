@@ -32,7 +32,7 @@ REGISTRY_PATH = ROOT / "contracts" / "harness-registry.json"
 
 def test_registry_loads_and_matches_catalog_counts() -> None:
     registry = load_registry(REGISTRY_PATH)
-    assert registry["schema_version"] == "1.1.0"
+    assert registry["schema_version"] == "1.2.0"
     assert registry["catalog_harness_count"] == registry["harness_count"] == 68
     assert "WF-HAR-PREFLIGHT-01" in registry["foundation_closure"]
     assert "WF-HAR-STATIC-01" in registry["foundation_closure"]
@@ -366,324 +366,128 @@ def test_registry_v11_rejects_missing_prerequisites() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Prerequisite derivation tests (builder logic)
+# Explicit lifecycle/dependency metadata
 # ---------------------------------------------------------------------------
 
 
-def test_derive_prerequisites_preflight() -> None:
-    from scripts.build_harness_registry import derive_prerequisites
+def _lifecycle_metadata(
+    *,
+    implemented: tuple[str, ...],
+    prerequisites: dict[str, tuple[str, ...]],
+):
+    from scripts.build_harness_registry import HarnessLifecycleMetadata
 
-    prereqs_harnesses = [_derive_harness_entry("WF-HAR-PREFLIGHT-01", layer=1, seq=1)]
-    derive_prerequisites(prereqs_harnesses)
-    assert prereqs_harnesses[0].get("prerequisites") == []
+    return HarnessLifecycleMetadata(
+        foundation_closure=implemented[:1],
+        implemented_harnesses=frozenset(implemented),
+        deferred_harnesses=frozenset(),
+        pre_ga_harnesses=frozenset(implemented),
+        prerequisites=prerequisites,
+    )
 
 
 def _derive_harness_entry(
     hid: str,
-    layer: int | None = None,
-    seq: int = 1,
+    *,
+    status: str = "implemented",
 ) -> dict[str, object]:
-    """Build a harness entry dict for derive_prerequisites tests."""
-    entry: dict[str, object] = {
-        "id": hid,
-        "_sequence": seq,
-        "status": "implemented",
-    }
-    if layer is not None:
-        entry["_layer_order"] = layer
-    return entry
+    return {"id": hid, "status": status, "_sequence": 1, "_layer_order": 1}
 
 
-def test_derive_prerequisites_static() -> None:
+def test_derive_prerequisites_uses_only_explicit_immediate_edges() -> None:
     from scripts.build_harness_registry import derive_prerequisites
 
-    harnesses = [
-        _derive_harness_entry("WF-HAR-PREFLIGHT-01", layer=1, seq=1),
-        _derive_harness_entry("WF-HAR-STATIC-01", layer=1, seq=1),
-        _derive_harness_entry("WF-HAR-STATIC-02", layer=1, seq=2),
-        _derive_harness_entry("WF-HAR-STATIC-03", layer=1, seq=3),
-    ]
-    derive_prerequisites(harnesses)
-    assert harnesses[0].get("prerequisites") == []
-    assert harnesses[1].get("prerequisites") == ["WF-HAR-PREFLIGHT-01"]
-    assert harnesses[2].get("prerequisites") == [
-        "WF-HAR-PREFLIGHT-01",
-        "WF-HAR-STATIC-01",
-    ]
-    assert harnesses[3].get("prerequisites") == [
-        "WF-HAR-PREFLIGHT-01",
-        "WF-HAR-STATIC-01",
-        "WF-HAR-STATIC-02",
-    ]
+    first = _derive_harness_entry("WF-HAR-TEST-A-01")
+    second = _derive_harness_entry("WF-HAR-TEST-B-01")
+    third = _derive_harness_entry("WF-HAR-TEST-C-01")
+    metadata = _lifecycle_metadata(
+        implemented=(
+            "WF-HAR-TEST-A-01",
+            "WF-HAR-TEST-B-01",
+            "WF-HAR-TEST-C-01",
+        ),
+        prerequisites={
+            "WF-HAR-TEST-A-01": (),
+            "WF-HAR-TEST-B-01": ("WF-HAR-TEST-A-01",),
+            "WF-HAR-TEST-C-01": ("WF-HAR-TEST-B-01",),
+        },
+    )
+    harnesses = [first, second, third]
+    derive_prerequisites(harnesses, metadata)
+    assert third["prerequisites"] == ["WF-HAR-TEST-B-01"]
+    assert "WF-HAR-TEST-A-01" not in cast("list[str]", third["prerequisites"])
 
 
-def test_derive_prerequisites_domain_depends_on_static() -> None:
+def test_specified_harness_has_no_certifying_dependencies() -> None:
     from scripts.build_harness_registry import derive_prerequisites
 
-    harnesses = [
-        _derive_harness_entry("WF-HAR-STATIC-01", layer=1, seq=1),
-        _derive_harness_entry("WF-HAR-STATIC-02", layer=1, seq=2),
-        _derive_harness_entry("WF-HAR-DOMAIN-01", layer=2, seq=1),
-    ]
-    derive_prerequisites(harnesses)
-    prereqs_result = cast("list[str]", harnesses[2].get("prerequisites", []))
-    assert prereqs_result == ["WF-HAR-STATIC-01", "WF-HAR-STATIC-02"]
+    harness = _derive_harness_entry("WF-HAR-FUTURE-01", status="specified")
+    derive_prerequisites(
+        [harness],
+        _lifecycle_metadata(implemented=(), prerequisites={}),
+    )
+    assert harness["prerequisites"] == []
 
 
-def test_derive_prerequisites_without_layer_order() -> None:
+def test_implemented_harness_requires_explicit_metadata() -> None:
     from scripts.build_harness_registry import derive_prerequisites
 
-    harnesses = [
-        _derive_harness_entry("WF-HAR-STATIC-01", layer=1, seq=1),
-        _derive_harness_entry("WF-HAR-UNKNOWN-01", seq=1),
-    ]
-    derive_prerequisites(harnesses)
-    assert cast("list[str]", harnesses[1].get("prerequisites", [])) == []
+    harness = _derive_harness_entry("WF-HAR-MISSING-01")
+    with pytest.raises(ValueError, match="lacks explicit prerequisites"):
+        derive_prerequisites(
+            [harness],
+            _lifecycle_metadata(implemented=(), prerequisites={}),
+        )
 
 
-def test_derive_prerequisites_ordered_by_layer_then_sequence() -> None:
-    from scripts.build_harness_registry import derive_prerequisites
-
-    harnesses = [
-        _derive_harness_entry("WF-HAR-STATIC-01", layer=1, seq=1),
-        _derive_harness_entry("WF-HAR-DOMAIN-01", layer=2, seq=2),
-        _derive_harness_entry("WF-HAR-DOMAIN-02", layer=2, seq=3),
-        _derive_harness_entry("WF-HAR-STATIC-03", layer=1, seq=3),
-    ]
-    derive_prerequisites(harnesses)
-    for h in harnesses:
-        hid = str(h["id"])
-        if hid == "WF-HAR-DOMAIN-02":
-            prereqs = cast("list[str]", h.get("prerequisites", []))
-            assert hid not in prereqs
-            assert "WF-HAR-STATIC-01" in prereqs
-            assert "WF-HAR-STATIC-03" in prereqs
-            assert prereqs[-1] == "WF-HAR-DOMAIN-01"
-            break
-
-
-# ---------------------------------------------------------------------------
-# Cross-cutting harnesses get layer None; OPS -L/-T retain layer 8
-# (tested through the public parse_catalog API)
-# ---------------------------------------------------------------------------
-
-
-def test_cross_cutting_harnesses_layer_is_none() -> None:
-    """Cross-cutting harnesses get _layer_order=None from parse_catalog."""
+def test_parse_catalog_separates_status_closure_and_release_stage() -> None:
     from scripts.build_harness_registry import parse_catalog
 
-    harnesses = parse_catalog(
-        "## Cross-Cutting Harnesses\n"
-        "\n"
-        "### WF-HAR-SEC-01: Auth\n"
-        "\n"
-        "| **Command** | `true` |\n"
-        "| **Artifact** | `a.json` |\n"
-        "| **What it runs** | auth |\n"
-        "| **Pass criteria** | exit 0 |\n"
-        "| **Blocks release** | Yes |\n"
-    )
-    assert len(harnesses) == 1
-    assert harnesses[0]["_layer_order"] is None
+    catalog = """## Layer 2: Domain (WF-HAR-DOMAIN)
 
-
-def test_ops_suffix_harnesses_layer_is_eight() -> None:
-    """OPS -L/-T harnesses get _layer_order=8 from parse_catalog."""
-    from scripts.build_harness_registry import parse_catalog
-
-    harnesses = parse_catalog(
-        "## Layer 8: Operational (WF-HAR-OPS)\n"
-        "\n"
-        "### WF-HAR-OPS-02-L: Large Load\n"
-        "\n"
-        "| **Command** | `true` |\n"
-        "| **Artifact** | `a.json` |\n"
-        "| **What it runs** | load |\n"
-        "| **Pass criteria** | exit 0 |\n"
-        "| **Blocks release** | Yes |\n"
-        "\n"
-        "### WF-HAR-OPS-02-T: Tenant Test\n"
-        "\n"
-        "| **Command** | `true` |\n"
-        "| **Artifact** | `b.json` |\n"
-        "| **What it runs** | tenant |\n"
-        "| **Pass criteria** | exit 0 |\n"
-        "| **Blocks release** | Yes |\n"
-    )
-    assert len(harnesses) == 2
-    for h in harnesses:
-        assert h["_layer_order"] == 8
-
-
-def test_ops_suffix_harnesses_sequence_is_correct() -> None:
-    """OPS -L/-T harnesses retain correct _sequence from parse_catalog."""
-    from scripts.build_harness_registry import parse_catalog
-
-    harnesses = parse_catalog(
-        "## Layer 8: Operational (WF-HAR-OPS)\n"
-        "\n"
-        "### WF-HAR-OPS-01: Smoke\n"
-        "\n"
-        "| **Command** | `true` |\n"
-        "| **Artifact** | `a.json` |\n"
-        "| **What it runs** | smoke |\n"
-        "| **Pass criteria** | exit 0 |\n"
-        "| **Blocks release** | Yes |\n"
-        "\n"
-        "### WF-HAR-OPS-02-L: Large Load\n"
-        "\n"
-        "| **Command** | `true` |\n"
-        "| **Artifact** | `b.json` |\n"
-        "| **What it runs** | load |\n"
-        "| **Pass criteria** | exit 0 |\n"
-        "| **Blocks release** | Yes |\n"
-        "\n"
-        "### WF-HAR-OPS-02-T: Tenant Test\n"
-        "\n"
-        "| **Command** | `true` |\n"
-        "| **Artifact** | `c.json` |\n"
-        "| **What it runs** | tenant |\n"
-        "| **Pass criteria** | exit 0 |\n"
-        "| **Blocks release** | Yes |\n"
-    )
-    by_id = {str(h["id"]): h for h in harnesses}
-    assert by_id["WF-HAR-OPS-01"]["_sequence"] == 1
-    assert by_id["WF-HAR-OPS-02-L"]["_sequence"] == 2
-    assert by_id["WF-HAR-OPS-02-T"]["_sequence"] == 2
-
-
-# ---------------------------------------------------------------------------
-# Cross-cutting harnesses get no derived prerequisites
-# ---------------------------------------------------------------------------
-
-
-def test_cross_cutting_harnesses_no_prerequisites() -> None:
-    """Cross-cutting harnesses receive no derived prerequisites."""
-    from scripts.build_harness_registry import derive_prerequisites
-
-    harnesses = [
-        _derive_harness_entry("WF-HAR-STATIC-01", layer=1, seq=1),
-        _derive_harness_entry("WF-HAR-SEC-01", seq=1),
-        _derive_harness_entry("WF-HAR-A11Y-01", seq=1),
-    ]
-    derive_prerequisites(harnesses)
-    assert harnesses[0].get("prerequisites") == []
-    assert harnesses[1].get("prerequisites") == []
-    assert harnesses[2].get("prerequisites") == []
-
-
-def test_ops_suffix_harnesses_retain_layer_order_in_prereqs() -> None:
-    """OPS -L/-T suffix harnesses retain numbered layer order in derivation."""
-    from scripts.build_harness_registry import derive_prerequisites
-
-    harnesses = [
-        _derive_harness_entry("WF-HAR-STATIC-01", layer=1, seq=1),
-        _derive_harness_entry("WF-HAR-STATIC-02", layer=1, seq=2),
-        _derive_harness_entry("WF-HAR-OPS-01", layer=8, seq=1),
-        _derive_harness_entry("WF-HAR-OPS-02-L", layer=8, seq=2),
-        _derive_harness_entry("WF-HAR-OPS-02-T", layer=8, seq=2),
-    ]
-    derive_prerequisites(harnesses)
-    ops_l = cast("list[str]", harnesses[3].get("prerequisites", []))
-    assert "WF-HAR-STATIC-01" in ops_l
-    assert "WF-HAR-STATIC-02" in ops_l
-    assert "WF-HAR-OPS-01" in ops_l
-    assert "WF-HAR-OPS-02-L" not in ops_l
-
-    ops_t = cast("list[str]", harnesses[4].get("prerequisites", []))
-    # OPS-02-T is after OPS-02-L in input order (same layer/seq), so
-    # stable sort preserves that: OPS-02-T has OPS-02-L as an extra prereq.
-    assert ops_t[:-1] == ops_l
-    assert ops_t[-1] == "WF-HAR-OPS-02-L"
-
-
-# ---------------------------------------------------------------------------
-# parse_catalog + derive_prerequisites end-to-end with numbered layers
-# ---------------------------------------------------------------------------
-
-
-def test_parse_catalog_and_derive_prerequisites_numbered_layers() -> None:
-    """parse_catalog + derive_prerequisites: layers ordered by number,
-    cross-cutting has none."""
-    from scripts.build_harness_registry import derive_prerequisites, parse_catalog
-
-    catalog = """## Layer 1: Static (WF-HAR-STATIC)
-
-### WF-HAR-STATIC-01: Type Checking
+### WF-HAR-DOMAIN-02: Precedence
 
 | **Command** | `true` |
-| **Artifact** | `.omo/evidence/static/WF-HAR-STATIC-01.json` |
-| **What it runs** | type checks |
-| **Pass criteria** | exit 0 |
+| **Artifact** | `evidence/domain/precedence.json` |
+| **What it runs** | precedence |
+| **Pass criteria** | pass |
 | **Blocks release** | Yes |
 
-### WF-HAR-STATIC-02: Lint
+### WF-HAR-DOMAIN-03: Graph
 
 | **Command** | `true` |
-| **Artifact** | `.omo/evidence/static/WF-HAR-STATIC-02.json` |
-| **What it runs** | lint |
-| **Pass criteria** | exit 0 |
-| **Blocks release** | Yes |
-
-## Layer 8: Operational (WF-HAR-OPS)
-
-### WF-HAR-OPS-01: Smoke
-
-| **Command** | `true` |
-| **Artifact** | `.omo/evidence/ops/smoke.json` |
-| **What it runs** | smoke |
-| **Pass criteria** | exit 0 |
-| **Blocks release** | Yes |
-
-### WF-HAR-OPS-02-L: Large Load
-
-| **Command** | `true` |
-| **Artifact** | `.omo/evidence/ops/large-load.json` |
-| **What it runs** | load |
-| **Pass criteria** | exit 0 |
-| **Blocks release** | Yes |
-
-## Cross-Cutting Harnesses
-
-### WF-HAR-SEC-01: Auth Bypass
-
-| **Command** | `true` |
-| **Artifact** | `.omo/evidence/security/auth-bypass.json` |
-| **What it runs** | auth |
-| **Pass criteria** | exit 0 |
-| **Blocks release** | Yes |
-
-### WF-HAR-A11Y-01: WCAG
-
-| **Command** | `true` |
-| **Artifact** | `.omo/evidence/a11y/wcag.json` |
-| **What it runs** | a11y |
-| **Pass criteria** | exit 0 |
+| **Artifact** | `evidence/domain/graph.json` |
+| **What it runs** | graph |
+| **Pass criteria** | pass |
 | **Blocks release** | Yes |
 """
-    harnesses = parse_catalog(catalog)
-    derive_prerequisites(harnesses)
+    metadata = _lifecycle_metadata(
+        implemented=("WF-HAR-DOMAIN-02",),
+        prerequisites={"WF-HAR-DOMAIN-02": ()},
+    )
+    entries = parse_catalog(catalog, metadata)
+    by_id = {str(entry["id"]): entry for entry in entries}
+    assert by_id["WF-HAR-DOMAIN-02"]["status"] == "implemented"
+    assert by_id["WF-HAR-DOMAIN-02"]["release_stage"] == "pre_ga"
+    assert by_id["WF-HAR-DOMAIN-03"]["status"] == "specified"
+    assert by_id["WF-HAR-DOMAIN-03"]["release_stage"] == "ga"
 
-    by_id = {str(h["id"]): h for h in harnesses}
 
-    # STATIC-01 (first in layer 1) -> no prereqs
-    assert by_id["WF-HAR-STATIC-01"].get("prerequisites") == []
+def test_registry_v12_requires_release_stage() -> None:
+    harness = _minimal_harness()
+    registry = _minimal_registry(harness)
+    registry["schema_version"] = "1.2.0"
+    with pytest.raises(HarnessRegistryError, match="release_stage"):
+        validate_registry(registry)
 
-    # STATIC-02 (second in layer 1) -> STATIC-01 prereq
-    assert by_id["WF-HAR-STATIC-02"].get("prerequisites") == ["WF-HAR-STATIC-01"]
 
-    # OPS-01 (layer 8) -> STATIC-01, STATIC-02 prereqs
-    ops01_prereqs = cast("list[str]", by_id["WF-HAR-OPS-01"].get("prerequisites", []))
-    assert ops01_prereqs == ["WF-HAR-STATIC-01", "WF-HAR-STATIC-02"]
+def test_canonical_lifecycle_keeps_domain_harnesses_outside_foundation() -> None:
+    from scripts.build_harness_registry import load_lifecycle_metadata
 
-    # OPS-02-L (layer 8, seq 2) -> STATIC-01, STATIC-02, OPS-01 prereqs
-    ops_l_prereqs = cast("list[str]", by_id["WF-HAR-OPS-02-L"].get("prerequisites", []))
-    assert ops_l_prereqs == [
-        "WF-HAR-STATIC-01",
-        "WF-HAR-STATIC-02",
-        "WF-HAR-OPS-01",
-    ]
-
-    # Cross-cutting entries have no prereqs
-    assert by_id["WF-HAR-SEC-01"].get("prerequisites") == []
-    assert by_id["WF-HAR-A11Y-01"].get("prerequisites") == []
+    metadata = load_lifecycle_metadata()
+    assert "WF-HAR-DOMAIN-02" in metadata.implemented_harnesses
+    assert "WF-HAR-DOMAIN-05" in metadata.implemented_harnesses
+    assert "WF-HAR-DOMAIN-02" not in metadata.foundation_closure
+    assert metadata.prerequisites["WF-HAR-DOMAIN-05"] == (
+        "WF-HAR-DOMAIN-02",
+    )

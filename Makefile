@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY: bootstrap check check-architecture check-contracts check-harness-registry check-preflight check-static clean doctor fix generate-contracts generate-harness-registry harness help infra-down infra-up migration-smoke recertify-foundation storage-smoke test test-frontend test-python verify
+.PHONY: bootstrap check check-architecture check-contracts check-harness-registry check-preflight check-static clean doctor fix generate-contracts generate-harness-registry harness help infra-down infra-up migration-smoke recertify-foundation storage-smoke test test-domain test-frontend test-python verify
 
 help: ## Show supported development commands
 	@awk 'BEGIN {FS = ":.*## "; printf "Usage: make <target>\n\nTargets:\n"} /^[a-zA-Z0-9_.-]+:.*## / {printf "  %-28s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -63,6 +63,9 @@ test: test-python test-frontend ## Run all unit tests
 
 test-python: ## Run Python tests
 	uv run pytest
+
+test-domain: ## Run pure domain entity and authority suites
+	uv run pytest backend/tests/domain
 
 test-frontend: ## Run frontend tests
 	pnpm --dir frontend run test

@@ -342,6 +342,7 @@ def write_evidence(
     tool_version: str | None = None,
     evidence_root: Path | None = None,
     applicability: Literal["standard", "large", "tenant"] = "standard",
+    release_stage: Literal["pre_ga", "ga"] = "pre_ga",
     applicability_reason: str | None = None,
 ) -> Path:
     """Write a validated evidence record and its stdout/stderr artifacts.
@@ -433,6 +434,7 @@ def write_evidence(
         invocation=invocation,
         tool=tool,
         applicability=applicability,
+        release_stage=release_stage,
         applicability_reason=applicability_reason,
         environment=get_environment_fingerprint(),
         artifacts=artifacts or [],

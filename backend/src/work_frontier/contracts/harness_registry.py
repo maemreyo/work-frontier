@@ -1,4 +1,4 @@
-"""Authoritative harness registry loading and validation."""
+"""Authoritative harness registry loading and fail-closed validation."""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ from typing import Any, Final, cast
 
 HARNESS_ID_PATTERN: Final = re.compile(r"^WF-HAR-[A-Z0-9]+(?:-[A-Z0-9]+)*$")
 APPLICABILITY: Final = frozenset({"standard", "large", "tenant"})
+RELEASE_STAGES: Final = frozenset({"pre_ga", "ga"})
 STATUS: Final = frozenset({"specified", "implemented", "deferred"})
 REQUIRED_FIELDS: Final = (
     "id",
@@ -23,14 +24,8 @@ REQUIRED_FIELDS: Final = (
     "applicability",
     "status",
 )
-
-# Valid artifact_mode values.
 VALID_ARTIFACT_MODES: Final = frozenset({"declared_file", "runner_evidence"})
-
-# Harnesses whose declared artifact is the evidence record itself.
 RUNNER_EVIDENCE_HARNESSES: Final = frozenset({"WF-HAR-STATIC-01", "WF-HAR-STATIC-04"})
-
-# Expected output path pattern for runner_evidence harnesses.
 RUNNER_EVIDENCE_EXPECTED_PATTERN: Final = re.compile(
     r"^\.omo/evidence/static/WF-HAR-[A-Z0-9]+(?:-[A-Z0-9]+)*\.json$"
 )
@@ -38,18 +33,25 @@ REMOTE_ARTIFACT_PREFIXES: Final = ("s3://", "http://", "https://")
 
 
 class ArtifactMode(StrEnum):
-    """Valid artifact_mode values for registry harness entries."""
+    """Valid artifact modes."""
 
     DECLARED_FILE = "declared_file"
     RUNNER_EVIDENCE = "runner_evidence"
 
 
 class Applicability(StrEnum):
-    """Harness applicability scope for certification gating."""
+    """Workload applicability scope."""
 
     STANDARD = "standard"
     LARGE = "large"
     TENANT = "tenant"
+
+
+class ReleaseStage(StrEnum):
+    """Release stage dimension, independent of workload scope."""
+
+    PRE_GA = "pre_ga"
+    GA = "ga"
 
 
 class HarnessRegistryError(ValueError):
@@ -68,105 +70,55 @@ def load_registry(path: Path | None = None) -> dict[str, Any]:
     return data
 
 
-_MIN_DRIVE_LETTER_LEN = 2
-
-
 def _validate_declared_artifact_path(harness_id: str, path: str) -> None:
-    """Validate declared artifact path.
-
-    Rejects remote, absolute, traversal, Windows drive-letter, and UNC paths.
-    """
     if path.startswith(REMOTE_ARTIFACT_PREFIXES):
-        msg = (
-            f"{harness_id}: remote artifact {path!r} is not allowed; "
-            "a registry-declared certification artifact must be locally verifiable"
-        )
+        msg = f"{harness_id}: remote artifact {path!r} is not allowed"
         raise HarnessRegistryError(msg)
-
-    # Reject UNC paths (\\server\share or //server/share).
-    # Must be checked before absolute-path check because // starts with /.
     if path.startswith(("\\\\", "//")):
-        msg = (
-            f"{harness_id}: UNC artifact path {path!r} is not allowed; "
-            "artifact paths must be repo-relative"
-        )
+        msg = f"{harness_id}: UNC artifact path {path!r} is not allowed"
         raise HarnessRegistryError(msg)
-
-    # Reject absolute paths.
     if path.startswith("/"):
+        msg = f"{harness_id}: absolute artifact path {path!r} is not allowed"
+        raise HarnessRegistryError(msg)
+    if "\\" in path:
         msg = (
-            f"{harness_id}: absolute artifact path {path!r} is not "
-            "allowed; artifact paths must be repo-relative"
+            f"{harness_id}: Windows-style artifact path {path!r} is not allowed; "
+            "use POSIX relative notation"
         )
         raise HarnessRegistryError(msg)
-
-    # Reject path-traversal components.
-    normalized = Path(path).as_posix()
-    if ".." in normalized.split("/"):
-        msg = (
-            f"{harness_id}: artifact path {path!r} contains '..' "
-            "traversal; artifact paths must be contained within the repo"
-        )
+    if ".." in path.split("/"):
+        msg = f"{harness_id}: artifact path {path!r} contains traversal"
         raise HarnessRegistryError(msg)
-
-    # Reject Windows drive-letter paths (e.g. C:\foo).
-    if len(path) >= _MIN_DRIVE_LETTER_LEN and path[1] == ":":
-        msg = (
-            f"{harness_id}: Windows-style artifact path {path!r} is "
-            "not allowed; artifact paths must use POSIX relative notation"
-        )
+    if len(path) >= 2 and path[1] == ":":
+        msg = f"{harness_id}: Windows-style artifact path {path!r} is not allowed"
         raise HarnessRegistryError(msg)
 
 
 def _validate_prerequisites(
     prereqs: list[str], harness_id: str, all_ids: set[str]
 ) -> None:
-    """Validate a harness's prerequisite list.
-
-    Rejects duplicates, self-references, and unknown IDs.  Also validates
-    the graph is acyclic by running a topological-sort check against the
-    full set of harness entries (deferred to a per-registry call).
-    """
     if len(prereqs) != len(set(prereqs)):
         msg = f"{harness_id}: prerequisites contain duplicates: {prereqs}"
         raise HarnessRegistryError(msg)
-
     if harness_id in prereqs:
         msg = f"{harness_id}: prerequisite references itself"
         raise HarnessRegistryError(msg)
-
     for prereq_id in prereqs:
         if prereq_id not in all_ids:
             msg = f"{harness_id}: prerequisite {prereq_id!r} is not a known harness ID"
             raise HarnessRegistryError(msg)
 
 
-def _validate_prerequisite_cycles(
-    harnesses: list[dict[str, Any]],
-) -> None:
-    """Validate the prerequisite graph has no cycles (topological sort)."""
-    # Build adjacency and in-degree maps for all harnesses.
-    by_id: dict[str, dict[str, Any]] = {}
-    for h in harnesses:
-        hid = str(h["id"])
-        by_id[hid] = h
-
+def _validate_prerequisite_cycles(harnesses: list[dict[str, Any]]) -> None:
+    by_id = {str(harness["id"]): harness for harness in harnesses}
     in_degree: dict[str, int] = dict.fromkeys(by_id, 0)
-    adjacency: dict[str, list[str]] = {hid: [] for hid in by_id}
+    adjacency: dict[str, list[str]] = {harness_id: [] for harness_id in by_id}
+    for harness_id, harness in by_id.items():
+        for prereq_id in cast("list[str]", harness.get("prerequisites", [])):
+            adjacency[prereq_id].append(harness_id)
+            in_degree[harness_id] += 1
 
-    for h in harnesses:
-        hid = str(h["id"])
-        prereqs_entry = h.get("prerequisites")
-        if isinstance(prereqs_entry, list):
-            prereqs_raw: list[object] = cast("list[object]", prereqs_entry)
-            prereq_items: list[str] = [str(p) for p in prereqs_raw]
-            for pid in prereq_items:
-                if pid in by_id:
-                    adjacency[pid].append(hid)
-                    in_degree[hid] += 1
-
-    # Kahn's algorithm.
-    queue = [hid for hid, deg in in_degree.items() if deg == 0]
+    queue = [harness_id for harness_id, degree in in_degree.items() if degree == 0]
     sorted_count = 0
     while queue:
         node = queue.pop()
@@ -175,18 +127,15 @@ def _validate_prerequisite_cycles(
             in_degree[neighbor] -= 1
             if in_degree[neighbor] == 0:
                 queue.append(neighbor)
-
     if sorted_count != len(by_id):
-        cyclic = [hid for hid, deg in in_degree.items() if deg > 0]
-        msg = f"prerequisite graph contains a cycle involving: {sorted(cyclic)}"
+        cyclic = sorted(
+            harness_id for harness_id, degree in in_degree.items() if degree
+        )
+        msg = f"prerequisite graph contains a cycle involving: {cyclic}"
         raise HarnessRegistryError(msg)
 
 
-def _validate_harness_entry(
-    harness_entry: dict[str, Any],
-    seen: set[str],
-) -> str:
-    """Validate a single harness entry; return the normalized harness id."""
+def _validate_harness_entry(harness_entry: dict[str, Any], seen: set[str]) -> str:
     for field in REQUIRED_FIELDS:
         if field not in harness_entry:
             msg = f"harness missing required field {field}"
@@ -199,51 +148,44 @@ def _validate_harness_entry(
         msg = f"duplicate harness id: {harness_id}"
         raise HarnessRegistryError(msg)
     seen.add(harness_id)
-    if not str(harness_entry.get("command", "")).strip():
+
+    if not str(harness_entry["command"]).strip():
         msg = f"{harness_id}: command is required"
         raise HarnessRegistryError(msg)
-    if not str(harness_entry.get("artifact", "")).strip():
+    declared_artifact = str(harness_entry["artifact"])
+    if not declared_artifact.strip():
         msg = f"{harness_id}: artifact is required"
         raise HarnessRegistryError(msg)
-    declared_artifact = str(harness_entry["artifact"])
     _validate_declared_artifact_path(harness_id, declared_artifact)
 
-    applicability = str(harness_entry.get("applicability", ""))
+    applicability = str(harness_entry["applicability"])
     if applicability not in APPLICABILITY:
         msg = f"{harness_id}: invalid applicability {applicability!r}"
         raise HarnessRegistryError(msg)
-
-    artifact_mode = str(harness_entry.get("artifact_mode", ""))
+    artifact_mode = str(harness_entry["artifact_mode"])
     if artifact_mode not in VALID_ARTIFACT_MODES:
-        msg = (
-            f"{harness_id}: invalid artifact_mode {artifact_mode!r}; "
-            f"valid values: {sorted(VALID_ARTIFACT_MODES)}"
-        )
+        msg = f"{harness_id}: invalid artifact_mode {artifact_mode!r}"
         raise HarnessRegistryError(msg)
-    if artifact_mode == "runner_evidence":
+    if artifact_mode == ArtifactMode.RUNNER_EVIDENCE:
         if harness_id not in RUNNER_EVIDENCE_HARNESSES:
             msg = f"{harness_id}: runner_evidence mode not allowed for this harness"
             raise HarnessRegistryError(msg)
-        declared = str(harness_entry.get("artifact", ""))
-        if not RUNNER_EVIDENCE_EXPECTED_PATTERN.match(declared):
-            msg = (
-                f"{harness_id}: runner_evidence artifact {declared!r} does not "
-                f"match expected pattern .omo/evidence/static/<HARNESS_ID>.json"
-            )
+        if RUNNER_EVIDENCE_EXPECTED_PATTERN.match(declared_artifact) is None:
+            msg = f"{harness_id}: runner_evidence artifact does not match expected pattern"
             raise HarnessRegistryError(msg)
-        expected_path = f".omo/evidence/static/{harness_id}.json"
-        if declared != expected_path:
+        expected = f".omo/evidence/static/{harness_id}.json"
+        if declared_artifact != expected:
             msg = (
-                f"{harness_id}: runner_evidence artifact {declared!r} "
-                f"does not match expected path {expected_path!r}"
+                f"{harness_id}: runner_evidence artifact {declared_artifact!r} "
+                f"does not match expected path {expected!r}"
             )
             raise HarnessRegistryError(msg)
 
-    status = str(harness_entry.get("status", ""))
+    status = str(harness_entry["status"])
     if status not in STATUS:
         msg = f"{harness_id}: invalid status {status!r}"
         raise HarnessRegistryError(msg)
-    if not isinstance(harness_entry.get("blocks_release"), bool):
+    if not isinstance(harness_entry["blocks_release"], bool):
         msg = f"{harness_id}: blocks_release must be bool"
         raise HarnessRegistryError(msg)
     return harness_id
@@ -251,126 +193,123 @@ def _validate_harness_entry(
 
 def _validate_registry_counts(
     data: dict[str, Any], harnesses: list[dict[str, Any]]
-) -> list[str]:
-    """Validate top-level counts and the standard_blockers invariant."""
+) -> None:
     if data.get("harness_count") != len(harnesses):
-        msg = "harness_count does not match harnesses length"
-        raise HarnessRegistryError(msg)
+        raise HarnessRegistryError("harness_count does not match harnesses length")
     if data.get("catalog_harness_count") != len(harnesses):
-        msg = "catalog_harness_count must equal harness_count (catalog is sole source)"
-        raise HarnessRegistryError(msg)
-
-    standard_blockers: list[str] = [
+        raise HarnessRegistryError("catalog_harness_count must equal harness_count")
+    standard_blockers = [
         str(entry["id"])
         for entry in harnesses
         if entry.get("blocks_release") and entry.get("applicability") == "standard"
     ]
     if data.get("standard_blocker_count") != len(standard_blockers):
-        msg = "standard_blocker_count does not match computed blockers"
-        raise HarnessRegistryError(msg)
-
-    declared = data.get("standard_blockers")
-    if declared != standard_blockers:
-        msg = "standard_blockers list is inconsistent with harness entries"
-        raise HarnessRegistryError(msg)
-
-    return standard_blockers
+        raise HarnessRegistryError(
+            "standard_blocker_count does not match computed blockers"
+        )
+    if data.get("standard_blockers") != standard_blockers:
+        raise HarnessRegistryError(
+            "standard_blockers list is inconsistent with harness entries"
+        )
 
 
-def _validate_foundation_closure(data: dict[str, Any], seen: set[str]) -> list[str]:
-    """Validate the foundation_closure list references known harnesses."""
-    closure_raw = data.get("foundation_closure")
-    if not isinstance(closure_raw, list) or not closure_raw:
-        msg = "foundation_closure missing from registry"
-        raise HarnessRegistryError(msg)
-    closure = [str(item) for item in cast("list[Any]", closure_raw)]
+def _validate_foundation_closure(data: dict[str, Any], all_ids: set[str]) -> None:
+    raw = data.get("foundation_closure")
+    if not isinstance(raw, list) or not raw:
+        raise HarnessRegistryError("foundation_closure missing from registry")
+    closure = [str(item) for item in raw]
     if len(closure) != len(set(closure)):
-        msg = "foundation_closure contains duplicates"
-        raise HarnessRegistryError(msg)
+        raise HarnessRegistryError("foundation_closure contains duplicates")
+    by_id = {str(item["id"]): item for item in data["harnesses"]}
     for harness_id in closure:
-        if harness_id not in seen:
+        if harness_id not in all_ids:
             msg = f"foundation_closure references unknown harness {harness_id}"
             raise HarnessRegistryError(msg)
-    return closure
+        if by_id[harness_id].get("status") != "implemented":
+            msg = f"foundation_closure member is not implemented: {harness_id}"
+            raise HarnessRegistryError(msg)
 
 
 def validate_registry(data: dict[str, Any]) -> None:
     schema_version = data.get("schema_version")
-    if schema_version not in {"1.0.0", "1.1.0"}:
-        msg = "registry schema_version must be 1.0.0 or 1.1.0"
-        raise HarnessRegistryError(msg)
-    harnesses_raw = data.get("harnesses")
-    if not isinstance(harnesses_raw, list) or not harnesses_raw:
-        msg = "registry must contain a non-empty harnesses list"
-        raise HarnessRegistryError(msg)
-    harnesses = cast("list[dict[str, Any]]", harnesses_raw)
+    if schema_version not in {"1.0.0", "1.1.0", "1.2.0"}:
+        raise HarnessRegistryError(
+            "registry schema_version must be 1.0.0, 1.1.0, or 1.2.0"
+        )
+    raw = data.get("harnesses")
+    if not isinstance(raw, list) or not raw:
+        raise HarnessRegistryError("registry must contain a non-empty harnesses list")
+    harnesses = cast("list[dict[str, Any]]", raw)
 
     seen: set[str] = set()
-    all_ids: set[str] = set()
-    for harness_entry in harnesses:
-        hid = _validate_harness_entry(harness_entry, seen)
-        all_ids.add(hid)
+    for harness in harnesses:
+        _ = _validate_harness_entry(harness, seen)
 
-    # Registry 1.1 makes prerequisites an explicit, typed contract.
-    # Version 1.0 remains readable for historical/local test fixtures.
-    for harness_entry in harnesses:
-        prereqs_entry = harness_entry.get("prerequisites")
-        hid = str(harness_entry["id"])
-        if schema_version == "1.1.0" and not isinstance(prereqs_entry, list):
-            msg = f"{hid}: prerequisites must be an explicit array"
+    for harness in harnesses:
+        harness_id = str(harness["id"])
+        prereqs_raw = harness.get("prerequisites")
+        if schema_version != "1.0.0" and not isinstance(prereqs_raw, list):
+            msg = f"{harness_id}: prerequisites must be an explicit array"
             raise HarnessRegistryError(msg)
-        if prereqs_entry is None:
-            continue
-        if not isinstance(prereqs_entry, list):
-            msg = f"{hid}: prerequisites must be an array"
+        if prereqs_raw is not None:
+            if not isinstance(prereqs_raw, list) or not all(
+                isinstance(item, str) for item in prereqs_raw
+            ):
+                msg = f"{harness_id}: prerequisites must contain only strings"
+                raise HarnessRegistryError(msg)
+            _validate_prerequisites(cast("list[str]", prereqs_raw), harness_id, seen)
+
+        release_stage = harness.get("release_stage")
+        if schema_version == "1.2.0" and release_stage not in RELEASE_STAGES:
+            msg = f"{harness_id}: release_stage must be 'pre_ga' or 'ga'"
             raise HarnessRegistryError(msg)
-        if not all(isinstance(item, str) for item in prereqs_entry):
-            msg = f"{hid}: prerequisites must contain only harness ID strings"
+        if release_stage is not None and release_stage not in RELEASE_STAGES:
+            msg = f"{harness_id}: invalid release_stage {release_stage!r}"
             raise HarnessRegistryError(msg)
-        prereqs = cast("list[str]", prereqs_entry)
-        _validate_prerequisites(prereqs, hid, all_ids)
 
     _validate_prerequisite_cycles(harnesses)
-    _ = _validate_registry_counts(data, harnesses)
-    _ = _validate_foundation_closure(data, seen)
+    _validate_registry_counts(data, harnesses)
+    _validate_foundation_closure(data, seen)
 
 
 def get_harness(registry: dict[str, Any], harness_id: str) -> dict[str, Any]:
     for item in registry["harnesses"]:
         if item["id"] == harness_id:
-            return item
-    msg = f"unknown harness id: {harness_id}"
-    raise HarnessRegistryError(msg)
+            return cast("dict[str, Any]", item)
+    raise HarnessRegistryError(f"unknown harness id: {harness_id}")
 
 
 def foundation_closure(registry: dict[str, Any]) -> list[str]:
-    closure_raw = registry.get("foundation_closure")
-    if not isinstance(closure_raw, list) or not closure_raw:
-        msg = "foundation_closure missing from registry"
-        raise HarnessRegistryError(msg)
-    closure = cast("list[Any]", closure_raw)
-    return [str(item) for item in closure]
+    raw = registry.get("foundation_closure")
+    if not isinstance(raw, list) or not raw:
+        raise HarnessRegistryError("foundation_closure missing from registry")
+    return [str(item) for item in raw]
 
 
 def get_prerequisites(registry: dict[str, Any], harness_id: str) -> list[str]:
     harness = get_harness(registry, harness_id)
-    prereqs_entry = harness.get("prerequisites")
-    if prereqs_entry is None and registry.get("schema_version") == "1.0.0":
+    raw = harness.get("prerequisites")
+    if raw is None and registry.get("schema_version") == "1.0.0":
         return []
-    if not isinstance(prereqs_entry, list) or not all(
-        isinstance(item, str) for item in prereqs_entry
-    ):
-        msg = f"{harness_id}: prerequisites are missing or invalid"
-        raise HarnessRegistryError(msg)
-    return cast("list[str]", prereqs_entry)
+    if not isinstance(raw, list) or not all(isinstance(item, str) for item in raw):
+        raise HarnessRegistryError(
+            f"{harness_id}: prerequisites are missing or invalid"
+        )
+    return cast("list[str]", raw)
+
+
+def get_release_stage(registry: dict[str, Any], harness_id: str) -> str:
+    harness = get_harness(registry, harness_id)
+    stage = harness.get("release_stage")
+    if stage is None and registry.get("schema_version") in {"1.0.0", "1.1.0"}:
+        return "pre_ga"
+    if stage not in RELEASE_STAGES:
+        raise HarnessRegistryError(f"{harness_id}: release_stage is missing or invalid")
+    return str(stage)
 
 
 def dependency_closure(registry: dict[str, Any], target_id: str) -> list[str]:
-    """Return target prerequisites in deterministic topological order.
-
-    Every member must be implemented. A specified/deferred dependency blocks
-    certification instead of disappearing from the graph.
-    """
+    """Return implemented target dependencies in deterministic topological order."""
     ordered: list[str] = []
     visiting: set[str] = set()
     visited: set[str] = set()
@@ -379,9 +318,9 @@ def dependency_closure(registry: dict[str, Any], target_id: str) -> list[str]:
         if harness_id in visited:
             return
         if harness_id in visiting:
-            msg = f"prerequisite graph contains a cycle at {harness_id}"
-            raise HarnessRegistryError(msg)
-
+            raise HarnessRegistryError(
+                f"prerequisite graph contains a cycle at {harness_id}"
+            )
         harness = get_harness(registry, harness_id)
         if harness.get("status") != "implemented":
             msg = (
@@ -389,7 +328,6 @@ def dependency_closure(registry: dict[str, Any], target_id: str) -> list[str]:
                 "dependency closure requires implemented harnesses"
             )
             raise HarnessRegistryError(msg)
-
         visiting.add(harness_id)
         for prereq_id in get_prerequisites(registry, harness_id):
             visit(prereq_id)

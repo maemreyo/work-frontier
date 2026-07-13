@@ -5,8 +5,9 @@ import { describe, expect, it } from "vitest"
 
 import { EvidenceRecordSchema } from "../../src/contracts/evidence-record.generated"
 import {
-  validateEvidenceRecordSemantic,
+  canonicalizeEvidenceRecord,
   isEvidenceRecordValid,
+  validateEvidenceRecordSemantic,
 } from "../../src/contracts/evidence-record-semantic"
 
 const FIXTURES_DIR = join(__dirname, "../../..", "contracts", "fixtures", "evidence")
@@ -26,6 +27,8 @@ const REQUIRED_INVALID_FIXTURES: ReadonlySet<string> = new Set([
   // Schema-level (Zod rejects via pattern/regex/structural rules)
   "invalid-absolute-working-directory.json",
   "invalid-absolute-artifact-path.json",
+  "invalid-backslash-working-directory.json",
+  "invalid-backslash-artifact-path.json",
   "invalid-missing-environment-os.json",
   // Semantic-level (Zod accepts, validateEvidenceRecordSemantic rejects)
   "invalid-traversal-working-directory.json",
@@ -293,7 +296,7 @@ describe("EvidenceRecordSchema", () => {
       const semanticErrors = validateEvidenceRecordSemantic(result.data)
       expect(semanticErrors).toEqual([])
 
-      const canonical = pythonCanonicalJson(result.data)
+      const canonical = pythonCanonicalJson(canonicalizeEvidenceRecord(result.data))
       const digest = createHash("sha256").update(canonical).digest("hex")
       const goldenPath = fixturePath.replace(/\.json$/, ".canonical.sha256")
       const expected = readFileSync(goldenPath, "utf-8").trim()

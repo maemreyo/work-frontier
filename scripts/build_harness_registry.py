@@ -1,13 +1,5 @@
 #!/usr/bin/env python3
-"""Build or check the machine-readable harness registry from the catalog.
-
-Catalog is the sole semantic source of truth. This builder only:
-- parses catalog entries grouped by section/layer
-- derives prerequisites from catalog layout (layers execute bottom-up;
-  within each layer, sequence determines order)
-- marks foundation-closure IDs as implemented when their catalog command is local
-- does not rewrite harness meaning, name, or artifact semantics
-"""
+"""Build or check the registry from catalog and lifecycle metadata."""
 
 from __future__ import annotations
 
@@ -15,48 +7,24 @@ import argparse
 import json
 import re
 import sys
+from dataclasses import dataclass
 from pathlib import Path
+from typing import cast
 
 ROOT = Path(__file__).resolve().parents[1]
 _BACKEND_SRC = ROOT / "backend" / "src"
 if str(_BACKEND_SRC) not in sys.path:
     sys.path.insert(0, str(_BACKEND_SRC))
 
-# Import runtime validation and constants from the shared module.
 from work_frontier.contracts.harness_registry import (  # noqa: E402
     RUNNER_EVIDENCE_HARNESSES,
     validate_registry,
 )
 
 CATALOG = ROOT / "docs" / "quality" / "harness-catalog.md"
+LIFECYCLE = ROOT / "contracts" / "harness-lifecycle.json"
 REGISTRY = ROOT / "contracts" / "harness-registry.json"
-
-# Foundation dependency closure for Todo 5 recertification of Todos 1-4 / P0.
-FOUNDATION_CLOSURE: tuple[str, ...] = (
-    "WF-HAR-PREFLIGHT-01",
-    "WF-HAR-STATIC-01",
-    "WF-HAR-STATIC-02",
-    "WF-HAR-STATIC-04",
-    "WF-HAR-STATIC-05",
-    "WF-HAR-CONTRACT-05",
-    "WF-HAR-INTEG-01",
-    "WF-HAR-INTEG-02",
-)
-
-# Implementation lifecycle and recertification scope are separate concepts.
-# Future todos add implemented harnesses here without expanding Todo 5's
-# historical foundation closure.
-IMPLEMENTED_HARNESSES: frozenset[str] = frozenset(FOUNDATION_CLOSURE)
-
 FIELD_RE = re.compile(r"\|\s*\*\*([^*]+)\*\*\s*\|\s*(.*?)\s*\|")
-
-# Section names whose harnesses live outside the numbered layer sequence.
-# Cross-cutting harnesses have no layer/sequence semantics in the catalog,
-# so they receive no derived prerequisites (conservative decision).
-CROSS_CUTTING_SECTION = "Cross-Cutting Harnesses"
-
-# Known numbered-layer prefixes.  PREFLIGHT lives in the Layer 1 (Static)
-# section of the catalog.
 KNOWN_LAYER_ORDER: dict[str, int] = {
     "PREFLIGHT": 1,
     "STATIC": 1,
@@ -68,142 +36,138 @@ KNOWN_LAYER_ORDER: dict[str, int] = {
     "PRODUCT": 7,
     "OPS": 8,
 }
-
-# Layer-extraction pattern from a harness ID: WF-HAR-{LAYER}-{SEQ}-{NAME}
-# For IDs with an extra trailing qualifier like -L or -T the layer is
-# still the third segment.
 _HAR_ID_LAYER_RE = re.compile(r"^WF-HAR-([A-Z0-9]+(?:-[A-Z0-9]+)*)-\d+")
-
-# Sequence extraction from a harness ID: the first numeric segment after
-# WF-HAR-{LAYER}-
 _HAR_ID_SEQ_RE = re.compile(r"^WF-HAR-(?:[A-Z0-9]+(?:-[A-Z0-9]+)*)-(\d+)")
 
 
+@dataclass(frozen=True, slots=True)
+class HarnessLifecycleMetadata:
+    """Canonical implementation, release-stage, closure, and dependency data."""
+
+    foundation_closure: tuple[str, ...]
+    implemented_harnesses: frozenset[str]
+    deferred_harnesses: frozenset[str]
+    pre_ga_harnesses: frozenset[str]
+    prerequisites: dict[str, tuple[str, ...]]
+
+
+def load_lifecycle_metadata(path: Path = LIFECYCLE) -> HarnessLifecycleMetadata:
+    """Load and validate the hand-reviewed lifecycle metadata."""
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    if raw.get("schema_version") != "1.0.0":
+        msg = "harness lifecycle schema_version must be 1.0.0"
+        raise ValueError(msg)
+
+    implemented = frozenset(str(item) for item in raw["implemented_harnesses"])
+    deferred = frozenset(str(item) for item in raw["deferred_harnesses"])
+    if implemented & deferred:
+        msg = "implemented_harnesses and deferred_harnesses must not overlap"
+        raise ValueError(msg)
+
+    prerequisites = {
+        str(harness_id): tuple(str(item) for item in values)
+        for harness_id, values in cast(
+            "dict[str, list[object]]", raw["prerequisites"]
+        ).items()
+    }
+    if set(prerequisites) != set(implemented):
+        msg = "prerequisites must contain exactly every implemented harness"
+        raise ValueError(msg)
+
+    closure = tuple(str(item) for item in raw["foundation_closure"])
+    if not closure or len(closure) != len(set(closure)):
+        msg = "foundation_closure must be non-empty and duplicate-free"
+        raise ValueError(msg)
+    if not set(closure) <= implemented:
+        msg = "every foundation closure member must be implemented"
+        raise ValueError(msg)
+
+    pre_ga = frozenset(str(item) for item in raw["pre_ga_harnesses"])
+    if not implemented <= pre_ga:
+        msg = "every currently implemented harness must be available pre-GA"
+        raise ValueError(msg)
+
+    return HarnessLifecycleMetadata(
+        foundation_closure=closure,
+        implemented_harnesses=implemented,
+        deferred_harnesses=deferred,
+        pre_ga_harnesses=pre_ga,
+        prerequisites=prerequisites,
+    )
+
+
 def _clean_cell(value: str) -> str:
-    value = value.strip()
-    value = value.strip("`")
+    value = value.strip().strip("`")
     value = re.sub(r"`\s*\(.*$", "", value).strip()
-    value = value.rstrip("`").strip()
-    return value
+    return value.rstrip("`").strip()
 
 
 def _extract_layer_from_id(harness_id: str) -> str:
-    """Extract the LAYER component from a WF-HAR-{LAYER}-{SEQ}-{NAME} id."""
-    m = _HAR_ID_LAYER_RE.match(harness_id)
-    if m:
-        return m.group(1)
-    return ""
+    match = _HAR_ID_LAYER_RE.match(harness_id)
+    return match.group(1) if match else ""
 
 
 def _extract_sequence_from_id(harness_id: str) -> int:
-    """Extract the numeric SEQUENCE from a WF-HAR-{LAYER}-{SEQ}-{NAME} id."""
-    m = _HAR_ID_SEQ_RE.search(harness_id)
-    if m:
-        return int(m.group(1))
-    return 0
-
-
-def _section_title(line: str) -> str:
-    """Return the plain-text section title stripped of markdown and layer prefix."""
-    # "## Layer 1: Static (WF-HAR-STATIC)" -> "Layer 1: Static"
-    # "## Cross-Cutting Harnesses" -> "Cross-Cutting Harnesses"
-    title = line.lstrip("#").strip()
-    return title
+    match = _HAR_ID_SEQ_RE.search(harness_id)
+    return int(match.group(1)) if match else 0
 
 
 def _layer_number_for_harness(harness_id: str) -> int | None:
-    """Return the numeric layer order for a harness based on catalog placement.
-
-    Returns None if no unambiguous layer can be established.  Cross-cutting
-    harnesses receive None because the catalog provides no layer/sequence
-    semantics for them — a conservative decision that yields no derived
-    prerequisites.
-    """
-    # Check if this harness's layer prefix is a known numbered-layer prefix.
-    id_layer = _extract_layer_from_id(harness_id)
-    if id_layer in KNOWN_LAYER_ORDER:
-        return KNOWN_LAYER_ORDER[id_layer]
-
-    # Cross-cutting harnesses are outside the numbered layer sequence and
-    # receive no derived prerequisites.  Returns None so derive_prerequisites
-    # skips them.
-    return None
-
-
-def _harness_sort_key(
-    harness: dict[str, object],
-) -> tuple[int, int]:
-    layer_val = harness.get("_layer_order", 99)
-    seq_val = harness.get("_sequence", 0)
-    if not isinstance(layer_val, int):
-        layer_val = 99
-    if not isinstance(seq_val, int):
-        seq_val = 0
-    return (layer_val, seq_val)  # type: ignore[return-value]
+    return KNOWN_LAYER_ORDER.get(_extract_layer_from_id(harness_id))
 
 
 def derive_prerequisites(
     harnesses: list[dict[str, object]],
+    metadata: HarnessLifecycleMetadata | None = None,
 ) -> None:
-    """Derive prerequisites for each harness from catalog layer ordering.
-
-    Prerequisites are all harnesses that must have been run before this one:
-    - All harnesses from lower-numbered layers in the catalog.
-    - Within the same layer, all harnesses that appear earlier in catalog
-      order (stable sort by layer, then sequence, then catalog position).
-    - When a harness has no unambiguous layer assignment (e.g. cross-cutting
-      harnesses outside the numbered-layer sequence), it gets no derived
-      prerequisites (conservative).
-
-    Mutates *harnesses* in place by adding a ``prerequisites`` list.
-    """
-    # Sort harnesses by (layer, sequence); stable sort preserves catalog
-    # order within equal (layer, sequence) groups.
-    sorted_harnesses = sorted(harnesses, key=_harness_sort_key)
-    for i, harness in enumerate(sorted_harnesses):
-        layer = harness.get("_layer_order")
-        prereqs: list[str] = []
-        if layer is not None:
-            for j in range(i):
-                candidate = sorted_harnesses[j]
-                clayer = candidate.get("_layer_order")
-                if clayer is not None and candidate.get("status") == "implemented":
-                    prereqs.append(str(candidate["id"]))
-        harness["prerequisites"] = prereqs
-
-    # Strip internal metadata before returning.
-    for h in harnesses:
-        _ = h.pop("_layer_order", None)
-        _ = h.pop("_sequence", None)
+    """Attach only explicit immediate dependencies; never transitive catalog order."""
+    lifecycle = metadata or load_lifecycle_metadata()
+    catalog_ids = {str(harness["id"]) for harness in harnesses}
+    for harness in harnesses:
+        harness_id = str(harness["id"])
+        status = str(harness.get("status", "specified"))
+        if status == "implemented":
+            if harness_id not in lifecycle.prerequisites:
+                msg = f"implemented harness lacks explicit prerequisites: {harness_id}"
+                raise ValueError(msg)
+            prereqs = lifecycle.prerequisites[harness_id]
+            unknown = set(prereqs) - catalog_ids
+            if unknown:
+                msg = f"{harness_id}: unknown explicit prerequisites: {sorted(unknown)}"
+                raise ValueError(msg)
+            harness["prerequisites"] = list(prereqs)
+        else:
+            harness["prerequisites"] = []
+        _ = harness.pop("_layer_order", None)
+        _ = harness.pop("_sequence", None)
 
 
-def parse_catalog(text: str) -> list[dict[str, object]]:
-    """Parse the catalog Markdown into a list of harness dicts.
-
-    Each result includes internal ``_layer_order`` and ``_sequence`` keys
-    used for prerequisite derivation; these are stripped before final output.
-    """
-    # Split the document into sections at ## headings.
+def parse_catalog(
+    text: str,
+    metadata: HarnessLifecycleMetadata | None = None,
+) -> list[dict[str, object]]:
+    """Parse canonical catalog entries and join lifecycle metadata."""
+    lifecycle = metadata or load_lifecycle_metadata()
     lines = text.splitlines()
-    sections: list[tuple[str, list[str]]] = []
-    current_section = ""
+    sections: list[list[str]] = []
     current_lines: list[str] = []
     for line in lines:
         if line.startswith("## ") and not line.startswith("### "):
-            if current_section:
-                sections.append((current_section, current_lines))
-            current_section = _section_title(line)
+            if current_lines:
+                sections.append(current_lines)
             current_lines = []
         else:
             current_lines.append(line)
-    if current_section:
-        sections.append((current_section, current_lines))
+    if current_lines:
+        sections.append(current_lines)
 
-    # Process each section using the existing ###-based harness parser.
-    all_harnesses: list[dict[str, object]] = []
-    for _, section_lines in sections:
-        section_text = "\n".join(section_lines)
-        parts = re.split(r"^### (WF-HAR-[^\n]+)\n", section_text, flags=re.MULTILINE)
+    harnesses: list[dict[str, object]] = []
+    for section_lines in sections:
+        parts = re.split(
+            r"^### (WF-HAR-[^\n]+)\n",
+            "\n".join(section_lines),
+            flags=re.MULTILINE,
+        )
         for index in range(1, len(parts), 2):
             title = parts[index].strip()
             body = parts[index + 1]
@@ -215,48 +179,72 @@ def parse_catalog(text: str) -> list[dict[str, object]]:
             fields = {
                 key.strip(): _clean_cell(value) for key, value in FIELD_RE.findall(body)
             }
-            blocks = fields.get("Blocks release", "").lower().startswith("yes")
+            if harness_id in lifecycle.implemented_harnesses:
+                status = "implemented"
+            elif harness_id in lifecycle.deferred_harnesses:
+                status = "deferred"
+            else:
+                status = "specified"
+
             applicability = "standard"
             if harness_id.endswith("-L"):
                 applicability = "large"
             elif harness_id.endswith("-T"):
                 applicability = "tenant"
-            status = (
-                "implemented"
-                if harness_id in IMPLEMENTED_HARNESSES
-                else "specified"
+
+            harnesses.append(
+                {
+                    "id": harness_id,
+                    "name": name,
+                    "command": fields.get("Command", ""),
+                    "artifact": fields.get("Artifact", ""),
+                    "blocks_release": fields.get("Blocks release", "")
+                    .lower()
+                    .startswith("yes"),
+                    "what_it_runs": fields.get("What it runs", ""),
+                    "pass_criteria": fields.get("Pass criteria", ""),
+                    "applicability": applicability,
+                    "release_stage": "pre_ga"
+                    if harness_id in lifecycle.pre_ga_harnesses
+                    else "ga",
+                    "status": status,
+                    "_layer_order": _layer_number_for_harness(harness_id),
+                    "_sequence": _extract_sequence_from_id(harness_id),
+                }
             )
-
-            # Derive layer metadata from harness ID.
-            layer_order = _layer_number_for_harness(harness_id)
-
-            entry: dict[str, object] = {
-                "id": harness_id,
-                "name": name,
-                "command": fields.get("Command", ""),
-                "artifact": fields.get("Artifact", ""),
-                "blocks_release": blocks,
-                "what_it_runs": fields.get("What it runs", ""),
-                "pass_criteria": fields.get("Pass criteria", ""),
-                "applicability": applicability,
-                "status": status,
-                "_layer_order": layer_order,
-                "_sequence": _extract_sequence_from_id(harness_id),
-            }
-            all_harnesses.append(entry)
-
-    return all_harnesses
+    return harnesses
 
 
-def build_registry(harnesses: list[dict[str, object]]) -> dict[str, object]:
-    by_id = {str(item["id"]): item for item in harnesses}
-    for harness_id in FOUNDATION_CLOSURE:
-        if harness_id not in by_id:
-            msg = f"foundation closure harness missing from catalog: {harness_id}"
-            raise ValueError(msg)
+def _validate_metadata_against_catalog(
+    harnesses: list[dict[str, object]], metadata: HarnessLifecycleMetadata
+) -> None:
+    catalog_ids = {str(item["id"]) for item in harnesses}
+    referenced = (
+        set(metadata.implemented_harnesses)
+        | set(metadata.deferred_harnesses)
+        | set(metadata.pre_ga_harnesses)
+        | set(metadata.foundation_closure)
+        | set(metadata.prerequisites)
+        | {
+            prereq
+            for prerequisites in metadata.prerequisites.values()
+            for prereq in prerequisites
+        }
+    )
+    unknown = referenced - catalog_ids
+    if unknown:
+        msg = f"lifecycle metadata references unknown catalog harnesses: {sorted(unknown)}"
+        raise ValueError(msg)
 
-    # Derive prerequisites from catalog layer ordering before building.
-    derive_prerequisites(harnesses)
+
+def build_registry(
+    harnesses: list[dict[str, object]],
+    metadata: HarnessLifecycleMetadata | None = None,
+) -> dict[str, object]:
+    """Build and validate the compiled authoritative registry."""
+    lifecycle = metadata or load_lifecycle_metadata()
+    _validate_metadata_against_catalog(harnesses, lifecycle)
+    derive_prerequisites(harnesses, lifecycle)
 
     standard_blockers = [
         str(item["id"])
@@ -264,13 +252,14 @@ def build_registry(harnesses: list[dict[str, object]]) -> dict[str, object]:
         if item.get("blocks_release") and item.get("applicability") == "standard"
     ]
     registry: dict[str, object] = {
-        "schema_version": "1.1.0",
+        "schema_version": "1.2.0",
         "source": "docs/quality/harness-catalog.md",
+        "lifecycle_source": "contracts/harness-lifecycle.json",
         "harness_count": len(harnesses),
         "catalog_harness_count": len(harnesses),
         "standard_blocker_count": len(standard_blockers),
         "standard_blockers": standard_blockers,
-        "foundation_closure": list(FOUNDATION_CLOSURE),
+        "foundation_closure": list(lifecycle.foundation_closure),
         "harnesses": harnesses,
     }
     validate_registry(registry)
@@ -282,29 +271,25 @@ def main() -> int:
     _ = parser.add_argument(
         "--check",
         action="store_true",
-        help="Fail if committed registry differs from catalog-derived output",
+        help="Fail if committed registry differs from its canonical sources",
     )
     args = parser.parse_args()
 
-    harnesses = parse_catalog(CATALOG.read_text(encoding="utf-8"))
-    for h in harnesses:
-        h_id = str(h["id"])
-        if h_id in RUNNER_EVIDENCE_HARNESSES:
-            h["artifact_mode"] = "runner_evidence"
-        else:
-            h["artifact_mode"] = "declared_file"
-    registry = build_registry(harnesses)
+    metadata = load_lifecycle_metadata()
+    harnesses = parse_catalog(CATALOG.read_text(encoding="utf-8"), metadata)
+    for harness in harnesses:
+        harness["artifact_mode"] = (
+            "runner_evidence"
+            if str(harness["id"]) in RUNNER_EVIDENCE_HARNESSES
+            else "declared_file"
+        )
+    registry = build_registry(harnesses, metadata)
     rendered = f"{json.dumps(registry, indent=2, sort_keys=False)}\n"
 
     if args.check:
-        if not REGISTRY.exists():
-            print(f"missing registry: {REGISTRY}", file=sys.stderr)
-            return 1
-        existing = REGISTRY.read_text(encoding="utf-8")
-        if existing != rendered:
+        if not REGISTRY.exists() or REGISTRY.read_text(encoding="utf-8") != rendered:
             print(
-                "harness registry is out of date; "
-                "run scripts/build_harness_registry.py",
+                "harness registry is out of date; run scripts/build_harness_registry.py",
                 file=sys.stderr,
             )
             return 1

@@ -7,7 +7,7 @@ Schema version: 1.0.0
 import math
 import re
 from pathlib import PurePosixPath
-from typing import ClassVar, Literal
+from typing import ClassVar, Final, Literal
 
 from pydantic import (
     AwareDatetime,
@@ -21,6 +21,27 @@ from pydantic import (
 JsonValue = str | int | float | bool | None | dict[str, object] | list[object]
 
 _SHA256_PATTERN = re.compile(r"^[a-f0-9]{64}$")
+
+EVIDENCE_SEMANTIC_RULES: Final[dict[str, object]] = {
+    "version": "1.0.0",
+    "posix_relative_paths": [
+        "invocation.working_directory",
+        "artifacts[].path",
+        "stdout_artifact.path",
+        "stderr_artifact.path",
+    ],
+    "required_object_keys": [
+        {"path": "environment", "keys": ["os"], "min_properties": 1}
+    ],
+    "duration": {
+        "start": "invocation.start_time",
+        "end": "invocation.end_time",
+        "seconds": "invocation.duration_seconds",
+        "tolerance_seconds": 0.001,
+    },
+    "not_applicable_reason": {"status": "not_applicable", "min_length": 10},
+    "defaults": {"artifacts": [], "results": [], "release_stage": "pre_ga"},
+}
 
 
 class Invocation(BaseModel):
@@ -55,6 +76,9 @@ class Invocation(BaseModel):
     def working_directory_must_be_repo_relative(cls, v: str) -> str:
         """Ensure the invocation directory is portable certification metadata."""
         parsed = PurePosixPath(v)
+        if "\\" in v:
+            msg = "working_directory must use POSIX separators"
+            raise ValueError(msg)
         if parsed.is_absolute() or ".." in parsed.parts:
             msg = "working_directory must be repo-relative and contained"
             raise ValueError(msg)
@@ -138,6 +162,9 @@ class Artifact(BaseModel):
         so that certification is portable across working-directory layouts.
         """
         parsed = PurePosixPath(v)
+        if "\\" in v:
+            msg = f"artifact path must use POSIX separators: {v}"
+            raise ValueError(msg)
         if parsed.is_absolute():
             msg = f"artifact path must be repo-relative, got absolute path: {v}"
             raise ValueError(msg)
@@ -186,6 +213,7 @@ class EvidenceRecord(BaseModel):
                     }
                 }
             },
+            "x-work-frontier-semantic-rules": EVIDENCE_SEMANTIC_RULES,
         },
     )
 
@@ -219,6 +247,13 @@ class EvidenceRecord(BaseModel):
     tool: Tool
     applicability: Literal["standard", "large", "tenant"] = Field(
         description="Harness applicability scope; required, no default",
+    )
+    release_stage: Literal["pre_ga", "ga"] = Field(
+        default="pre_ga",
+        description=(
+            "Release-stage dimension independent of workload scope; pre_ga "
+            "harnesses remain required at GA"
+        ),
     )
     applicability_reason: str = Field(
         min_length=1,

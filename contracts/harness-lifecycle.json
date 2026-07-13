@@ -1,0 +1,50 @@
+{
+  "schema_version": "1.0.0",
+  "foundation_closure": [
+    "WF-HAR-PREFLIGHT-01",
+    "WF-HAR-STATIC-01",
+    "WF-HAR-STATIC-02",
+    "WF-HAR-STATIC-04",
+    "WF-HAR-STATIC-05",
+    "WF-HAR-CONTRACT-05",
+    "WF-HAR-INTEG-01",
+    "WF-HAR-INTEG-02"
+  ],
+  "implemented_harnesses": [
+    "WF-HAR-PREFLIGHT-01",
+    "WF-HAR-STATIC-01",
+    "WF-HAR-STATIC-02",
+    "WF-HAR-STATIC-04",
+    "WF-HAR-STATIC-05",
+    "WF-HAR-CONTRACT-05",
+    "WF-HAR-INTEG-01",
+    "WF-HAR-INTEG-02",
+    "WF-HAR-DOMAIN-02",
+    "WF-HAR-DOMAIN-05"
+  ],
+  "deferred_harnesses": [],
+  "pre_ga_harnesses": [
+    "WF-HAR-PREFLIGHT-01",
+    "WF-HAR-STATIC-01",
+    "WF-HAR-STATIC-02",
+    "WF-HAR-STATIC-04",
+    "WF-HAR-STATIC-05",
+    "WF-HAR-CONTRACT-05",
+    "WF-HAR-INTEG-01",
+    "WF-HAR-INTEG-02",
+    "WF-HAR-DOMAIN-02",
+    "WF-HAR-DOMAIN-05"
+  ],
+  "prerequisites": {
+    "WF-HAR-PREFLIGHT-01": [],
+    "WF-HAR-STATIC-01": ["WF-HAR-PREFLIGHT-01"],
+    "WF-HAR-STATIC-02": ["WF-HAR-STATIC-01"],
+    "WF-HAR-STATIC-04": ["WF-HAR-STATIC-02"],
+    "WF-HAR-STATIC-05": ["WF-HAR-STATIC-04"],
+    "WF-HAR-CONTRACT-05": ["WF-HAR-STATIC-05"],
+    "WF-HAR-INTEG-01": ["WF-HAR-CONTRACT-05"],
+    "WF-HAR-INTEG-02": ["WF-HAR-INTEG-01"],
+    "WF-HAR-DOMAIN-02": ["WF-HAR-INTEG-02"],
+    "WF-HAR-DOMAIN-05": ["WF-HAR-DOMAIN-02"]
+  }
+}

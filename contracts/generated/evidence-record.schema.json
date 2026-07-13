@@ -292,6 +292,16 @@
       "description": "Extension point for harness-specific data.",
       "title": "Property Bag"
     },
+    "release_stage": {
+      "default": "pre_ga",
+      "description": "Release-stage dimension independent of workload scope; pre_ga harnesses remain required at GA",
+      "enum": [
+        "pre_ga",
+        "ga"
+      ],
+      "title": "Release Stage",
+      "type": "string"
+    },
     "results": {
       "description": "Individual test results or findings",
       "items": {
@@ -372,5 +382,38 @@
     }
   },
   "title": "EvidenceRecord",
-  "type": "object"
+  "type": "object",
+  "x-work-frontier-semantic-rules": {
+    "defaults": {
+      "artifacts": [],
+      "release_stage": "pre_ga",
+      "results": []
+    },
+    "duration": {
+      "end": "invocation.end_time",
+      "seconds": "invocation.duration_seconds",
+      "start": "invocation.start_time",
+      "tolerance_seconds": 0.001
+    },
+    "not_applicable_reason": {
+      "min_length": 10,
+      "status": "not_applicable"
+    },
+    "posix_relative_paths": [
+      "invocation.working_directory",
+      "artifacts[].path",
+      "stdout_artifact.path",
+      "stderr_artifact.path"
+    ],
+    "required_object_keys": [
+      {
+        "keys": [
+          "os"
+        ],
+        "min_properties": 1,
+        "path": "environment"
+      }
+    ],
+    "version": "1.0.0"
+  }
 }
