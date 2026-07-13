@@ -30,6 +30,7 @@ RUNNER_EVIDENCE_EXPECTED_PATTERN: Final = re.compile(
     r"^\.omo/evidence/static/WF-HAR-[A-Z0-9]+(?:-[A-Z0-9]+)*\.json$"
 )
 REMOTE_ARTIFACT_PREFIXES: Final = ("s3://", "http://", "https://")
+_WINDOWS_DRIVE_MIN_LENGTH: Final = 2
 
 
 class ArtifactMode(StrEnum):
@@ -89,7 +90,7 @@ def _validate_declared_artifact_path(harness_id: str, path: str) -> None:
     if ".." in path.split("/"):
         msg = f"{harness_id}: artifact path {path!r} contains traversal"
         raise HarnessRegistryError(msg)
-    if len(path) >= 2 and path[1] == ":":
+    if len(path) >= _WINDOWS_DRIVE_MIN_LENGTH and path[1] == ":":
         msg = f"{harness_id}: Windows-style artifact path {path!r} is not allowed"
         raise HarnessRegistryError(msg)
 
@@ -171,7 +172,10 @@ def _validate_harness_entry(harness_entry: dict[str, Any], seen: set[str]) -> st
             msg = f"{harness_id}: runner_evidence mode not allowed for this harness"
             raise HarnessRegistryError(msg)
         if RUNNER_EVIDENCE_EXPECTED_PATTERN.match(declared_artifact) is None:
-            msg = f"{harness_id}: runner_evidence artifact does not match expected pattern"
+            msg = (
+                f"{harness_id}: runner_evidence artifact does not match "
+                "expected pattern"
+            )
             raise HarnessRegistryError(msg)
         expected = f".omo/evidence/static/{harness_id}.json"
         if declared_artifact != expected:
@@ -195,31 +199,33 @@ def _validate_registry_counts(
     data: dict[str, Any], harnesses: list[dict[str, Any]]
 ) -> None:
     if data.get("harness_count") != len(harnesses):
-        raise HarnessRegistryError("harness_count does not match harnesses length")
+        msg = "harness_count does not match harnesses length"
+        raise HarnessRegistryError(msg)
     if data.get("catalog_harness_count") != len(harnesses):
-        raise HarnessRegistryError("catalog_harness_count must equal harness_count")
+        msg = "catalog_harness_count must equal harness_count"
+        raise HarnessRegistryError(msg)
     standard_blockers = [
         str(entry["id"])
         for entry in harnesses
         if entry.get("blocks_release") and entry.get("applicability") == "standard"
     ]
     if data.get("standard_blocker_count") != len(standard_blockers):
-        raise HarnessRegistryError(
-            "standard_blocker_count does not match computed blockers"
-        )
+        msg = "standard_blocker_count does not match computed blockers"
+        raise HarnessRegistryError(msg)
     if data.get("standard_blockers") != standard_blockers:
-        raise HarnessRegistryError(
-            "standard_blockers list is inconsistent with harness entries"
-        )
+        msg = "standard_blockers list is inconsistent with harness entries"
+        raise HarnessRegistryError(msg)
 
 
 def _validate_foundation_closure(data: dict[str, Any], all_ids: set[str]) -> None:
     raw = data.get("foundation_closure")
     if not isinstance(raw, list) or not raw:
-        raise HarnessRegistryError("foundation_closure missing from registry")
+        msg = "foundation_closure missing from registry"
+        raise HarnessRegistryError(msg)
     closure = [str(item) for item in raw]
     if len(closure) != len(set(closure)):
-        raise HarnessRegistryError("foundation_closure contains duplicates")
+        msg = "foundation_closure contains duplicates"
+        raise HarnessRegistryError(msg)
     by_id = {str(item["id"]): item for item in data["harnesses"]}
     for harness_id in closure:
         if harness_id not in all_ids:
@@ -233,12 +239,12 @@ def _validate_foundation_closure(data: dict[str, Any], all_ids: set[str]) -> Non
 def validate_registry(data: dict[str, Any]) -> None:
     schema_version = data.get("schema_version")
     if schema_version not in {"1.0.0", "1.1.0", "1.2.0"}:
-        raise HarnessRegistryError(
-            "registry schema_version must be 1.0.0, 1.1.0, or 1.2.0"
-        )
+        msg = "registry schema_version must be 1.0.0, 1.1.0, or 1.2.0"
+        raise HarnessRegistryError(msg)
     raw = data.get("harnesses")
     if not isinstance(raw, list) or not raw:
-        raise HarnessRegistryError("registry must contain a non-empty harnesses list")
+        msg = "registry must contain a non-empty harnesses list"
+        raise HarnessRegistryError(msg)
     harnesses = cast("list[dict[str, Any]]", raw)
 
     seen: set[str] = set()
@@ -276,13 +282,15 @@ def get_harness(registry: dict[str, Any], harness_id: str) -> dict[str, Any]:
     for item in registry["harnesses"]:
         if item["id"] == harness_id:
             return cast("dict[str, Any]", item)
-    raise HarnessRegistryError(f"unknown harness id: {harness_id}")
+    msg = f"unknown harness id: {harness_id}"
+    raise HarnessRegistryError(msg)
 
 
 def foundation_closure(registry: dict[str, Any]) -> list[str]:
     raw = registry.get("foundation_closure")
     if not isinstance(raw, list) or not raw:
-        raise HarnessRegistryError("foundation_closure missing from registry")
+        msg = "foundation_closure missing from registry"
+        raise HarnessRegistryError(msg)
     return [str(item) for item in raw]
 
 
@@ -292,9 +300,8 @@ def get_prerequisites(registry: dict[str, Any], harness_id: str) -> list[str]:
     if raw is None and registry.get("schema_version") == "1.0.0":
         return []
     if not isinstance(raw, list) or not all(isinstance(item, str) for item in raw):
-        raise HarnessRegistryError(
-            f"{harness_id}: prerequisites are missing or invalid"
-        )
+        msg = f"{harness_id}: prerequisites are missing or invalid"
+        raise HarnessRegistryError(msg)
     return cast("list[str]", raw)
 
 
@@ -304,7 +311,8 @@ def get_release_stage(registry: dict[str, Any], harness_id: str) -> str:
     if stage is None and registry.get("schema_version") in {"1.0.0", "1.1.0"}:
         return "pre_ga"
     if stage not in RELEASE_STAGES:
-        raise HarnessRegistryError(f"{harness_id}: release_stage is missing or invalid")
+        msg = f"{harness_id}: release_stage is missing or invalid"
+        raise HarnessRegistryError(msg)
     return str(stage)
 
 
@@ -318,9 +326,8 @@ def dependency_closure(registry: dict[str, Any], target_id: str) -> list[str]:
         if harness_id in visited:
             return
         if harness_id in visiting:
-            raise HarnessRegistryError(
-                f"prerequisite graph contains a cycle at {harness_id}"
-            )
+            msg = f"prerequisite graph contains a cycle at {harness_id}"
+            raise HarnessRegistryError(msg)
         harness = get_harness(registry, harness_id)
         if harness.get("status") != "implemented":
             msg = (

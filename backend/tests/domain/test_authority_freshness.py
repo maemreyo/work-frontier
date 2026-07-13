@@ -19,7 +19,9 @@ POLICY = FreshnessPolicy(
 )
 
 
-def tracker_observation(*, observed_at: datetime, revision: str = "r1"):
+def tracker_observation(
+    *, observed_at: datetime, revision: str = "r1"
+) -> SourceObservation:
     return SourceObservation(
         field="lifecycle",
         value="active",

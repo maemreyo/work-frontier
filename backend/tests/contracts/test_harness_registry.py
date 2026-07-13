@@ -5,9 +5,12 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 import pytest
+
+if TYPE_CHECKING:
+    from scripts.build_harness_registry import HarnessLifecycleMetadata
 
 from work_frontier.contracts.evidence_record import (
     Artifact,
@@ -374,7 +377,7 @@ def _lifecycle_metadata(
     *,
     implemented: tuple[str, ...],
     prerequisites: dict[str, tuple[str, ...]],
-):
+) -> HarnessLifecycleMetadata:
     from scripts.build_harness_registry import HarnessLifecycleMetadata
 
     return HarnessLifecycleMetadata(
@@ -488,6 +491,4 @@ def test_canonical_lifecycle_keeps_domain_harnesses_outside_foundation() -> None
     assert "WF-HAR-DOMAIN-02" in metadata.implemented_harnesses
     assert "WF-HAR-DOMAIN-05" in metadata.implemented_harnesses
     assert "WF-HAR-DOMAIN-02" not in metadata.foundation_closure
-    assert metadata.prerequisites["WF-HAR-DOMAIN-05"] == (
-        "WF-HAR-DOMAIN-02",
-    )
+    assert metadata.prerequisites["WF-HAR-DOMAIN-05"] == ("WF-HAR-DOMAIN-02",)

@@ -1359,3 +1359,52 @@ def test_recertify_prerequisite_pass_allows_dependent_execution() -> None:
     finally:
         shutil.rmtree(clone, ignore_errors=True)
         registry_path.unlink(missing_ok=True)
+
+
+def test_recertify_failure_surfaces_command_output_without_manifest_noise() -> None:
+    """A failed command exposes diagnostics without secondary manifest errors."""
+    clone = _make_clean_clone()
+    registry_path = Path(tempfile.mkstemp(suffix=".json")[1])
+    try:
+        registry = {
+            "schema_version": "1.0.0",
+            "harness_count": 1,
+            "catalog_harness_count": 1,
+            "standard_blocker_count": 1,
+            "standard_blockers": ["WF-HAR-DIAG-01"],
+            "harnesses": [
+                {
+                    "id": "WF-HAR-DIAG-01",
+                    "name": "diagnostic-failure",
+                    "command": (
+                        "printf 'TYPECHECK_MARKER\\n'; "
+                        "printf 'TSC_MARKER\\n' >&2; "
+                        "exit 1"
+                    ),
+                    "artifact": ".omo/evidence/static/diagnostic.txt",
+                    "artifact_mode": "declared_file",
+                    "blocks_release": True,
+                    "what_it_runs": "a deterministic failing command",
+                    "pass_criteria": "diagnostics are surfaced",
+                    "applicability": "standard",
+                    "status": "implemented",
+                }
+            ],
+            "foundation_closure": ["WF-HAR-DIAG-01"],
+        }
+        _ = registry_path.write_text(json.dumps(registry), encoding="utf-8")
+
+        with pytest.raises(CertificationError) as exc:
+            _ = recertify_foundation(
+                repo_root=clone,
+                registry_path=registry_path,
+            )
+
+        message = str(exc.value)
+        assert "TYPECHECK_MARKER" in message
+        assert "TSC_MARKER" in message
+        assert "evidence disk is missing referenced files" not in message
+        assert "evidence disk has unexpected files" not in message
+    finally:
+        shutil.rmtree(clone, ignore_errors=True)
+        registry_path.unlink(missing_ok=True)

@@ -115,7 +115,9 @@ export function validateEvidenceRecordSemantic(
     if (Object.keys(value).length < rule.min_properties) {
       errors.push({
         path: rule.path,
-        message: `${rule.path} must contain at least ${rule.min_properties} property`,
+        message:
+          `${rule.path} must contain at least ` +
+          `${rule.min_properties} property`,
       })
     }
     for (const key of rule.keys) {
@@ -131,12 +133,18 @@ export function validateEvidenceRecordSemantic(
   const start = valueAtPath(record, SEMANTIC_RULES.duration.start)
   const end = valueAtPath(record, SEMANTIC_RULES.duration.end)
   const duration = valueAtPath(record, SEMANTIC_RULES.duration.seconds)
-  if (typeof start === "string" && typeof end === "string" && typeof duration === "number") {
+  if (
+    typeof start === "string" &&
+    typeof end === "string" &&
+    typeof duration === "number"
+  ) {
     const expected = (new Date(end).getTime() - new Date(start).getTime()) / 1000
     if (Math.abs(duration - expected) > SEMANTIC_RULES.duration.tolerance_seconds) {
       errors.push({
         path: SEMANTIC_RULES.duration.seconds,
-        message: `duration_seconds (${duration}) does not match end_time - start_time (${expected})`,
+        message:
+          `duration_seconds (${duration}) does not match ` +
+          `end_time - start_time (${expected})`,
       })
     }
   }
@@ -167,7 +175,9 @@ export function validateEvidenceRecordSemantic(
   ) {
     errors.push({
       path: "applicability_reason",
-      message: `applicability_reason for not_applicable must contain at least ${SEMANTIC_RULES.not_applicable_reason.min_length} characters`,
+      message:
+        "applicability_reason for not_applicable must contain at least " +
+        `${SEMANTIC_RULES.not_applicable_reason.min_length} characters`,
     })
   }
   return errors

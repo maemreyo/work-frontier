@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import TypeVar, override
+from typing import override
 
 from work_frontier.domain.errors import DomainErrorCode, DomainInvariantError
 
@@ -22,6 +22,7 @@ class Ulid:
     value: str
 
     def __post_init__(self) -> None:
+        """Validate the canonical Crockford representation."""
         if _ULID_PATTERN.fullmatch(self.value) is None:
             raise DomainInvariantError(
                 DomainErrorCode.INVALID_ULID,
@@ -94,6 +95,7 @@ class ResourceRef:
     resource_id: ResourceId
 
     def __post_init__(self) -> None:
+        """Validate that the branded identifier matches the resource kind."""
         expected: dict[ResourceKind, type[ResourceId]] = {
             ResourceKind.WORK_ITEM: WorkItemId,
             ResourceKind.PROGRAM: ProgramId,
@@ -107,9 +109,6 @@ class ResourceRef:
             )
 
 
-TUlid = TypeVar("TUlid", bound=Ulid)
-
-
 class MonotonicUlidFactory:
     """Deterministic monotonic ULID factory with caller-supplied time/entropy."""
 
@@ -119,10 +118,11 @@ class MonotonicUlidFactory:
     _last_entropy: int
 
     def __init__(self) -> None:
+        """Initialize the local monotonic sequence."""
         self._last_timestamp_ms = -1
         self._last_entropy = -1
 
-    def generate(
+    def generate[TUlid: Ulid](
         self,
         id_type: type[TUlid],
         *,

@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
 from enum import StrEnum
+from typing import TYPE_CHECKING
 
 from work_frontier.domain.errors import DomainErrorCode, DomainInvariantError
 from work_frontier.domain.identifiers import (
@@ -14,6 +14,9 @@ from work_frontier.domain.identifiers import (
     TenantId,
     WorkspaceId,
 )
+
+if TYPE_CHECKING:
+    from datetime import datetime
 
 
 class EdgeType(StrEnum):
@@ -55,6 +58,7 @@ class Edge:
     subtype: BlockSubtype | None = None
 
     def __post_init__(self) -> None:
+        """Validate timestamp, endpoint, subtype, and provenance invariants."""
         if self.created_at.tzinfo is None or self.created_at.utcoffset() is None:
             raise DomainInvariantError(
                 DomainErrorCode.INVALID_TIMESTAMP,

@@ -8,7 +8,7 @@ import shlex
 import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Literal, cast
+from typing import Any, Final, Literal, cast
 
 from work_frontier.contracts.evidence_record import (
     Artifact,
@@ -58,8 +58,35 @@ def tool_name_for_harness(harness_id: str) -> str:
     return "python"
 
 
+_DIAGNOSTIC_TAIL_LIMIT: Final = 2_000
+
+
 def _is_remote_artifact(path: str) -> bool:
     return path.startswith(("s3://", "http://", "https://"))
+
+
+def _artifact_text_tail(artifact: Artifact, root: Path) -> str:
+    candidate = (root / artifact.path).resolve()
+    root_resolved = root.resolve()
+    if not candidate.is_relative_to(root_resolved) or not candidate.is_file():
+        return ""
+    content = candidate.read_text(encoding="utf-8", errors="replace")
+    return content[-_DIAGNOSTIC_TAIL_LIMIT:].strip()
+
+
+def _failure_diagnostics(record: EvidenceRecord, root: Path) -> list[str]:
+    diagnostics = [
+        f"{record.harness_id}: stdout artifact: {record.stdout_artifact.path}",
+        f"{record.harness_id}: stderr artifact: {record.stderr_artifact.path}",
+    ]
+    for label, artifact in (
+        ("stdout", record.stdout_artifact),
+        ("stderr", record.stderr_artifact),
+    ):
+        tail = _artifact_text_tail(artifact, root)
+        if tail:
+            diagnostics.append(f"{record.harness_id}: {label} tail:\n{tail}")
+    return diagnostics
 
 
 def run_harness(  # noqa: PLR0915 - harness lifecycle spans pre/post validation
@@ -275,12 +302,7 @@ def run_harness_with_prerequisites(
     subject_tree_sha = get_git_tree_sha(root)
     resolved_run_id = generate_run_id()
     evidence_root = (
-        root
-        / ".omo"
-        / "evidence"
-        / "runs"
-        / subject_sha[:12]
-        / resolved_run_id
+        root / ".omo" / "evidence" / "runs" / subject_sha[:12] / resolved_run_id
     )
 
     records: list[EvidenceRecord] = []
@@ -305,10 +327,10 @@ def run_harness_with_prerequisites(
                 f"{member_id}: prerequisite closure member status is "
                 f"{record.status!r}, not 'pass'"
             )
+            failures.extend(_failure_diagnostics(record, root))
         if failures:
             raise CertificationError(
-                "standalone harness certification failed:\n"
-                + "\n".join(failures)
+                "standalone harness certification failed:\n" + "\n".join(failures)
             )
         records.append(record)
 
@@ -542,6 +564,8 @@ def recertify_foundation(  # noqa: PLR0915 - certification lifecycle spans 8 har
                     repo_root=root,
                 )
             )
+            if record.status != "pass":
+                failures.extend(_failure_diagnostics(record, root))
             # Mark this harness as satisfied if it passed.
             if record.status == "pass":
                 satisfied_prereqs.add(harness_id)
@@ -645,7 +669,8 @@ def recertify_foundation(  # noqa: PLR0915 - certification lifecycle spans 8 har
     # Build an exact expected-file set from the disk-reloaded records.
     # Merely living under artifacts/<harness_id>/ is not sufficient:
     # every certified file must be referenced by a validated EvidenceRecord.
-    expected_files = {f"{harness_id}.json" for harness_id in closure}
+    manifest_records = disk_records or records
+    expected_files = {f"{record.harness_id}.json" for record in manifest_records}
     evidence_root_resolved = evidence_root.resolve()
 
     def add_expected_artifact(
@@ -668,7 +693,7 @@ def recertify_foundation(  # noqa: PLR0915 - certification lifecycle spans 8 har
             return
         expected_files.add(rel.as_posix())
 
-    for record in disk_records:
+    for record in manifest_records:
         for artifact in [
             record.stdout_artifact,
             record.stderr_artifact,
@@ -722,8 +747,7 @@ def recertify_foundation(  # noqa: PLR0915 - certification lifecycle spans 8 har
         if path.is_file()
     }
     evidence_manifest = {
-        rel: hash_file(evidence_root / rel)
-        for rel in sorted(actual_files)
+        rel: hash_file(evidence_root / rel) for rel in sorted(actual_files)
     }
 
     missing_files = expected_files - actual_files

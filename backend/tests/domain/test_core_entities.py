@@ -1,6 +1,5 @@
 from dataclasses import FrozenInstanceError
 from datetime import UTC, datetime
-from typing import TypeVar
 
 import pytest
 
@@ -25,27 +24,24 @@ from work_frontier.domain.identifiers import (
     ResourceKind,
     ResourceRef,
     TenantId,
+    Ulid,
     WorkItemId,
     WorkspaceId,
-    Ulid,
 )
 
 NOW = datetime(2026, 7, 13, tzinfo=UTC)
 FACTORY = MonotonicUlidFactory()
 
 
-TId = TypeVar("TId", bound=Ulid)
-
-
-def new_id(id_type: type[TId], entropy: int) -> TId:
+def new_id[TId: Ulid](id_type: type[TId], entropy: int) -> TId:
     return FACTORY.generate(id_type, timestamp_ms=1_720_000_000_000, entropy=entropy)
 
 
-def scope():
+def scope() -> tuple[TenantId, WorkspaceId]:
     return new_id(TenantId, 1), new_id(WorkspaceId, 2)
 
 
-def actor_id():
+def actor_id() -> ActorId:
     return new_id(ActorId, 3)
 
 
@@ -95,7 +91,7 @@ def test_work_item_is_immutable_and_canonicalizes_collections() -> None:
     )
     assert item.labels == ("alpha", "zeta")
     with pytest.raises(FrozenInstanceError):
-        setattr(item, "title", "mutated")
+        item.__setattr__("title", "mutated")
 
 
 def test_program_supports_multiple_parents_and_archives_when_empty() -> None:

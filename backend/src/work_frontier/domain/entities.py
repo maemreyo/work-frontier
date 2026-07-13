@@ -3,11 +3,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
 from enum import StrEnum
-from typing import TypeVar
+from typing import TYPE_CHECKING
 
-from work_frontier.domain.authority import SourceObservation
 from work_frontier.domain.errors import DomainErrorCode, DomainInvariantError
 from work_frontier.domain.identifiers import (
     ActorId,
@@ -16,10 +14,15 @@ from work_frontier.domain.identifiers import (
     ProgramId,
     ResourceRef,
     TenantId,
+    Ulid,
     WorkItemId,
     WorkspaceId,
-    Ulid,
 )
+
+if TYPE_CHECKING:
+    from datetime import datetime
+
+    from work_frontier.domain.authority import SourceObservation
 
 
 class ActorKind(StrEnum):
@@ -71,6 +74,7 @@ class Actor:
     display_name: str
 
     def __post_init__(self) -> None:
+        """Validate the actor display name."""
         _require_text(self.display_name, "display_name", max_length=200)
 
 
@@ -86,6 +90,7 @@ class ExternalBlocker:
     resolved: bool = False
 
     def __post_init__(self) -> None:
+        """Validate and canonicalize external blocker state."""
         _require_text(self.description, "description")
         _require_text(self.source, "source")
         _require_aware(self.created_at, "created_at")
@@ -123,6 +128,7 @@ class WorkItem:
     source_authorities: tuple[SourceObservation, ...] = ()
 
     def __post_init__(self) -> None:
+        """Validate and canonicalize WorkItem state."""
         _require_text(self.title, "title", max_length=500)
         _require_aware(self.created_at, "created_at")
         _require_aware(self.updated_at, "updated_at")
@@ -209,6 +215,7 @@ class Program:
     participants: tuple[ActorId, ...] = ()
 
     def __post_init__(self) -> None:
+        """Validate and canonicalize Program state."""
         _require_text(self.name, "name", max_length=200)
         _require_aware(self.created_at, "created_at")
         _require_aware(self.updated_at, "updated_at")
@@ -248,10 +255,9 @@ class Program:
             object.__setattr__(self, "status", ProgramStatus.ARCHIVED)
 
 
-TUlid = TypeVar("TUlid", bound=Ulid)
-
-
-def _canonical_ids(values: tuple[TUlid, ...], field: str) -> tuple[TUlid, ...]:
+def _canonical_ids[TUlid: Ulid](
+    values: tuple[TUlid, ...], field: str
+) -> tuple[TUlid, ...]:
     ordered = tuple(sorted(values, key=str))
     if len(ordered) != len(set(ordered)):
         raise DomainInvariantError(

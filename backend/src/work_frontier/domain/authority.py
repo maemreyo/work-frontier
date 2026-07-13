@@ -57,6 +57,7 @@ class SourceRevision:
     revision: str
 
     def __post_init__(self) -> None:
+        """Validate non-empty source and revision identities."""
         if not self.source_id.strip() or not self.revision.strip():
             raise DomainInvariantError(
                 DomainErrorCode.INVALID_PROVENANCE,
@@ -79,6 +80,7 @@ class SourceObservation:
     expires_at: datetime | None = None
 
     def __post_init__(self) -> None:
+        """Validate timestamp, provenance, and source-authority invariants."""
         _require_aware(self.observed_at, "observed_at")
         if self.expires_at is not None:
             _require_aware(self.expires_at, "expires_at")
@@ -119,6 +121,7 @@ class FreshnessRule:
     max_age: timedelta
 
     def __post_init__(self) -> None:
+        """Validate that the configured maximum age is positive."""
         if self.max_age <= timedelta(0):
             raise DomainInvariantError(
                 DomainErrorCode.INVALID_FRESHNESS_POLICY,
@@ -134,6 +137,7 @@ class FreshnessPolicy:
     rules: tuple[FreshnessRule, ...]
 
     def __post_init__(self) -> None:
+        """Require exactly one freshness rule for every source level."""
         levels = tuple(rule.source_level for rule in self.rules)
         if len(levels) != len(set(levels)) or set(levels) != set(SourceLevel):
             raise DomainInvariantError(
@@ -147,7 +151,8 @@ class FreshnessPolicy:
         for rule in self.rules:
             if rule.source_level is source_level:
                 return rule.max_age
-        raise AssertionError("FreshnessPolicy invariant was bypassed")
+        msg = "FreshnessPolicy invariant was bypassed"
+        raise AssertionError(msg)
 
 
 @dataclass(frozen=True, slots=True)
@@ -196,7 +201,7 @@ class AuthorityResolution:
     blocks_readiness: bool
 
 
-def reconcile_authority(
+def reconcile_authority(  # noqa: PLR0913 - explicit domain inputs are auditable
     *,
     field: str,
     observations: tuple[SourceObservation, ...],
@@ -303,7 +308,9 @@ def reconcile_authority(
     )
 
 
-def _observation_sort_key(observation: SourceObservation) -> tuple[object, ...]:
+def _observation_sort_key(
+    observation: SourceObservation,
+) -> tuple[int, str, str, str, str]:
     return (
         -int(observation.source_level),
         observation.source_id,

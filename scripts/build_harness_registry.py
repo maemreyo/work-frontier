@@ -142,7 +142,7 @@ def derive_prerequisites(
         _ = harness.pop("_sequence", None)
 
 
-def parse_catalog(
+def parse_catalog(  # noqa: PLR0912 - parser validates independent dimensions
     text: str,
     metadata: HarnessLifecycleMetadata | None = None,
 ) -> list[dict[str, object]]:
@@ -233,7 +233,10 @@ def _validate_metadata_against_catalog(
     )
     unknown = referenced - catalog_ids
     if unknown:
-        msg = f"lifecycle metadata references unknown catalog harnesses: {sorted(unknown)}"
+        msg = (
+            "lifecycle metadata references unknown catalog harnesses: "
+            f"{sorted(unknown)}"
+        )
         raise ValueError(msg)
 
 
@@ -289,7 +292,8 @@ def main() -> int:
     if args.check:
         if not REGISTRY.exists() or REGISTRY.read_text(encoding="utf-8") != rendered:
             print(
-                "harness registry is out of date; run scripts/build_harness_registry.py",
+                "harness registry is out of date; "
+                "run scripts/build_harness_registry.py",
                 file=sys.stderr,
             )
             return 1

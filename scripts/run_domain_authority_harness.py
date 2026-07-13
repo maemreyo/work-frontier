@@ -30,7 +30,7 @@ def main() -> int:
     mode = str(args.mode)
     test_path = TEST_BY_MODE[mode]
 
-    completed = subprocess.run(  # noqa: S603 - fixed interpreter and repository path
+    completed = subprocess.run(
         [sys.executable, "-m", "pytest", test_path, "-v"],
         cwd=ROOT,
         capture_output=True,

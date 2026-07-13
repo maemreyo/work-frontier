@@ -27,6 +27,7 @@ class DomainInvariantError(ValueError):
     detail: str
 
     def __init__(self, code: DomainErrorCode, field: str, detail: str) -> None:
+        """Initialize a typed invariant failure."""
         self.code = code
         self.field = field
         self.detail = detail

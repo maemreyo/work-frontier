@@ -2,7 +2,8 @@ from datetime import UTC, datetime, timedelta
 from itertools import permutations
 
 import pytest
-from hypothesis import given, strategies as st
+from hypothesis import given
+from hypothesis import strategies as st
 
 from work_frontier.domain.authority import (
     AuthorityStatus,
@@ -21,7 +22,9 @@ POLICY = FreshnessPolicy(
 )
 
 
-def observation(level: SourceLevel, value: str, source_id: str | None = None):
+def observation(
+    level: SourceLevel, value: str, source_id: str | None = None
+) -> SourceObservation:
     resolved_source = source_id or level.name.lower()
     return SourceObservation(
         field="priority",

@@ -502,4 +502,3 @@ registered harnesses pass against a clean exact subject revision.
   configurable freshness/revision staleness, deterministic Attention bases and
   readiness blocking are implemented. `WF-HAR-DOMAIN-02` and
   `WF-HAR-DOMAIN-05` are implemented outside the historical foundation closure.
-
