@@ -1,30 +1,17 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Protocol, cast
+from typing import Protocol, cast
 
 from fastapi.testclient import TestClient
-
-if TYPE_CHECKING:
-    from httpx import Response
 
 from work_frontier.interfaces.api.app import create_app
 from work_frontier.interfaces.api.services import InMemoryControlPlane
 
 
-class _TestHttpClient(Protocol):
-    def get(self, path: str, *, headers: dict[str, str] | None = None) -> Response:
-        """Send a test GET request."""
-        ...
+class _Response(Protocol):
+    status_code: int
 
-    def post(
-        self,
-        path: str,
-        *,
-        headers: dict[str, str] | None = None,
-        json: dict[str, object] | None = None,
-    ) -> Response:
-        """Send a test POST request."""
-        ...
+    def json(self) -> object: ...
 
 
 def _client() -> TestClient:
@@ -34,8 +21,9 @@ def _client() -> TestClient:
 
 def _get(
     client: TestClient, path: str, *, headers: dict[str, str] | None = None
-) -> Response:
-    return cast("_TestHttpClient", client).get(path, headers=headers)
+) -> _Response:
+    response: object = client.get(path, headers=headers)
+    return cast("_Response", response)
 
 
 def _post(
@@ -44,18 +32,19 @@ def _post(
     *,
     headers: dict[str, str] | None = None,
     payload: dict[str, object] | None = None,
-) -> Response:
-    return cast("_TestHttpClient", client).post(path, headers=headers, json=payload)
+) -> _Response:
+    response: object = client.post(path, headers=headers, json=payload)
+    return cast("_Response", response)
 
 
-def _json(response: Response) -> dict[str, object]:
+def _json(response: _Response) -> dict[str, object]:
     decoded = response.json()
     if not isinstance(decoded, dict):
         raise TypeError
     return cast("dict[str, object]", decoded)
 
 
-def _error_code(response: Response) -> str:
+def _error_code(response: _Response) -> str:
     payload = _json(response)
     error = payload.get("error")
     if not isinstance(error, dict):

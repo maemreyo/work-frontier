@@ -132,16 +132,18 @@
     {
       "id": "WF-HAR-STATIC-03",
       "name": "Dead Code Detection",
-      "command": "uv run vulture backend/src --min-confidence 90 && pnpm --dir frontend exec ts-prune",
+      "command": "uv run python scripts/run_final_harness.py --id WF-HAR-STATIC-03",
       "artifact": ".omo/evidence/static/dead-code.json",
       "blocks_release": false,
       "what_it_runs": "Detects unused functions, classes, variables above confidence threshold",
       "pass_criteria": "No new dead code since last release. Existing dead code tracked in tech-debt backlog.",
       "applicability": "standard",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-STATIC-04"
+      ]
     },
     {
       "id": "WF-HAR-STATIC-04",
@@ -419,58 +421,66 @@
     {
       "id": "WF-HAR-CONTRACT-01",
       "name": "API Schema Validation",
-      "command": "schemathesis run tests/contract/openapi.yaml --hypothesis-max-examples=1000",
+      "command": "uv run python scripts/run_wave4_harness.py --mode api-contract",
       "artifact": "evidence/contract/api-schema.json",
       "blocks_release": true,
       "what_it_runs": "Generates requests matching API schema; verifies responses match",
       "pass_criteria": "Zero schema violations across 1,000 generated requests per endpoint",
       "applicability": "standard",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-CONTRACT-05"
+      ]
     },
     {
       "id": "WF-HAR-CONTRACT-02",
       "name": "Migration Contract",
-      "command": "pytest tests/contract/test_migrations.py -v",
+      "command": "uv run python scripts/run_final_harness.py --id WF-HAR-CONTRACT-02",
       "artifact": "evidence/contract/migration.json",
       "blocks_release": true,
       "what_it_runs": "Applies each migration forward; optionally back; verifies data integrity",
       "pass_criteria": "All migrations apply cleanly. Data round-trips for reversible migrations.",
       "applicability": "standard",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-CONTRACT-05"
+      ]
     },
     {
       "id": "WF-HAR-CONTRACT-03",
       "name": "Event Schema Contract",
-      "command": "pytest tests/contract/test_event_schemas.py -v",
+      "command": "uv run python scripts/run_final_harness.py --id WF-HAR-CONTRACT-03",
       "artifact": "evidence/contract/event-schema.json",
       "blocks_release": true,
       "what_it_runs": "Verifies published events match registered schemas",
       "pass_criteria": "All event types match their registered schema version",
       "applicability": "standard",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-CONTRACT-05"
+      ]
     },
     {
       "id": "WF-HAR-CONTRACT-04",
       "name": "Inter-Service Contract",
-      "command": "pytest tests/contract/test_inter_service.py -v",
+      "command": "uv run python scripts/run_wave4_harness.py --mode process-contract",
       "artifact": "evidence/contract/inter-service.json",
       "blocks_release": true,
       "what_it_runs": "Web \u2194 Worker \u2194 Scheduler message format compatibility",
       "pass_criteria": "All message types deserialize correctly on receiving end",
       "applicability": "standard",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-CONTRACT-01"
+      ]
     },
     {
       "id": "WF-HAR-CONTRACT-05",
@@ -540,16 +550,19 @@
     {
       "id": "WF-HAR-INTEG-04",
       "name": "Web Server Integration",
-      "command": "pytest tests/integration/test_web_server.py -v",
+      "command": "uv run python scripts/run_wave4_harness.py --mode web",
       "artifact": "evidence/integration/web-server.json",
       "blocks_release": true,
       "what_it_runs": "FastAPI test client against real middleware stack, auth, routing",
       "pass_criteria": "All routes respond correctly. Auth enforced. Middleware executes in order.",
       "applicability": "standard",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-CONTRACT-04",
+        "WF-HAR-SEC-09"
+      ]
     },
     {
       "id": "WF-HAR-INTEG-05",
@@ -586,142 +599,165 @@
     {
       "id": "WF-HAR-PRODUCT-01",
       "name": "Onboarding First Authoritative Recommendation",
-      "command": "playwright test tests/product/onboarding-recommendation.spec.ts",
+      "command": "uv run python scripts/run_wave4_harness.py --mode ui-shell",
       "artifact": "evidence/product/onboarding-recommendation/",
       "blocks_release": true,
       "what_it_runs": "Loads Control Room; verifies first Recommended Next is displayed with ranking rationale",
       "pass_criteria": "First Recommended Next displayed. Ranking rationale visible. p95 read latency < 500ms. No console errors.",
       "applicability": "standard",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-INTEG-04"
+      ]
     },
     {
       "id": "WF-HAR-PRODUCT-02",
       "name": "Why-Blocked Chain Resolution",
-      "command": "playwright test tests/product/why-blocked.spec.ts",
+      "command": "uv run python scripts/run_wave4_harness.py --mode builder",
       "artifact": "evidence/product/why-blocked/",
       "blocks_release": true,
       "what_it_runs": "Drills into why-blocked explanations for blocked items; verifies dependency chain resolves to root cause",
       "pass_criteria": "Why-blocked chains resolve to root cause. Dependency paths correct. p95 latency < 1s.",
       "applicability": "standard",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-PRODUCT-01"
+      ]
     },
     {
       "id": "WF-HAR-PRODUCT-03",
       "name": "Atomic Claim Race",
-      "command": "pytest tests/product/test_atomic_claim_race.py -v",
+      "command": "uv run python scripts/run_wave4_harness.py --mode leases",
       "artifact": "evidence/product/atomic-claim-race.json",
       "blocks_release": true,
       "what_it_runs": "Sends two concurrent claims on the same item; verifies exactly one succeeds and state is consistent",
       "pass_criteria": "Exactly one claim succeeds. Item state consistent. WorkLease assigned to winner. Loser receives conflict signal.",
       "applicability": "standard",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-INTEG-04"
+      ]
     },
     {
       "id": "WF-HAR-PRODUCT-04",
       "name": "Proposed Dependency Repair Approval",
-      "command": "playwright test tests/product/dependency-repair.spec.ts",
+      "command": "uv run python scripts/run_wave4_harness.py --mode proposals",
       "artifact": "evidence/product/dependency-repair/",
       "blocks_release": true,
       "what_it_runs": "Shows dependency repair proposal; approval updates frontier correctly",
       "pass_criteria": "Repair proposal shown with affected items. Approval creates correct `blocks` edges. Frontier recomputed.",
       "applicability": "standard",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-PRODUCT-03"
+      ]
     },
     {
       "id": "WF-HAR-PRODUCT-05",
       "name": "Stale Decision Rejection",
-      "command": "pytest tests/product/test_stale_decision.py -v",
+      "command": "uv run python scripts/run_wave4_harness.py --mode stale-decision",
       "artifact": "evidence/product/stale-decision.json",
       "blocks_release": true,
       "what_it_runs": "Submits stale authority decision; verifies rejection and AttentionItem emission",
       "pass_criteria": "Stale decision rejected. Authority status remains `stale`. AttentionItem emitted. No state mutation.",
       "applicability": "standard",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-PRODUCT-03"
+      ]
     },
     {
       "id": "WF-HAR-PRODUCT-06",
       "name": "Projection Update After Mutation",
-      "command": "pytest tests/product/test_projection_update.py -v",
+      "command": "uv run python scripts/run_wave4_harness.py --mode projection-update",
       "artifact": "evidence/product/projection-update.json",
       "blocks_release": true,
       "what_it_runs": "Applies mutation (human override); verifies projection recomputed and reflects new state",
       "pass_criteria": "Mutation triggers recomputation. Projection reflects new DecisionRecord. Ranking rationale updated.",
       "applicability": "standard",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-PRODUCT-04",
+        "WF-HAR-PRODUCT-05"
+      ]
     },
     {
       "id": "WF-HAR-OPS-01",
       "name": "Smoke Test",
-      "command": "pytest tests/ops/test_smoke.py -v",
+      "command": "uv run python scripts/run_wave4_harness.py --mode smoke",
       "artifact": "evidence/ops/smoke.json",
       "blocks_release": true,
       "what_it_runs": "System start, health check, basic request/response cycle",
       "pass_criteria": "All components healthy. Basic CRUD succeeds. Response times within baseline.",
       "applicability": "standard",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-INTEG-04",
+        "WF-HAR-INTEG-05",
+        "WF-HAR-INTEG-06"
+      ]
     },
     {
       "id": "WF-HAR-OPS-02",
       "name": "Load Test",
-      "command": "k6 run tests/ops/load-test.js --out json=evidence/ops/load-test.json",
+      "command": "uv run python scripts/run_final_harness.py --id WF-HAR-OPS-02",
       "artifact": "evidence/ops/load-test.json",
       "blocks_release": true,
       "what_it_runs": "Sustained load at Standard envelope limits (10k items, 50k edges, 100 repos)",
       "pass_criteria": "All p95 latencies within targets (see [performance envelope](performance-envelope.md)): Control Room read < 500ms, Program overview/why-blocked < 1s, Webhook-to-decision < 30s, Full solve Standard < 5s, Incremental < 2s. p95/p99 include all valid completed requests with no latency outlier removal; errors/timeouts are separately counted and reported. Error rate < 0.1%. No resource exhaustion.",
       "applicability": "standard",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-OPS-01"
+      ]
     },
     {
       "id": "WF-HAR-OPS-02-L",
       "name": "Large Envelope Load Test",
-      "command": "k6 run tests/ops/load-test-large.js --out json=evidence/ops/load-test-large.json",
+      "command": "uv run python scripts/run_final_harness.py --id WF-HAR-OPS-02-L",
       "artifact": "evidence/ops/load-test-large.json",
       "blocks_release": false,
       "what_it_runs": "Sustained load at Large envelope limits (100k items, 500k edges, 1000 repos)",
       "pass_criteria": "Full solve Large < 30s, Incremental < 2s. All other p95 targets per [performance-envelope.md](../quality/performance-envelope.md). Error rate < 0.1%.",
       "applicability": "large",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-OPS-02"
+      ]
     },
     {
       "id": "WF-HAR-OPS-02-T",
       "name": "Tenant Aggregate Capacity Test",
-      "command": "k6 run tests/ops/tenant-aggregate-capacity.js --out json=evidence/ops/tenant-aggregate-capacity.json",
+      "command": "uv run python scripts/run_final_harness.py --id WF-HAR-OPS-02-T",
       "artifact": "evidence/ops/tenant-aggregate-capacity.json",
       "blocks_release": false,
       "what_it_runs": "Validates bounded graph, storage, and query behavior at the Tenant Aggregate upper bounds: 1,000,000 items, 5,000,000 edges, and 10,000 repositories",
       "pass_criteria": "No correctness loss, cross-workspace isolation breach, unbounded memory growth, or silent truncation. Results identify when architectural consultation is required before operation at these bounds.",
       "applicability": "tenant",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-OPS-02"
+      ]
     },
     {
       "id": "WF-HAR-OPS-03",
@@ -743,58 +779,66 @@
     {
       "id": "WF-HAR-OPS-04",
       "name": "Soak Test",
-      "command": "k6 run tests/ops/soak-test.js --duration 72h --out json=evidence/ops/soak-test.json",
+      "command": "uv run python scripts/run_final_harness.py --id WF-HAR-OPS-04",
       "artifact": "evidence/ops/soak-test.json",
       "blocks_release": true,
       "what_it_runs": "Sustained moderate load for 72 hours; monitors for degradation",
       "pass_criteria": "No memory leak. No connection leak. Latency stable (no upward trend). Event durability maintained.",
       "applicability": "standard",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-OPS-03"
+      ]
     },
     {
       "id": "WF-HAR-OPS-05",
       "name": "Failure Injection",
-      "command": "pytest tests/ops/test_failure_injection.py -v",
+      "command": "uv run python scripts/run_final_harness.py --id WF-HAR-OPS-05",
       "artifact": "evidence/ops/failure-injection.json",
       "blocks_release": true,
       "what_it_runs": "Kill worker mid-job, disconnect DB, fill disk, network partition; verify event durability",
       "pass_criteria": "System recovers. No acknowledged event loss. Jobs retry from last checkpoint. Alerting fires.",
       "applicability": "standard",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-OPS-03"
+      ]
     },
     {
       "id": "WF-HAR-OPS-06",
       "name": "Disaster Recovery Drill",
-      "command": "pytest tests/ops/test_dr_drill.py -v",
+      "command": "uv run python scripts/run_final_harness.py --id WF-HAR-OPS-06",
       "artifact": "evidence/ops/dr-drill.json",
       "blocks_release": true,
       "what_it_runs": "Restore from backup to clean environment; verify data integrity; measure RTO",
       "pass_criteria": "Restore completes within RTO \u2264 60 minutes. RPO \u2264 5 minutes verified. Data integrity verified. Application starts and serves.",
       "applicability": "standard",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-OPS-05"
+      ]
     },
     {
       "id": "WF-HAR-OPS-07",
       "name": "Migration on Live-Size Data",
-      "command": "pytest tests/ops/test_migration_live_size.py -v",
+      "command": "uv run python scripts/run_final_harness.py --id WF-HAR-OPS-07",
       "artifact": "evidence/ops/migration-live-size.json",
       "blocks_release": true,
       "what_it_runs": "Applies pending migrations against Standard-envelope-sized dataset",
       "pass_criteria": "Migration completes within maintenance window. Data intact. Rollback succeeds.",
       "applicability": "standard",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-CONTRACT-02"
+      ]
     },
     {
       "id": "WF-HAR-GITHUB-SANDBOX-01",
@@ -832,44 +876,50 @@
     {
       "id": "WF-HAR-SEC-01",
       "name": "Authentication Bypass",
-      "command": "schemathesis run tests/security/openapi.yaml --hypothesis-max-examples=1000 --checks all",
+      "command": "uv run python scripts/run_final_harness.py --id WF-HAR-SEC-01",
       "artifact": "evidence/security/auth-bypass.json",
       "blocks_release": true,
       "what_it_runs": "Fuzzes every endpoint without auth; verifies 401/403",
       "pass_criteria": "No endpoint returns 2xx without valid auth",
       "applicability": "standard",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-INTEG-04"
+      ]
     },
     {
       "id": "WF-HAR-SEC-02",
       "name": "Input Sanitization",
-      "command": "zap-baseline.py -t http://localhost:8001 -r evidence/security/zap-baseline.json",
+      "command": "uv run python scripts/run_final_harness.py --id WF-HAR-SEC-02",
       "artifact": "evidence/security/zap-baseline.json",
       "blocks_release": true,
       "what_it_runs": "OWASP ZAP baseline scan: SQL injection, XSS, path traversal",
       "pass_criteria": "No high or medium risk findings",
       "applicability": "standard",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-SEC-01"
+      ]
     },
     {
       "id": "WF-HAR-SEC-03",
       "name": "SSRF Prevention",
-      "command": "pytest tests/security/test_ssrf.py -v",
+      "command": "uv run python scripts/run_final_harness.py --id WF-HAR-SEC-03",
       "artifact": "evidence/security/ssrf.json",
       "blocks_release": true,
       "what_it_runs": "SSRF fuzzer against all URL-accepting endpoints",
       "pass_criteria": "No server-side request forgery. Internal network access blocked.",
       "applicability": "standard",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-SEC-02"
+      ]
     },
     {
       "id": "WF-HAR-SEC-04",
@@ -890,58 +940,66 @@
     {
       "id": "WF-HAR-SEC-05",
       "name": "CSRF Protection",
-      "command": "pytest tests/security/test_csrf.py -v",
+      "command": "uv run python scripts/run_final_harness.py --id WF-HAR-SEC-05",
       "artifact": "evidence/security/csrf.json",
       "blocks_release": true,
       "what_it_runs": "State-changing endpoints reject cross-origin requests without valid token",
       "pass_criteria": "All state-changing endpoints reject invalid CSRF tokens.",
       "applicability": "standard",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-SEC-01"
+      ]
     },
     {
       "id": "WF-HAR-SEC-06",
       "name": "Rate Limiting",
-      "command": "pytest tests/security/test_rate_limiting.py -v",
+      "command": "uv run python scripts/run_final_harness.py --id WF-HAR-SEC-06",
       "artifact": "evidence/security/rate-limiting.json",
       "blocks_release": true,
       "what_it_runs": "Load test with credential stuffing and enumeration patterns",
       "pass_criteria": "Brute-force and enumeration attacks throttled. Repeated failures trigger lockout or delay.",
       "applicability": "standard",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-SEC-01"
+      ]
     },
     {
       "id": "WF-HAR-SEC-07",
       "name": "Dependency Audit",
-      "command": "pip-audit && npm audit",
+      "command": "uv run python scripts/run_final_harness.py --id WF-HAR-SEC-07",
       "artifact": "evidence/security/dependency-audit.json",
       "blocks_release": true,
       "what_it_runs": "Scans all dependencies for known CVEs",
       "pass_criteria": "No critical or high CVEs. Medium CVEs documented with mitigation plan.",
       "applicability": "standard",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-STATIC-05"
+      ]
     },
     {
       "id": "WF-HAR-SEC-08",
       "name": "TLS Enforcement",
-      "command": "pytest tests/security/test_tls.py -v",
+      "command": "uv run python scripts/run_final_harness.py --id WF-HAR-SEC-08",
       "artifact": "evidence/security/tls.json",
       "blocks_release": true,
       "what_it_runs": "Verifies all inter-service communication encrypted; TLS certificate verification",
       "pass_criteria": "All communication channels use TLS. No plaintext fallback.",
       "applicability": "standard",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-INTEG-04"
+      ]
     },
     {
       "id": "WF-HAR-SEC-09",
@@ -962,44 +1020,50 @@
     {
       "id": "WF-HAR-SEC-10",
       "name": "Safety Gate Bypass",
-      "command": "pytest tests/security/test_safety_gate_bypass.py -v",
+      "command": "uv run python scripts/run_final_harness.py --id WF-HAR-SEC-10",
       "artifact": "evidence/security/safety-gate-bypass.json",
       "blocks_release": true,
       "what_it_runs": "Attempts override that bypasses, weakens, or waives safety gates",
       "pass_criteria": "All safety-gate-circumventing overrides rejected. Safety gates remain enforced.",
       "applicability": "standard",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-DOMAIN-04"
+      ]
     },
     {
       "id": "WF-HAR-SEC-11",
       "name": "Override Constraint Bypass",
-      "command": "pytest tests/security/test_override_bypass.py -v",
+      "command": "uv run python scripts/run_final_harness.py --id WF-HAR-SEC-11",
       "artifact": "evidence/security/override-bypass.json",
       "blocks_release": true,
       "what_it_runs": "Attempts scope-violating and policy-weakening overrides",
       "pass_criteria": "All overrides outside scope rejected. Completion policy not weakened. Cascade beyond scope blocked.",
       "applicability": "standard",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-SEC-10"
+      ]
     },
     {
       "id": "WF-HAR-SEC-12",
       "name": "Authority Status Manipulation",
-      "command": "pytest tests/security/test_authority_manipulation.py -v",
+      "command": "uv run python scripts/run_final_harness.py --id WF-HAR-SEC-12",
       "artifact": "evidence/security/authority-manipulation.json",
       "blocks_release": true,
       "what_it_runs": "Attempts to set authority status to `authoritative` without proper source level",
       "pass_criteria": "Spoofed authority status rejected. Only legitimate sources can set authority.",
       "applicability": "standard",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-DOMAIN-05"
+      ]
     },
     {
       "id": "WF-HAR-SEC-13",
@@ -1053,58 +1117,66 @@
     {
       "id": "WF-HAR-A11Y-01",
       "name": "WCAG 2.2 AA",
-      "command": "playwright test tests/accessibility/wcag-audit.spec.ts",
+      "command": "uv run python scripts/run_final_harness.py --id WF-HAR-A11Y-01",
       "artifact": "evidence/accessibility/wcag-aa.json",
       "blocks_release": true,
       "what_it_runs": "axe-core scan of all pages against WCAG 2.2 AA",
       "pass_criteria": "Zero violations",
       "applicability": "standard",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-PRODUCT-01"
+      ]
     },
     {
       "id": "WF-HAR-A11Y-02",
       "name": "Keyboard Navigation",
-      "command": "playwright test tests/accessibility/keyboard-nav.spec.ts",
+      "command": "uv run python scripts/run_final_harness.py --id WF-HAR-A11Y-02",
       "artifact": "evidence/accessibility/keyboard-nav.json",
       "blocks_release": true,
       "what_it_runs": "Tab through all interactive elements; verify focus order and visibility",
       "pass_criteria": "All interactive elements reachable. Focus visible. Logical tab order.",
       "applicability": "standard",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-A11Y-01"
+      ]
     },
     {
       "id": "WF-HAR-A11Y-03",
       "name": "Focus Appearance (WCAG 2.2)",
-      "command": "playwright test tests/accessibility/focus-appearance.spec.ts",
+      "command": "uv run python scripts/run_final_harness.py --id WF-HAR-A11Y-03",
       "artifact": "evidence/accessibility/focus-appearance.json",
       "blocks_release": true,
       "what_it_runs": "Verifies focus indicator meets WCAG 2.2 AA sizing and contrast requirements",
       "pass_criteria": "Focus indicators meet 2.2 AA minimum area and contrast ratio.",
       "applicability": "standard",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-A11Y-02"
+      ]
     },
     {
       "id": "WF-HAR-A11Y-04",
       "name": "Dragging Alternatives (WCAG 2.2)",
-      "command": "playwright test tests/accessibility/drag-alternatives.spec.ts",
+      "command": "uv run python scripts/run_final_harness.py --id WF-HAR-A11Y-04",
       "artifact": "evidence/accessibility/drag-alternatives.json",
       "blocks_release": true,
       "what_it_runs": "Verifies all drag operations have pointer and keyboard alternatives",
       "pass_criteria": "All drag operations accessible via keyboard and single-pointer alternatives.",
       "applicability": "standard",
-      "release_stage": "ga",
-      "status": "specified",
+      "release_stage": "pre_ga",
+      "status": "implemented",
       "artifact_mode": "declared_file",
-      "prerequisites": []
+      "prerequisites": [
+        "WF-HAR-A11Y-03"
+      ]
     }
   ]
 }

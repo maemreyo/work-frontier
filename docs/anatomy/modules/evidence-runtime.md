@@ -1,21 +1,18 @@
 # Module: Evidence Runtime
 
-**Path:** `backend/src/work_frontier/contracts`  
+**Path:** `scripts/run_harness.py`
 **Role:** Executes registered harnesses and writes reproducible evidence bound to the tested Git revision with tamper detection and prerequisite-satisfaction gating.
 
 ## Public interface
 
 - `python scripts/run_harness.py --id WF-HAR-...` — executes one registry-backed harness.
 - `python scripts/run_harness.py --recertify-foundation` — runs the foundation closure and writes supersession evidence.
-- `write_evidence_record(...)` — persists canonical evidence, stdout and stderr artifacts.
-- `recertify_foundation()` — runs the foundation closure with prerequisite ordering, per-harness tamper detection, and a final evidence manifest.
 
 ## Internal structure
 
-- `harness_runner.py` — selects and executes harness commands; evidence root now uses run-scoped paths (`.omo/evidence/runs/<run_id>/` instead of `.omo/evidence/static/`), eliminates legacy global-artifact fallback to prevent stale-artifact fabrication; supports prerequisite-satisfaction gating, TOCTOU guards, and post-closure tamper detection via evidence manifest.
+- `harness_runner.py` — selects and executes harness commands; evidence root uses run-scoped paths (`.omo/evidence/runs/<run_id>/` instead of `.omo/evidence/static/`), eliminates legacy global-artifact fallback; supports prerequisite-satisfaction gating, TOCTOU guards, and post-closure tamper detection via evidence manifest.
 - `evidence_writer.py` — writes immutable evidence artifacts.
 - `scripts/run_harness.py` — CLI entry point that wraps `harness_runner` for single-harness and recertification runs.
-- `scripts/build_harness_registry.py` — rebuilds the machine-readable harness registry; now derives prerequisite relationships from catalog section/layer layout.
 
 ## Depends on
 
@@ -37,4 +34,4 @@
 
 ---
 
-_Traced from source on 2026-07-13. Files examined in depth: all files listed in this module’s internal structure or public interface._
+_Traced from source on 2026-07-14. Files examined in depth: all 1 files._

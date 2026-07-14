@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Protocol, cast
+from typing import cast
 
 from fastapi.testclient import TestClient
 
@@ -8,22 +8,8 @@ from work_frontier.interfaces.api.app import create_app
 from work_frontier.interfaces.api.services import InMemoryControlPlane
 
 
-class _Response(Protocol):
-    status_code: int
-
-    def json(self) -> object:
-        """Decode the response body."""
-        ...
-
-
-class _Client(Protocol):
-    def get(self, path: str, *, headers: dict[str, str] | None = None) -> _Response:
-        """Send a test GET request."""
-        ...
-
-
-def _client() -> _Client:
-    return cast("_Client", TestClient(create_app(InMemoryControlPlane.seeded())))
+def _client() -> TestClient:
+    return TestClient(create_app(InMemoryControlPlane.seeded()))
 
 
 def test_openapi_31_contract_and_security_are_complete() -> None:
@@ -57,5 +43,8 @@ def test_one_thousand_malformed_identifiers_never_bypass_validation() -> None:
         "X-Workspace-ID": "workspace-1",
     }
     for index in range(1000):
-        response = client.get(f"/frontier/invalid id {index}", headers=headers)
+        response = client.get(
+            f"/frontier/invalid id {index}",
+            headers={**headers, "X-Actor-ID": f"schema-{index}"},
+        )
         assert response.status_code == 422

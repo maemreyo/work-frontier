@@ -14,7 +14,9 @@ MIN_PACKAGE_PARTS: Final = 2
 LAYERS: Final = frozenset(
     {"domain", "platform", "application", "adapters", "interfaces", "contracts"}
 )
-COMPOSITION_ROOT_FILES: Final = frozenset({"__main__.py", "composition.py"})
+COMPOSITION_ROOT_FILES: Final = frozenset(
+    {"__main__.py", "bootstrap.py", "composition.py"}
+)
 
 # Canonical import matrix from ARCHITECTURE.md section 3.3
 # Application orchestrates Domain; Platform (audit) references Domain types

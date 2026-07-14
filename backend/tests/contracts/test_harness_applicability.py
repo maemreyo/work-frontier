@@ -55,3 +55,13 @@ def test_nonzero_exit_cannot_be_overridden_by_artifact(tmp_path: Path) -> None:
     outcome = resolve_declared_outcome(exit_code=9, artifact_path=artifact)
 
     assert outcome.status == "fail"
+
+
+def test_plaintext_artifact_does_not_override_a_successful_exit(tmp_path: Path) -> None:
+    artifact = tmp_path / "output.txt"
+    _ = artifact.write_text("ordinary harness output\n", encoding="utf-8")
+
+    outcome = resolve_declared_outcome(exit_code=0, artifact_path=artifact)
+
+    assert outcome.status == "pass"
+    assert outcome.failure_detail is None

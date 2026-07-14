@@ -1,6 +1,6 @@
 # Module: Architecture Enforcement
 
-**Path:** `scripts/check_import_boundaries.py`  
+**Path:** `scripts/check_import_boundaries.py`
 **Role:** Statically scans Python imports and enforces the allowed dependency matrix between architectural layers.
 
 ## Public interface
@@ -22,4 +22,4 @@
 
 ---
 
-_Traced from source on 2026-07-12. Files examined in depth: all files listed in this module’s internal structure or public interface._
+_Traced from source on 2026-07-14. Files examined in depth: all 1 files._

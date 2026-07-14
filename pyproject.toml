@@ -8,10 +8,18 @@ dependencies = [
     "cryptography>=45.0.0",
     "fastapi>=0.116.0",
     "httpx>=0.28.0",
+    "keyring>=25.7.0",
+    "platformdirs>=4.10.0",
     "pydantic>=2.11.0",
+    "pydantic-settings>=2.14.0",
+    "rich>=15.0.0",
+    "tomlkit>=0.13.3",
     "typer>=0.16.0",
     "uvicorn>=0.35.0",
 ]
+
+[project.scripts]
+work-frontier = "work_frontier.__main__:main"
 
 [dependency-groups]
 dev = [
@@ -26,6 +34,7 @@ dev = [
     "ruff>=0.12.0",
     "sqlalchemy>=2.0.0",
     "psycopg[binary]>=3.2.0",
+    "httpx2>=0.1.0",
 ]
 
 [build-system]
@@ -79,7 +88,7 @@ fixable = ["ALL"]
 "backend/src/work_frontier/contracts/evidence_*.py" = ["PLC0415", "S607", "ARG001", "PLR0913", "C901", "PLR0911", "PLR0912", "S603", "SIM105"]
 "backend/src/work_frontier/contracts/decision_record.py" = ["D105", "D107", "PERF403", "PLW0108"]
 "backend/src/work_frontier/contracts/harness_*.py" = ["D103", "C901", "PLR0911", "S602", "SIM108", "RET504", "PLR0912", "PLR0913", "PLC0415", "S603"]
-"backend/tests/**/*.py" = ["D", "PLC0415", "PLR2004", "S101", "S607"]
+"backend/tests/**/*.py" = ["D", "INP001", "PLC0415", "PLR2004", "S101", "S607"]
 "scripts/**/*.py" = ["C901", "INP001", "PLC0415", "PLR0911", "PLR0915", "PLR2004", "S603", "S607", "SIM102", "T201", "TRY301", "BLE001", "EXE001", "D103", "RET504"]
 "scripts/minio_roundtrip.py" = ["S105"]
 "backend/lib/evidence_collector.py" = ["PLR0913", "D"]

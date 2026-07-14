@@ -2,19 +2,12 @@
 
 from __future__ import annotations
 
-import hashlib
-import hmac
 import ipaddress
 import re
-from collections import deque
-from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from dataclasses import dataclass
 from pathlib import PurePath
-from types import MappingProxyType
 from typing import Final, cast
 from urllib.parse import urlsplit
-
-_MIN_SECRET_BYTES: Final = 32
 
 _ALLOWED_UPLOAD_TYPES: Final = frozenset(
     {"application/json", "text/csv", "text/markdown", "text/plain"}
@@ -23,23 +16,6 @@ _SECRET_KEY_PATTERN: Final = re.compile(
     r"(?i)(authorization|password|token|secret|private[_-]?key|credential)"
 )
 _SECRET_VALUE_PATTERN: Final = re.compile(r"(?i)bearer\s+[a-z0-9._-]+")
-_SECURITY_HEADERS: Final = MappingProxyType(
-    {
-        "Cache-Control": "no-store",
-        "Content-Security-Policy": (
-            "default-src 'self'; base-uri 'none'; frame-ancestors 'none'; "
-            "form-action 'self'; object-src 'none'; script-src 'self'; "
-            "style-src 'self'; connect-src 'self' https://api.github.com"
-        ),
-        "Cross-Origin-Opener-Policy": "same-origin",
-        "Cross-Origin-Resource-Policy": "same-origin",
-        "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
-        "Referrer-Policy": "no-referrer",
-        "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
-        "X-Content-Type-Options": "nosniff",
-        "X-Frame-Options": "DENY",
-    }
-)
 
 
 class SecurityControlError(ValueError):
@@ -79,54 +55,6 @@ class EgressPolicy:
             msg = "egress URL must use the default TLS port"
             raise SecurityControlError(msg)
         return parsed.geturl()
-
-
-@dataclass(slots=True)
-class SlidingWindowRateLimiter:
-    """Clock-controlled per-key sliding-window limiter."""
-
-    limit: int
-    window: timedelta
-    _events: dict[str, deque[datetime]] = field(default_factory=dict)
-
-    def allow(self, key: str, now: datetime) -> bool:
-        """Record one allowed request or reject when the window is full."""
-        _require_aware(now)
-        if self.limit < 1 or self.window <= timedelta(0):
-            msg = "rate limiter configuration must be positive"
-            raise SecurityControlError(msg)
-        events = self._events.setdefault(key, deque())
-        threshold = now - self.window
-        while events and events[0] <= threshold:
-            _ = events.popleft()
-        if len(events) >= self.limit:
-            return False
-        events.append(now)
-        return True
-
-
-@dataclass(frozen=True, slots=True)
-class CsrfProtector:
-    """Stateless HMAC CSRF token bound to a session identity."""
-
-    secret: bytes
-
-    def issue(self, session_id: str) -> str:
-        """Issue one deterministic session-bound CSRF token."""
-        if len(self.secret) < _MIN_SECRET_BYTES or not session_id.strip():
-            msg = "CSRF secret and session identity are required"
-            raise SecurityControlError(msg)
-        return hmac.new(self.secret, session_id.encode(), hashlib.sha256).hexdigest()
-
-    def verify(self, session_id: str, token: str) -> bool:
-        """Compare a submitted token in constant time."""
-        expected = self.issue(session_id)
-        return hmac.compare_digest(expected, token)
-
-
-def security_headers() -> MappingProxyType[str, str]:
-    """Return immutable production browser headers."""
-    return _SECURITY_HEADERS
 
 
 def validate_upload(
@@ -187,10 +115,4 @@ def require_tls_configuration(
         raise SecurityControlError(msg)
     if not object_store_url.startswith("https://"):
         msg = "object store URL must use HTTPS"
-        raise SecurityControlError(msg)
-
-
-def _require_aware(now: datetime) -> None:
-    if now.tzinfo is None or now.utcoffset() is None:
-        msg = "rate limiter clock must be timezone-aware"
         raise SecurityControlError(msg)

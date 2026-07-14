@@ -1,6 +1,598 @@
 {
   "repo_root": "/Users/trung.ngo/Documents/zaob-dev/work-frontier",
-  "hypotheses": [],
+  "hypotheses": [
+    {
+      "kind": "http_routes",
+      "module": "(root)",
+      "method": "POST",
+      "detail": "/api/setup/session/exchange",
+      "file": "work-frontier-interactive-onboarding-full.patch",
+      "line": 2155,
+      "framework": "fastapi",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "http_routes",
+      "module": "(root)",
+      "method": "POST",
+      "detail": "/api/setup/session/close",
+      "file": "work-frontier-interactive-onboarding-full.patch",
+      "line": 2172,
+      "framework": "fastapi",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "http_routes",
+      "module": "(root)",
+      "method": "GET",
+      "detail": "/api/setup/status",
+      "file": "work-frontier-interactive-onboarding-full.patch",
+      "line": 2186,
+      "framework": "fastapi",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "http_routes",
+      "module": "(root)",
+      "method": "POST",
+      "detail": "/api/setup/detect",
+      "file": "work-frontier-interactive-onboarding-full.patch",
+      "line": 2194,
+      "framework": "fastapi",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "http_routes",
+      "module": "(root)",
+      "method": "POST",
+      "detail": "/api/setup/plan",
+      "file": "work-frontier-interactive-onboarding-full.patch",
+      "line": 2199,
+      "framework": "fastapi",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "http_routes",
+      "module": "(root)",
+      "method": "POST",
+      "detail": "/api/setup/apply",
+      "file": "work-frontier-interactive-onboarding-full.patch",
+      "line": 2208,
+      "framework": "fastapi",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "http_routes",
+      "module": "(root)",
+      "method": "POST",
+      "detail": "/api/setup/resume/{session_id}",
+      "file": "work-frontier-interactive-onboarding-full.patch",
+      "line": 2213,
+      "framework": "fastapi",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "http_routes",
+      "module": "(root)",
+      "method": "POST",
+      "detail": "/api/setup/signing-key",
+      "file": "work-frontier-interactive-onboarding-full.patch",
+      "line": 2226,
+      "framework": "fastapi",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "http_routes",
+      "module": "(root)",
+      "method": "POST",
+      "detail": "/api/setup/secrets",
+      "file": "work-frontier-interactive-onboarding-full.patch",
+      "line": 2236,
+      "framework": "fastapi",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "http_routes",
+      "module": "(root)",
+      "method": "GET",
+      "detail": "/setup.html",
+      "file": "work-frontier-interactive-onboarding-full.patch",
+      "line": 2255,
+      "framework": "fastapi",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "http_routes",
+      "module": "(root)",
+      "method": "GET",
+      "detail": "/",
+      "file": "work-frontier-interactive-onboarding-full.patch",
+      "line": 2263,
+      "framework": "fastapi",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "http_routes",
+      "module": "(root)",
+      "method": "GET",
+      "detail": "/setup/status",
+      "file": "work-frontier-interactive-onboarding-full.patch",
+      "line": 2410,
+      "framework": "fastapi",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "http_routes",
+      "module": "(root)",
+      "method": "POST",
+      "detail": "/setup/detect",
+      "file": "work-frontier-interactive-onboarding-full.patch",
+      "line": 2418,
+      "framework": "fastapi",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "http_routes",
+      "module": "(root)",
+      "method": "POST",
+      "detail": "/setup/plan",
+      "file": "work-frontier-interactive-onboarding-full.patch",
+      "line": 2423,
+      "framework": "fastapi",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "http_routes",
+      "module": "(root)",
+      "method": "POST",
+      "detail": "/setup/apply",
+      "file": "work-frontier-interactive-onboarding-full.patch",
+      "line": 2432,
+      "framework": "fastapi",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "http_routes",
+      "module": "(root)",
+      "method": "POST",
+      "detail": "/setup/resume/{session_id}",
+      "file": "work-frontier-interactive-onboarding-full.patch",
+      "line": 2437,
+      "framework": "fastapi",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "http_routes",
+      "module": "(root)",
+      "method": "POST",
+      "detail": "/setup/secrets",
+      "file": "work-frontier-interactive-onboarding-full.patch",
+      "line": 2442,
+      "framework": "fastapi",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "http_routes",
+      "module": "(root)",
+      "method": "POST",
+      "detail": "/setup/signing-key",
+      "file": "work-frontier-interactive-onboarding-full.patch",
+      "line": 2456,
+      "framework": "fastapi",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "cli_commands",
+      "module": "(root)",
+      "detail": "status",
+      "file": "work-frontier-interactive-onboarding-full.patch",
+      "line": 2558,
+      "framework": "click",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "cli_commands",
+      "module": "(root)",
+      "detail": "repair",
+      "file": "work-frontier-interactive-onboarding-full.patch",
+      "line": 2573,
+      "framework": "click",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "cli_commands",
+      "module": "(root)",
+      "detail": "plan",
+      "file": "work-frontier-interactive-onboarding-full.patch",
+      "line": 2584,
+      "framework": "click",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "cli_commands",
+      "module": "(root)",
+      "detail": "apply",
+      "file": "work-frontier-interactive-onboarding-full.patch",
+      "line": 2603,
+      "framework": "click",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "cli_commands",
+      "module": "(root)",
+      "detail": "show",
+      "file": "work-frontier-interactive-onboarding-full.patch",
+      "line": 2619,
+      "framework": "click",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "http_routes",
+      "module": "control-plane-api",
+      "method": "GET",
+      "detail": "/healthz",
+      "file": "backend/src/work_frontier/interfaces/api/app.py",
+      "line": 166,
+      "framework": "fastapi",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "http_routes",
+      "module": "control-plane-api",
+      "method": "GET",
+      "detail": "/metrics",
+      "file": "backend/src/work_frontier/interfaces/api/app.py",
+      "line": 170,
+      "framework": "fastapi",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "http_routes",
+      "module": "control-plane-api",
+      "method": "GET",
+      "detail": "/frontier",
+      "file": "backend/src/work_frontier/interfaces/api/app.py",
+      "line": 178,
+      "framework": "fastapi",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "http_routes",
+      "module": "control-plane-api",
+      "method": "GET",
+      "detail": "/frontier/{item_id}",
+      "file": "backend/src/work_frontier/interfaces/api/app.py",
+      "line": 186,
+      "framework": "fastapi",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "http_routes",
+      "module": "control-plane-api",
+      "method": "GET",
+      "detail": "/writer-state",
+      "file": "backend/src/work_frontier/interfaces/api/app.py",
+      "line": 190,
+      "framework": "fastapi",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "http_routes",
+      "module": "control-plane-api",
+      "method": "GET",
+      "detail": "/attention",
+      "file": "backend/src/work_frontier/interfaces/api/app.py",
+      "line": 194,
+      "framework": "fastapi",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "http_routes",
+      "module": "control-plane-api",
+      "method": "POST",
+      "detail": "/api/setup/session/exchange",
+      "file": "backend/src/work_frontier/interfaces/api/setup_app.py",
+      "line": 198,
+      "framework": "fastapi",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "http_routes",
+      "module": "control-plane-api",
+      "method": "POST",
+      "detail": "/api/setup/session/close",
+      "file": "backend/src/work_frontier/interfaces/api/setup_app.py",
+      "line": 215,
+      "framework": "fastapi",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "http_routes",
+      "module": "control-plane-api",
+      "method": "GET",
+      "detail": "/api/setup/status",
+      "file": "backend/src/work_frontier/interfaces/api/setup_app.py",
+      "line": 229,
+      "framework": "fastapi",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "http_routes",
+      "module": "control-plane-api",
+      "method": "POST",
+      "detail": "/api/setup/detect",
+      "file": "backend/src/work_frontier/interfaces/api/setup_app.py",
+      "line": 237,
+      "framework": "fastapi",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "http_routes",
+      "module": "control-plane-api",
+      "method": "POST",
+      "detail": "/api/setup/plan",
+      "file": "backend/src/work_frontier/interfaces/api/setup_app.py",
+      "line": 242,
+      "framework": "fastapi",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "http_routes",
+      "module": "control-plane-api",
+      "method": "POST",
+      "detail": "/api/setup/apply",
+      "file": "backend/src/work_frontier/interfaces/api/setup_app.py",
+      "line": 251,
+      "framework": "fastapi",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "http_routes",
+      "module": "control-plane-api",
+      "method": "POST",
+      "detail": "/api/setup/resume/{session_id}",
+      "file": "backend/src/work_frontier/interfaces/api/setup_app.py",
+      "line": 256,
+      "framework": "fastapi",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "http_routes",
+      "module": "control-plane-api",
+      "method": "POST",
+      "detail": "/api/setup/signing-key",
+      "file": "backend/src/work_frontier/interfaces/api/setup_app.py",
+      "line": 269,
+      "framework": "fastapi",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "http_routes",
+      "module": "control-plane-api",
+      "method": "POST",
+      "detail": "/api/setup/secrets",
+      "file": "backend/src/work_frontier/interfaces/api/setup_app.py",
+      "line": 279,
+      "framework": "fastapi",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "http_routes",
+      "module": "control-plane-api",
+      "method": "GET",
+      "detail": "/setup.html",
+      "file": "backend/src/work_frontier/interfaces/api/setup_app.py",
+      "line": 298,
+      "framework": "fastapi",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "http_routes",
+      "module": "control-plane-api",
+      "method": "GET",
+      "detail": "/",
+      "file": "backend/src/work_frontier/interfaces/api/setup_app.py",
+      "line": 306,
+      "framework": "fastapi",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "http_routes",
+      "module": "control-plane-api",
+      "method": "GET",
+      "detail": "/setup/status",
+      "file": "backend/src/work_frontier/interfaces/api/setup_routes.py",
+      "line": 39,
+      "framework": "fastapi",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "http_routes",
+      "module": "control-plane-api",
+      "method": "POST",
+      "detail": "/setup/detect",
+      "file": "backend/src/work_frontier/interfaces/api/setup_routes.py",
+      "line": 47,
+      "framework": "fastapi",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "http_routes",
+      "module": "control-plane-api",
+      "method": "POST",
+      "detail": "/setup/plan",
+      "file": "backend/src/work_frontier/interfaces/api/setup_routes.py",
+      "line": 52,
+      "framework": "fastapi",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "http_routes",
+      "module": "control-plane-api",
+      "method": "POST",
+      "detail": "/setup/apply",
+      "file": "backend/src/work_frontier/interfaces/api/setup_routes.py",
+      "line": 61,
+      "framework": "fastapi",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "http_routes",
+      "module": "control-plane-api",
+      "method": "POST",
+      "detail": "/setup/resume/{session_id}",
+      "file": "backend/src/work_frontier/interfaces/api/setup_routes.py",
+      "line": 66,
+      "framework": "fastapi",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "http_routes",
+      "module": "control-plane-api",
+      "method": "POST",
+      "detail": "/setup/secrets",
+      "file": "backend/src/work_frontier/interfaces/api/setup_routes.py",
+      "line": 71,
+      "framework": "fastapi",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "http_routes",
+      "module": "control-plane-api",
+      "method": "POST",
+      "detail": "/setup/signing-key",
+      "file": "backend/src/work_frontier/interfaces/api/setup_routes.py",
+      "line": 85,
+      "framework": "fastapi",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "cli_commands",
+      "module": "control-plane-cli",
+      "detail": "frontier",
+      "file": "backend/src/work_frontier/interfaces/cli/main.py",
+      "line": 31,
+      "framework": "click",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "cli_commands",
+      "module": "control-plane-cli",
+      "detail": "item",
+      "file": "backend/src/work_frontier/interfaces/cli/main.py",
+      "line": 35,
+      "framework": "click",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "cli_commands",
+      "module": "control-plane-cli",
+      "detail": "claim",
+      "file": "backend/src/work_frontier/interfaces/cli/main.py",
+      "line": 39,
+      "framework": "click",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "cli_commands",
+      "module": "control-plane-cli",
+      "detail": "approve",
+      "file": "backend/src/work_frontier/interfaces/cli/main.py",
+      "line": 56,
+      "framework": "click",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "cli_commands",
+      "module": "control-plane-cli",
+      "detail": "list",
+      "file": "backend/src/work_frontier/interfaces/cli/main.py",
+      "line": 68,
+      "framework": "click",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "cli_commands",
+      "module": "control-plane-cli",
+      "detail": "sync",
+      "file": "backend/src/work_frontier/interfaces/cli/main.py",
+      "line": 72,
+      "framework": "click",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "cli_commands",
+      "module": "control-plane-cli",
+      "detail": "audit",
+      "file": "backend/src/work_frontier/interfaces/cli/main.py",
+      "line": 80,
+      "framework": "click",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "cli_commands",
+      "module": "control-plane-cli",
+      "detail": "state",
+      "file": "backend/src/work_frontier/interfaces/cli/main.py",
+      "line": 84,
+      "framework": "click",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "cli_commands",
+      "module": "control-plane-cli",
+      "detail": "certify",
+      "file": "backend/src/work_frontier/interfaces/cli/main.py",
+      "line": 88,
+      "framework": "click",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "cli_commands",
+      "module": "control-plane-cli",
+      "detail": "status",
+      "file": "backend/src/work_frontier/interfaces/cli/setup.py",
+      "line": 69,
+      "framework": "click",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "cli_commands",
+      "module": "control-plane-cli",
+      "detail": "repair",
+      "file": "backend/src/work_frontier/interfaces/cli/setup.py",
+      "line": 84,
+      "framework": "click",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "cli_commands",
+      "module": "control-plane-cli",
+      "detail": "plan",
+      "file": "backend/src/work_frontier/interfaces/cli/setup.py",
+      "line": 95,
+      "framework": "click",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "cli_commands",
+      "module": "control-plane-cli",
+      "detail": "apply",
+      "file": "backend/src/work_frontier/interfaces/cli/setup.py",
+      "line": 114,
+      "framework": "click",
+      "confidence": "hypothesis"
+    },
+    {
+      "kind": "cli_commands",
+      "module": "control-plane-cli",
+      "detail": "show",
+      "file": "backend/src/work_frontier/interfaces/cli/setup.py",
+      "line": 130,
+      "framework": "click",
+      "confidence": "hypothesis"
+    }
+  ],
   "scan_errors": [],
   "note": "Every hypothesis must be reviewed against framework wiring/source before it becomes canonical. For a false positive, add disposition=false_positive and a review_note before running verify_entry_points.py --strict-source."
 }

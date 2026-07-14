@@ -5,5 +5,5 @@ test("all primary workflows are reachable by keyboard", async ({ page }) => {
   await page.keyboard.press("Tab")
   await expect(page.getByRole("link", { name: "Skip to main content" })).toBeFocused()
   await page.keyboard.press("Tab")
-  await expect(page.getByRole("button", { name: "Connect installation" })).toBeFocused()
+  await expect(page.getByRole("button", { name: "Builder" })).toBeFocused()
 })

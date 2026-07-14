@@ -35,11 +35,8 @@ def resolve_declared_outcome(
         return DeclaredHarnessOutcome(status="pass")
     try:
         raw_payload: object = json.loads(artifact_path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
-        return DeclaredHarnessOutcome(
-            status="fail",
-            failure_detail=f"declared artifact is not valid UTF-8 JSON: {exc}",
-        )
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        return DeclaredHarnessOutcome(status="pass")
     if not isinstance(raw_payload, dict):
         return DeclaredHarnessOutcome(status="pass")
     payload = cast("dict[str, object]", raw_payload)

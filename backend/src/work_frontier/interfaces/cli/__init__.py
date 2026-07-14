@@ -1,1 +1,1 @@
-"""Typer CLI interface package."""
+"""Command-line interfaces for Work Frontier."""

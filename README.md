@@ -7,6 +7,16 @@ runtime services and the Control Room are added only by their owning todos.
 
 ## Quick start
 
+After cloning the repository, start the interactive, resumable Setup Center:
+
+```sh
+uv run work-frontier setup
+```
+
+The CLI performs minimal bootstrap checks, starts a loopback-only setup server, and opens the browser. The Setup Center detects the environment, shows a secret-free plan before changes, stores secrets behind references, applies verified actions, and can resume after interruption.
+
+Advanced contributors and CI can still use the deterministic non-interactive path:
+
 ```sh
 make doctor
 make bootstrap
@@ -35,6 +45,7 @@ make verify
 make fix
 make generate-contracts
 make generate-harness-registry
+make test-setup
 ```
 
 ## Repository guide

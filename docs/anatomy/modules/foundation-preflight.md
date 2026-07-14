@@ -1,6 +1,6 @@
 # Module: Foundation Preflight
 
-**Path:** `.omo/preflight/adr-006`  
+**Path:** `.omo/preflight/adr-006`
 **Role:** Validates the seven foundation baselines and proves negative fixtures fail with typed failure IDs.
 
 ## Public interface
@@ -27,4 +27,4 @@
 
 ---
 
-_Traced from source on 2026-07-12. Files examined in depth: all files listed in this module’s internal structure or public interface._
+_Traced from source on 2026-07-14. Files examined in depth: all 29 files._

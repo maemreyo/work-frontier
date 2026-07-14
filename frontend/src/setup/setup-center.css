@@ -1,0 +1,100 @@
+.wf-setup {
+  display: grid;
+  gap: 1rem;
+  max-inline-size: 80rem;
+  margin-inline: auto;
+}
+
+.wf-setup__header,
+.wf-setup__panel,
+.wf-setup__capability,
+.wf-setup__check {
+  border: 1px solid currentColor;
+  border-radius: 0.5rem;
+  padding: 1rem;
+}
+
+.wf-setup__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.wf-eyebrow {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.wf-setup__status {
+  display: block;
+  border-inline-start: 0.35rem solid currentColor;
+  padding: 0.75rem 1rem;
+}
+
+.wf-setup__capabilities,
+.wf-setup__checks {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+}
+
+.wf-setup__capability[data-state="ready"],
+.wf-setup__check[data-state="ready"] {
+  border-width: 2px;
+}
+
+.wf-setup__capability[data-state="blocked"],
+.wf-setup__check[data-state="blocked"] {
+  border-style: double;
+  border-width: 4px;
+}
+
+.wf-setup label,
+.wf-setup form {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.wf-setup form {
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  align-items: end;
+}
+
+.wf-setup input,
+.wf-setup select,
+.wf-setup button {
+  min-block-size: 2.75rem;
+  font: inherit;
+}
+
+.wf-setup input,
+.wf-setup select {
+  inline-size: 100%;
+  padding-inline: 0.75rem;
+}
+
+.wf-setup__plan section {
+  margin-block: 1rem;
+}
+
+.wf-setup__results {
+  display: grid;
+  gap: 0.5rem;
+}
+
+@media (max-width: 48rem) {
+  .wf-setup__header {
+    flex-direction: column;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wf-setup * {
+    scroll-behavior: auto;
+    transition-duration: 0.01ms;
+  }
+}

@@ -1,5 +1,6 @@
-import { useReducer, useState } from "react"
+import { useState } from "react"
 
+import { SetupCenter } from "../setup/setup-center"
 import { buildBuilderWorkspace, type BuilderDecision } from "./builder"
 import { BuilderView } from "./builder-view"
 import type { FrontierItem } from "./client.generated"
@@ -11,7 +12,6 @@ import type {
   ExecutiveMetric,
   OperatorStatus,
 } from "./executive-operator"
-import { initialOnboardingState, isAuthoritative, reduceOnboarding } from "./onboarding"
 import { OperatorView } from "./operator-view"
 import { ControlRoomShell, type ControlRoomView } from "./shell"
 
@@ -135,60 +135,12 @@ const operatorStatus: OperatorStatus = {
 }
 
 export function ControlRoomApp() {
-  const [onboarding, dispatch] = useReducer(reduceOnboarding, initialOnboardingState)
   const [activeView, setActiveView] = useState<ControlRoomView>("builder")
-  const [status, setStatus] = useState("Ready for onboarding")
+  const [status, setStatus] = useState("Runtime ready; Setup Center remains available")
   const [claimedItem, setClaimedItem] = useState<string | null>(null)
   const [proposalState, setProposalState] = useState(proposals)
   const [items, setItems] = useState(seededItems)
   const workspace = buildBuilderWorkspace(items)
-
-  if (!isAuthoritative(onboarding)) {
-    return (
-      <>
-        <a className="wf-skip-link" href="#wf-main">
-          Skip to main content
-        </a>
-        <main className="wf-onboarding" id="wf-main">
-        <h1>Connect Work Frontier</h1>
-        <output>{onboarding.conflict ?? status}</output>
-        {onboarding.step === "install" ? (
-          <button
-            type="button"
-            onClick={() => {
-              dispatch({ type: "installation_connected" })
-              setStatus("GitHub installation connected")
-            }}
-          >
-            Connect installation
-          </button>
-        ) : null}
-        {onboarding.step === "profile" ? (
-          <button
-            type="button"
-            onClick={() => {
-              dispatch({ type: "profile_validated" })
-              setStatus("Normalization profile validated")
-            }}
-          >
-            Validate profile
-          </button>
-        ) : null}
-        {onboarding.step === "reconcile" ? (
-          <button
-            type="button"
-            onClick={() => {
-              dispatch({ type: "reconciliation_succeeded" })
-              setStatus("Reconciliation complete")
-            }}
-          >
-            Reconcile authoritative state
-          </button>
-        ) : null}
-        </main>
-      </>
-    )
-  }
 
   function claim(decision: BuilderDecision): void {
     if (claimedItem === null) {
@@ -205,7 +157,8 @@ export function ControlRoomApp() {
       onNavigate={setActiveView}
       session={{
         actorId: "builder-1",
-        role: activeView === "operator" ? "operator" : "builder",
+        role: activeView === "operator" || activeView === "setup" ? "operator" : "builder",
+        sessionToken: "session-good",
         tenantId: "tenant-1",
         workspaceId: "workspace-1",
       }}
@@ -287,6 +240,7 @@ export function ControlRoomApp() {
           onRetryDeadLetter={() => setStatus("Dead letter retry requested")}
         />
       ) : null}
+      {activeView === "setup" ? <SetupCenter /> : null}
     </ControlRoomShell>
   )
 }

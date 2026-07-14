@@ -1,9 +1,20 @@
 .DEFAULT_GOAL := help
 
-.PHONY: bootstrap check check-architecture check-contracts check-harness-registry check-preflight check-static clean doctor fix generate-contracts generate-harness-registry harness help infra-down infra-up migration-smoke recertify-foundation storage-smoke test test-domain test-frontend test-python verify test-security test-ops test-final certify-standard
+.PHONY: build-setup-assets check-setup-assets test-setup bootstrap check check-architecture check-contracts check-harness-registry check-preflight check-static clean doctor fix generate-contracts generate-harness-registry harness help infra-down infra-up migration-smoke recertify-foundation storage-smoke test test-domain test-frontend test-python verify test-security test-ops test-final certify-standard
 
 help: ## Show supported development commands
 	@awk 'BEGIN {FS = ":.*## "; printf "Usage: make <target>\n\nTargets:\n"} /^[a-zA-Z0-9_.-]+:.*## / {printf "  %-28s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+
+
+build-setup-assets: ## Build packaged first-run Setup Center assets
+	node scripts/build_setup_assets.mjs
+
+check-setup-assets: ## Fail when packaged Setup Center assets drift
+	uv run python scripts/check_setup_assets.py
+
+test-setup: ## Run setup workflow, API, CLI, security, and browser-model tests
+	uv run pytest backend/tests/application/setup backend/tests/platform/configuration backend/tests/platform/secrets backend/tests/platform/setup backend/tests/adapters/github/test_setup_adapters.py backend/tests/interfaces/api/test_setup_app.py backend/tests/interfaces/api/test_persistent_setup_routes.py backend/tests/interfaces/test_setup_cli.py backend/tests/contracts/test_setup_generated_contracts.py backend/tests/test_setup_asset_drift.py
+	node --test frontend/tests/setup/*.test.mjs
 
 doctor: ## Validate required local tools and pinned versions
 	python3 scripts/doctor.py
@@ -17,7 +28,7 @@ check: check-static test ## Run the fast pre-push verification path
 check-architecture: ## Enforce Python architecture import boundaries
 	uv run python scripts/check_import_boundaries.py
 
-check-static: check-preflight check-architecture check-contracts check-harness-registry check-anatomy ## Run lint, format, type, contract, registry, architecture, and anatomy checks
+check-static: check-preflight check-architecture check-contracts check-harness-registry check-anatomy check-setup-assets ## Run lint, format, type, contract, registry, architecture, and anatomy checks
 	uv run ruff check backend/lib backend/src backend/tests scripts
 	uv run ruff format --check backend/lib backend/src backend/tests scripts
 	uv run basedpyright

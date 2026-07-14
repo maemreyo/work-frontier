@@ -4,14 +4,17 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from work_frontier.platform.security.hardening import (
+from work_frontier.interfaces.api.browser_security import (
+    BrowserSecurityError,
     CsrfProtector,
+    SlidingWindowRateLimiter,
+    security_headers,
+)
+from work_frontier.platform.security.hardening import (
     EgressPolicy,
     SecurityControlError,
-    SlidingWindowRateLimiter,
     redact,
     require_tls_configuration,
-    security_headers,
     validate_upload,
 )
 
@@ -38,6 +41,11 @@ def test_csrf_tokens_are_session_bound() -> None:
     token = protector.issue("session-a")
     assert protector.verify("session-a", token)
     assert not protector.verify("session-b", token)
+
+
+def test_csrf_rejects_an_undersized_secret() -> None:
+    with pytest.raises(BrowserSecurityError):
+        _ = CsrfProtector(b"x").issue("session-a")
 
 
 def test_rate_limiter_uses_clock_controlled_window() -> None:

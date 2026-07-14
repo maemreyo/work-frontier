@@ -25,23 +25,31 @@ from work_frontier.interfaces.api.models import (
     WriterStateResponse,
 )
 from work_frontier.interfaces.api.security import install_security_middleware
+from work_frontier.interfaces.api.setup_routes import install_persistent_setup_routes
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
 
     from starlette.responses import Response
 
+    from work_frontier.application.setup.service import SetupService
     from work_frontier.interfaces.api.services import (
         ControlPlaneService,
         RequestContext,
     )
+    from work_frontier.interfaces.api.setup_app import SecretWriter
 
 _ItemId = Annotated[str, Path(pattern=r"^[A-Za-z0-9._:-]{1,128}$")]
 _ProposalId = Annotated[str, Path(pattern=r"^[A-Fa-f0-9]{16,64}$")]
 _PUBLIC_PATHS = frozenset({"/healthz", "/metrics", "/openapi.json", "/docs", "/redoc"})
 
 
-def create_app(service: ControlPlaneService) -> FastAPI:
+def create_app(
+    service: ControlPlaneService,
+    *,
+    setup_service: SetupService | None = None,
+    setup_secret_store: SecretWriter | None = None,
+) -> FastAPI:
     """Create the web process with injected application services."""
     app = FastAPI(
         title="Work Frontier Control Plane",
@@ -52,7 +60,12 @@ def create_app(service: ControlPlaneService) -> FastAPI:
     install_security_middleware(app)
     _install_error_handlers(app)
     _install_scope_middleware(app, service)
-    _install_routes(app, service)
+    _install_routes(
+        app,
+        service,
+        setup_service=setup_service,
+        setup_secret_store=setup_secret_store,
+    )
     return app
 
 
@@ -132,9 +145,21 @@ def _request_context(request: Request) -> RequestContext:
     return cast("RequestContext", request.state.context)
 
 
-def _install_routes(app: FastAPI, service: ControlPlaneService) -> None:
+def _install_routes(
+    app: FastAPI,
+    service: ControlPlaneService,
+    *,
+    setup_service: SetupService | None,
+    setup_secret_store: SecretWriter | None,
+) -> None:
     _install_read_routes(app, service)
     _install_write_routes(app, service)
+    if setup_service is not None:
+        install_persistent_setup_routes(
+            app,
+            setup_service,
+            secret_store=setup_secret_store,
+        )
 
 
 def _install_read_routes(app: FastAPI, service: ControlPlaneService) -> None:

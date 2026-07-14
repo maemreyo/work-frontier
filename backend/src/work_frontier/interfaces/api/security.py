@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 from fastapi.responses import JSONResponse
 
-from work_frontier.platform.security.hardening import (
+from work_frontier.interfaces.api.browser_security import (
     CsrfProtector,
     SlidingWindowRateLimiter,
     security_headers,

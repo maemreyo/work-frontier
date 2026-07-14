@@ -1,271 +1,403 @@
 {
   "project_name": "Work Frontier",
-  "generated_at": "2026-07-12",
-  "mode": "full trace",
-  "source_commit": "e54bfeca1150fbc15fb6da1b603af938e2bca79",
   "modules": [
     {
       "slug": "foundation-preflight",
       "name": "Foundation Preflight",
-      "role": "Validates the seven foundation baselines and proves negative fixtures fail with typed failure IDs.",
       "path": ".omo/preflight/adr-006",
-      "doc": "modules/foundation-preflight.md"
+      "role": "Validates foundation baselines",
+      "doc": "modules/foundation-preflight.md",
+      "confirmed": true
     },
     {
       "slug": "contracts",
       "name": "Canonical Contracts",
-      "role": "Defines canonical DecisionRecord and EvidenceRecord schemas plus harness registry contracts with comprehensive validation.",
       "path": "backend/src/work_frontier/contracts",
-      "doc": "modules/contracts.md"
+      "role": "Canonical contracts and schemas",
+      "doc": "modules/contracts.md",
+      "confirmed": true
     },
     {
       "slug": "evidence-runtime",
       "name": "Evidence Runtime",
-      "role": "Executes registered harnesses and writes reproducible evidence bound to the tested Git revision with tamper detection and prerequisite-satisfaction gating.",
       "path": "scripts/run_harness.py",
-      "doc": "modules/evidence-runtime.md"
+      "role": "Executes harnesses and writes evidence",
+      "doc": "modules/evidence-runtime.md",
+      "confirmed": true
     },
     {
       "slug": "architecture-enforcement",
       "name": "Architecture Enforcement",
-      "role": "Statically scans Python imports and enforces the allowed dependency matrix between architectural layers.",
       "path": "scripts/check_import_boundaries.py",
-      "doc": "modules/architecture-enforcement.md"
+      "role": "Enforces import boundaries",
+      "doc": "modules/architecture-enforcement.md",
+      "confirmed": true
     },
     {
       "slug": "contract-generation",
       "name": "Contract Generation",
-      "role": "Generates JSON Schema and frontend Zod artifacts for both DecisionRecord and EvidenceRecord from the canonical Pydantic contracts and checks drift.",
       "path": "scripts/generate_contracts.py",
-      "doc": "modules/contract-generation.md"
+      "role": "Generates JSON Schema and Zod artifacts",
+      "doc": "modules/contract-generation.md",
+      "confirmed": true
     },
     {
       "slug": "infrastructure-smoke",
       "name": "Infrastructure Smoke",
-      "role": "Proves PostgreSQL migration rollback behavior and MinIO object lifecycle behavior against local containers.",
       "path": "scripts",
-      "doc": "modules/infrastructure-smoke.md"
+      "role": "Infrastructure and verification scripts",
+      "doc": "modules/infrastructure-smoke.md",
+      "confirmed": true
     },
     {
       "slug": "frontend-foundation",
       "name": "Frontend Foundation",
-      "role": "Contains TypeScript contract artifacts (DecisionRecord and EvidenceRecord Zod validators with semantic validation), evidence helper code and test/tooling configuration, but no product UI shell yet.",
       "path": "frontend",
-      "doc": "modules/frontend-foundation.md"
+      "role": "Frontend app, setup center, and tests",
+      "doc": "modules/frontend-foundation.md",
+      "confirmed": true
     },
     {
       "slug": "delivery-ci",
       "name": "Delivery and CI",
-      "role": "Orchestrates preflight, contract drift, static checks, tests, infrastructure smokes, security scans and evidence collection.",
       "path": ".github/workflows/ci.yml",
-      "doc": "modules/delivery-ci.md"
+      "role": "CI orchestration",
+      "doc": "modules/delivery-ci.md",
+      "confirmed": true
+    },
+    {
+      "slug": "bootstrap-root",
+      "name": "Bootstrap and Composition Root",
+      "path": "backend/src/work_frontier",
+      "role": "Composition root, adapters, platform infra",
+      "doc": "modules/bootstrap-root.md",
+      "confirmed": true
+    },
+    {
+      "slug": "control-plane-api",
+      "name": "Control Plane API",
+      "path": "backend/src/work_frontier/interfaces/api",
+      "role": "FastAPI routes and security",
+      "doc": "modules/control-plane-api.md",
+      "confirmed": true
+    },
+    {
+      "slug": "control-plane-cli",
+      "name": "Control Plane CLI",
+      "path": "backend/src/work_frontier/interfaces/cli",
+      "role": "Typer CLI and setup center",
+      "doc": "modules/control-plane-cli.md",
+      "confirmed": true
+    },
+    {
+      "slug": "setup-application",
+      "name": "Setup Application",
+      "path": "backend/src/work_frontier/application/setup",
+      "role": "Setup orchestration use cases",
+      "doc": "modules/setup-application.md",
+      "confirmed": true
+    },
+    {
+      "slug": "platform-setup",
+      "name": "Platform Setup",
+      "path": "backend/src/work_frontier/platform/setup",
+      "role": "Local probes and action runners",
+      "doc": "modules/platform-setup.md",
+      "confirmed": true
+    },
+    {
+      "slug": "platform-operations",
+      "name": "Platform Operations",
+      "path": "backend/src/work_frontier/platform/operations",
+      "role": "SLO, backup, recovery, drill models",
+      "doc": "modules/platform-operations.md",
+      "confirmed": true
+    },
+    {
+      "slug": "platform-security",
+      "name": "Platform Security",
+      "path": "backend/src/work_frontier/platform/security",
+      "role": "Browser, egress, upload, redaction controls",
+      "doc": "modules/platform-security.md",
+      "confirmed": true
+    },
+    {
+      "slug": "platform-secrets",
+      "name": "Platform Secrets",
+      "path": "backend/src/work_frontier/platform/secrets",
+      "role": "OS keyring and env secret stores",
+      "doc": "modules/platform-secrets.md",
+      "confirmed": true
+    },
+    {
+      "slug": "platform-configuration",
+      "name": "Platform Configuration",
+      "path": "backend/src/work_frontier/platform/configuration",
+      "role": "TOML config store and SQLite journal",
+      "doc": "modules/platform-configuration.md",
+      "confirmed": true
+    },
+    {
+      "slug": "platform-persistence",
+      "name": "Platform Persistence",
+      "path": "backend/src/work_frontier/platform/persistence",
+      "role": "SQLAlchemy schema and repositories",
+      "doc": "modules/platform-persistence.md",
+      "confirmed": true
+    },
+    {
+      "slug": "application-layer",
+      "name": "Application Layer",
+      "path": "backend/src/work_frontier/application",
+      "role": "Application services and ports",
+      "doc": "modules/application-layer.md",
+      "confirmed": true
+    },
+    {
+      "slug": "domain-layer",
+      "name": "Domain Layer",
+      "path": "backend/src/work_frontier/domain",
+      "role": "Domain entities, policies, and rules",
+      "doc": "modules/domain-layer.md",
+      "confirmed": true
+    },
+    {
+      "slug": "process-interfaces",
+      "name": "Process Interfaces",
+      "path": "backend/src/work_frontier/interfaces/processes",
+      "role": "Scheduler, worker, web entry points",
+      "doc": "modules/process-interfaces.md",
+      "confirmed": true
+    },
+    {
+      "slug": "deployment-infrastructure",
+      "name": "Deployment Infrastructure",
+      "path": "infra",
+      "role": "Docker, K8s, observability manifests",
+      "doc": "modules/deployment-infrastructure.md",
+      "confirmed": true
     }
   ],
   "edges": [
     {
       "from": "foundation-preflight",
       "to": "contracts",
-      "label": "validates DecisionRecord-shaped baseline documents and hash fields",
-      "kind": "sync"
+      "kind": "sync",
+      "confirmed": true
     },
     {
       "from": "evidence-runtime",
       "to": "contracts",
-      "label": "loads registry and evidence schemas and serializes validated records",
-      "kind": "sync"
+      "kind": "sync",
+      "confirmed": true
     },
     {
       "from": "architecture-enforcement",
       "to": "contracts",
-      "label": "writes EvidenceRecord-compatible results for the boundary check",
-      "kind": "sync"
+      "kind": "sync",
+      "confirmed": true
     },
     {
       "from": "contract-generation",
       "to": "contracts",
-      "label": "imports the canonical DecisionRecord model as the source schema",
-      "kind": "sync"
+      "kind": "sync",
+      "confirmed": true
     },
     {
       "from": "infrastructure-smoke",
       "to": "contracts",
-      "label": "emits structured evidence for infrastructure checks",
-      "kind": "sync"
+      "kind": "sync",
+      "confirmed": true
+    },
+    {
+      "from": "infrastructure-smoke",
+      "to": "contract-generation",
+      "kind": "sync",
+      "confirmed": true
     },
     {
       "from": "frontend-foundation",
       "to": "contract-generation",
-      "label": "consumes the generated DecisionRecord Zod schema",
-      "kind": "sync"
+      "kind": "sync",
+      "confirmed": true
     },
     {
       "from": "delivery-ci",
       "to": "foundation-preflight",
-      "label": "runs the preflight gate before verification",
-      "kind": "sync"
+      "kind": "sync",
+      "confirmed": true
     },
     {
       "from": "delivery-ci",
       "to": "contract-generation",
-      "label": "checks generated contract drift",
-      "kind": "sync"
+      "kind": "sync",
+      "confirmed": true
     },
     {
       "from": "delivery-ci",
       "to": "architecture-enforcement",
-      "label": "runs import-boundary enforcement through the harness suite",
-      "kind": "sync"
+      "kind": "sync",
+      "confirmed": true
     },
     {
       "from": "delivery-ci",
       "to": "evidence-runtime",
-      "label": "executes registered harnesses and records evidence",
-      "kind": "sync"
+      "kind": "sync",
+      "confirmed": true
     },
     {
       "from": "delivery-ci",
       "to": "infrastructure-smoke",
-      "label": "starts services and executes database/object-store smokes",
-      "kind": "sync"
+      "kind": "sync",
+      "confirmed": true
     },
     {
       "from": "delivery-ci",
       "to": "frontend-foundation",
-      "label": "runs frontend quality checks",
-      "kind": "sync"
+      "kind": "sync",
+      "confirmed": true
+    },
+    {
+      "from": "control-plane-cli",
+      "to": "contracts",
+      "kind": "sync",
+      "confirmed": true
+    },
+    {
+      "from": "control-plane-cli",
+      "to": "control-plane-api",
+      "kind": "sync",
+      "confirmed": true
+    },
+    {
+      "from": "control-plane-cli",
+      "to": "bootstrap-root",
+      "kind": "sync",
+      "confirmed": true
+    },
+    {
+      "from": "control-plane-api",
+      "to": "contracts",
+      "kind": "sync",
+      "confirmed": true
+    },
+    {
+      "from": "control-plane-api",
+      "to": "setup-application",
+      "kind": "sync",
+      "confirmed": true
+    },
+    {
+      "from": "setup-application",
+      "to": "contracts",
+      "kind": "sync",
+      "confirmed": true
+    },
+    {
+      "from": "setup-application",
+      "to": "application-layer",
+      "kind": "sync",
+      "confirmed": true
+    },
+    {
+      "from": "platform-setup",
+      "to": "contracts",
+      "kind": "sync",
+      "confirmed": true
+    },
+    {
+      "from": "platform-secrets",
+      "to": "contracts",
+      "kind": "sync",
+      "confirmed": true
+    },
+    {
+      "from": "platform-configuration",
+      "to": "contracts",
+      "kind": "sync",
+      "confirmed": true
+    },
+    {
+      "from": "bootstrap-root",
+      "to": "contracts",
+      "kind": "sync",
+      "confirmed": true
+    },
+    {
+      "from": "application-layer",
+      "to": "contracts",
+      "kind": "sync",
+      "confirmed": true
+    },
+    {
+      "from": "process-interfaces",
+      "to": "control-plane-api",
+      "kind": "sync",
+      "confirmed": true
+    },
+    {
+      "from": "deployment-infrastructure",
+      "to": "control-plane-api",
+      "kind": "sync",
+      "confirmed": true
     }
   ],
   "context": {
     "actors": [
-      "Developer",
-      "GitHub Actions"
+      "Builder",
+      "Coordinator",
+      "Operator",
+      "Executive",
+      "Copilot"
     ],
     "external_systems": [
       "PostgreSQL",
-      "MinIO"
-    ],
-    "edges": [
-      {
-        "from": "Developer",
-        "to": "Work Frontier",
-        "label": "runs checks and harnesses"
-      },
-      {
-        "from": "GitHub Actions",
-        "to": "Work Frontier",
-        "label": "executes CI workflow"
-      },
-      {
-        "from": "Work Frontier",
-        "to": "PostgreSQL",
-        "label": "migration smoke"
-      },
-      {
-        "from": "Work Frontier",
-        "to": "MinIO",
-        "label": "object lifecycle smoke"
-      }
+      "MinIO",
+      "GitHub",
+      "OS Keyring",
+      "Git"
     ]
   },
-  "flows": [
+  "key_flows": [
     {
-      "name": "Foundation preflight gate",
+      "name": "Setup Center workflow",
       "steps": [
         {
-          "from": "GitHub Actions",
-          "to": "foundation-preflight",
-          "label": "run validator and tests"
+          "from": "control-plane-cli",
+          "to": "control-plane-api",
+          "action": "loopback server"
         },
         {
-          "from": "foundation-preflight",
+          "from": "control-plane-api",
+          "to": "setup-application",
+          "action": "detect/plan/apply"
+        },
+        {
+          "from": "setup-application",
+          "to": "platform-configuration",
+          "action": "config I/O"
+        },
+        {
+          "from": "platform-setup",
           "to": "contracts",
-          "label": "apply contract-specific rules"
-        },
-        {
-          "from": "foundation-preflight",
-          "to": "GitHub Actions",
-          "label": "pass/fail plus evidence"
+          "action": "detection models"
         }
       ]
     },
     {
-      "name": "Contract generation and drift check",
+      "name": "API request lifecycle",
       "steps": [
         {
-          "from": "delivery-ci",
-          "to": "contract-generation",
-          "label": "run --check"
+          "from": "HTTP client",
+          "to": "control-plane-api",
+          "action": "HTTP request"
         },
         {
-          "from": "contract-generation",
-          "to": "contracts",
-          "label": "read Pydantic schema"
-        },
-        {
-          "from": "contract-generation",
-          "to": "frontend-foundation",
-          "label": "compare generated Zod artifact"
-        }
-      ]
-    },
-    {
-      "name": "Harness evidence lifecycle",
-      "steps": [
-        {
-          "from": "delivery-ci",
-          "to": "evidence-runtime",
-          "label": "execute blocking harnesses"
-        },
-        {
-          "from": "evidence-runtime",
-          "to": "contracts",
-          "label": "validate registry and evidence"
-        },
-        {
-          "from": "evidence-runtime",
-          "to": "infrastructure-smoke",
-          "label": "run smoke commands"
-        },
-        {
-          "from": "evidence-runtime",
-          "to": "delivery-ci",
-          "label": "return evidence bound to subject SHA"
+          "from": "control-plane-api",
+          "to": "InMemoryControlPlane",
+          "action": "business logic"
         }
       ]
     }
-  ],
-  "data_model": {
-    "entities": [
-      {
-        "name": "BootstrapMarker",
-        "fields": [
-          "id",
-          "label"
-        ],
-        "module": "infrastructure-smoke"
-      }
-    ],
-    "relations": []
-  },
-  "deployment": {
-    "services": [
-      {
-        "name": "postgres",
-        "module": "infrastructure-smoke",
-        "ports": [
-          "54329:5432"
-        ],
-        "depends_on": []
-      },
-      {
-        "name": "minio",
-        "module": "infrastructure-smoke",
-        "ports": [
-          "9002:9000",
-          "9003:9001"
-        ],
-        "depends_on": []
-      }
-    ]
-  }
+  ]
 }

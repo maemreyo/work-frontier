@@ -1,0 +1,409 @@
+{
+  "$defs": {
+    "ActionResult": {
+      "additionalProperties": false,
+      "description": "Redacted outcome for one setup action.",
+      "properties": {
+        "action_id": {
+          "title": "Action Id",
+          "type": "string"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "redacted_evidence": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": "Redacted Evidence",
+          "type": "object"
+        },
+        "state": {
+          "$ref": "#/$defs/ActionState"
+        }
+      },
+      "required": [
+        "action_id",
+        "state",
+        "message"
+      ],
+      "title": "ActionResult",
+      "type": "object"
+    },
+    "ActionState": {
+      "description": "Journaled setup action states.",
+      "enum": [
+        "pending",
+        "running",
+        "applied",
+        "verified",
+        "failed",
+        "compensating",
+        "compensated",
+        "manual_recovery_required"
+      ],
+      "title": "ActionState",
+      "type": "string"
+    },
+    "CapabilityName": {
+      "description": "Independent setup readiness capabilities.",
+      "enum": [
+        "local_runtime",
+        "github_integration",
+        "release_certification",
+        "production_cutover"
+      ],
+      "title": "CapabilityName",
+      "type": "string"
+    },
+    "CapabilityReport": {
+      "additionalProperties": false,
+      "description": "Independent readiness report for one capability.",
+      "properties": {
+        "capability": {
+          "$ref": "#/$defs/CapabilityName"
+        },
+        "impact": {
+          "title": "Impact",
+          "type": "string"
+        },
+        "next_actions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Next Actions",
+          "type": "array"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        },
+        "state": {
+          "$ref": "#/$defs/CheckState"
+        },
+        "supporting_check_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Supporting Check Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "capability",
+        "state",
+        "reason",
+        "impact",
+        "next_actions",
+        "supporting_check_ids"
+      ],
+      "title": "CapabilityReport",
+      "type": "object"
+    },
+    "CheckState": {
+      "description": "Typed detector and capability states.",
+      "enum": [
+        "ready",
+        "repairable",
+        "needs_input",
+        "blocked",
+        "not_required"
+      ],
+      "title": "CheckState",
+      "type": "string"
+    },
+    "DetectionCheck": {
+      "additionalProperties": false,
+      "description": "One read-only environment fact with user-facing remediation.",
+      "properties": {
+        "check_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Check Id",
+          "type": "string"
+        },
+        "evidence": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": "Evidence",
+          "type": "object"
+        },
+        "impact": {
+          "maxLength": 1024,
+          "minLength": 1,
+          "title": "Impact",
+          "type": "string"
+        },
+        "remediation": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Remediation",
+          "type": "array"
+        },
+        "state": {
+          "$ref": "#/$defs/CheckState"
+        },
+        "summary": {
+          "maxLength": 512,
+          "minLength": 1,
+          "title": "Summary",
+          "type": "string"
+        }
+      },
+      "required": [
+        "check_id",
+        "state",
+        "summary",
+        "impact"
+      ],
+      "title": "DetectionCheck",
+      "type": "object"
+    },
+    "DetectionSnapshot": {
+      "additionalProperties": false,
+      "description": "Canonical read-only detection snapshot.",
+      "properties": {
+        "checks": {
+          "items": {
+            "$ref": "#/$defs/DetectionCheck"
+          },
+          "title": "Checks",
+          "type": "array"
+        },
+        "config_revision": {
+          "title": "Config Revision",
+          "type": "string"
+        },
+        "profile": {
+          "$ref": "#/$defs/SetupProfile"
+        },
+        "snapshot_id": {
+          "title": "Snapshot Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "snapshot_id",
+        "profile",
+        "config_revision",
+        "checks"
+      ],
+      "title": "DetectionSnapshot",
+      "type": "object"
+    },
+    "SetupAction": {
+      "additionalProperties": false,
+      "description": "One deterministic reviewed side effect.",
+      "properties": {
+        "action_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Action Id",
+          "type": "string"
+        },
+        "depends_on": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Depends On",
+          "type": "array"
+        },
+        "kind": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Kind",
+          "type": "string"
+        },
+        "parameters": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": "Parameters",
+          "type": "object"
+        },
+        "reason": {
+          "maxLength": 1024,
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        },
+        "reversible": {
+          "title": "Reversible",
+          "type": "boolean"
+        },
+        "risk": {
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "title": "Risk",
+          "type": "string"
+        },
+        "title": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "action_id",
+        "title",
+        "reason",
+        "risk",
+        "reversible",
+        "depends_on",
+        "kind",
+        "parameters"
+      ],
+      "title": "SetupAction",
+      "type": "object"
+    },
+    "SetupPlan": {
+      "additionalProperties": false,
+      "description": "Secret-free, deterministic, dependency-ordered setup plan.",
+      "properties": {
+        "actions": {
+          "items": {
+            "$ref": "#/$defs/SetupAction"
+          },
+          "title": "Actions",
+          "type": "array"
+        },
+        "config_revision": {
+          "title": "Config Revision",
+          "type": "string"
+        },
+        "detection_snapshot_id": {
+          "title": "Detection Snapshot Id",
+          "type": "string"
+        },
+        "plan_id": {
+          "title": "Plan Id",
+          "type": "string"
+        },
+        "profile": {
+          "$ref": "#/$defs/SetupProfile"
+        }
+      },
+      "required": [
+        "plan_id",
+        "profile",
+        "detection_snapshot_id",
+        "config_revision",
+        "actions"
+      ],
+      "title": "SetupPlan",
+      "type": "object"
+    },
+    "SetupProfile": {
+      "description": "Supported onboarding profiles.",
+      "enum": [
+        "development",
+        "production"
+      ],
+      "title": "SetupProfile",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Cross-language setup API envelope.",
+  "properties": {
+    "capabilities": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/CapabilityReport"
+      },
+      "title": "Capabilities",
+      "type": "array"
+    },
+    "detection": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/DetectionSnapshot"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "plan": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/SetupPlan"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "results": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/ActionResult"
+      },
+      "title": "Results",
+      "type": "array"
+    },
+    "session_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Session Id"
+    }
+  },
+  "title": "SetupEnvelope",
+  "type": "object"
+}

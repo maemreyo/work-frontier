@@ -1,19 +1,14 @@
 import AxeBuilder from "@axe-core/playwright"
 import { expect, test } from "@playwright/test"
 
-async function onboard(page: import("@playwright/test").Page) {
+async function gotoControlRoom(page: import("@playwright/test").Page) {
   await page.goto("/")
-  await page.getByRole("button", { name: "Connect installation" }).click()
-  await page.getByRole("button", { name: "Validate profile" }).click()
-  await page.getByRole("button", {
-    name: "Reconcile authoritative state",
-  }).click()
 }
 
 test("coordinator approval and stale/self approval rules are visible", async ({
   page,
 }, testInfo) => {
-  await onboard(page)
+  await gotoControlRoom(page)
   await page.getByRole("button", { name: "Coordinator" }).click()
   await expect(page.getByRole("heading", { name: "Coordinator proposals" })).toBeVisible()
   const independentApproval = page.getByRole("button", { name: "Approve" }).first()
@@ -30,7 +25,7 @@ test("coordinator approval and stale/self approval rules are visible", async ({
 })
 
 test("executive and operator views expose role-safe information", async ({ page }, testInfo) => {
-  await onboard(page)
+  await gotoControlRoom(page)
   await page.getByRole("button", { name: "Executive" }).click()
   await expect(page.getByText("authoritative; rev-4").first()).toBeVisible()
   await page.getByRole("button", { name: "Operator" }).click()
@@ -45,7 +40,7 @@ test("executive and operator views expose role-safe information", async ({ page 
 for (const width of [320, 768, 1280, 1920]) {
   test(`has no serious axe violations at ${width}px`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 900 })
-    await onboard(page)
+    await gotoControlRoom(page)
     const results = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa", "wcag22aa"])
       .analyze()

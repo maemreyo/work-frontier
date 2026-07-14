@@ -1,12 +1,13 @@
 # Module: Delivery and CI
 
-**Path:** `.github/workflows/ci.yml`  
-**Role:** Orchestrates preflight, contract drift, static checks, tests, infrastructure smokes, security scans and evidence collection.
+**Path:** `.github/workflows/ci.yml`
+**Role:** Orchestrates preflight, contract drift, static checks, tests, infrastructure smokes, security scans, evidence collection, and anatomy drift detection.
 
 ## Public interface
 
 - GitHub Actions workflow jobs `preflight-gate`, `contract-drift-check`, and `verify`.
 - Make targets and package scripts used by CI to install, lint, test and run harnesses.
+- `python3 scripts/check_anatomy_drift.py docs/anatomy --mode check` — checks anatomy documentation drift against source.
 
 ## Depends on
 
@@ -28,10 +29,6 @@
 
 - Installs dependencies, starts containers, runs scans/tests, and uploads artifacts in GitHub Actions.
 
-## Notes / discrepancies vs existing docs
-
-- Harness `WF-HAR-STATIC-05` is named as secret detection plus preflight, while its registered command only executes the ADR-006 validator/tests; secret scanning is separately performed by CI.
-
 ---
 
-_Traced from source on 2026-07-12. Files examined in depth: all files listed in this module’s internal structure or public interface._
+_Traced from source on 2026-07-14. Files examined in depth: all 1 files._

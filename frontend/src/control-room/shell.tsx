@@ -1,13 +1,14 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { createContext, useMemo, type ReactNode } from "react"
 
-export type ControlRoomView = "builder" | "coordinator" | "executive" | "operator"
+export type ControlRoomView = "builder" | "coordinator" | "executive" | "operator" | "setup"
 
 export interface WorkspaceSession {
   readonly tenantId: string
   readonly workspaceId: string
   readonly actorId: string
   readonly role: string
+  readonly sessionToken: string
 }
 
 export const WorkspaceSessionContext = createContext<WorkspaceSession | null>(null)
@@ -24,6 +25,7 @@ const views: readonly { readonly id: ControlRoomView; readonly label: string }[]
   { id: "coordinator", label: "Coordinator" },
   { id: "executive", label: "Executive" },
   { id: "operator", label: "Operator" },
+  { id: "setup", label: "Setup" },
 ]
 
 export function ControlRoomShell(props: ControlRoomShellProps) {

@@ -9,12 +9,9 @@ const viewports = [
 ] as const
 
 for (const viewport of viewports) {
-  test(`onboarding reaches authoritative recommendation at ${viewport.width}px`, async ({ page }) => {
+  test(`Builder lands with recommended decisions at ${viewport.width}px`, async ({ page }) => {
     await page.setViewportSize(viewport)
     await page.goto("/")
-    await page.getByRole("button", { name: "Connect installation" }).click()
-    await page.getByRole("button", { name: "Validate profile" }).click()
-    await page.getByRole("button", { name: "Reconcile authoritative state" }).click()
     await expect(page.getByRole("heading", { name: "Recommended Next" })).toBeVisible()
     await expect(page.getByRole("heading", { name: "Stabilize the release foundation" }).first()).toBeVisible()
     const results = await new AxeBuilder({ page }).analyze()
@@ -26,9 +23,6 @@ for (const viewport of viewports) {
 
 test("Builder keyboard flow exposes decision type and claim conflict", async ({ page }) => {
   await page.goto("/")
-  await page.getByRole("button", { name: "Connect installation" }).click()
-  await page.getByRole("button", { name: "Validate profile" }).click()
-  await page.getByRole("button", { name: "Reconcile authoritative state" }).click()
   await expect(page.getByText("Decision type:").first()).toBeVisible()
   const claimButtons = page.getByRole("button", { name: "Claim" })
   await claimButtons.nth(0).focus()
